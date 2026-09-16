@@ -154,7 +154,13 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
         hidePast={!showPast}
       />
 
-      <SectionTitle>Избранные программы</SectionTitle>
+      <SectionTitle
+        after={favorites.data?.length >= 2
+          ? <button type="button" className="link-button" onClick={() => onOpenTab('colleges', { compare: true })}>Сравнить рядом</button>
+          : null}
+      >
+        Избранные программы
+      </SectionTitle>
       {favorites.status === 'error' && <ErrorState error={favorites.error} onRetry={favorites.reload} />}
       {favorites.data && favorites.data.length === 0 && (
         <Card>
