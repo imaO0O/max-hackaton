@@ -46,7 +46,7 @@ export function summaryText({ region, city, grade, interests, path, remindersEna
     `Класс: ${grade}`,
     `Интересы: ${interests.length ? interests.map((item) => item.title).join(', ') : 'пока не выбраны'}`,
     `Путь: ${PATH_TITLES[path]}`,
-    region.twoOgeExperiment ? '\nВ регионе идёт эксперимент: на ОГЭ сдаются только русский язык и математика.' : null,
+    region.twoOgeExperiment ? '\nВ регионе идёт эксперимент: для поступления в колледж можно сдать ОГЭ только по русскому языку и математике. Для 10 класса нужны четыре экзамена.' : null,
     '',
     remindersEnabled ? 'Напоминания о ключевых датах включены.' : 'Напоминания выключены.',
   ].filter((line) => line !== null).join('\n');

@@ -157,6 +157,16 @@ describe('API мини-приложения', () => {
     assert.ok(!ids.includes('2627-reg-demo-standard-fair'), 'даты другого региона не попадают');
   });
 
+  test('регион эксперимента: путь в 10 класс не теряет выбор предметов ОГЭ', async () => {
+    const user = 3004;
+    await call('PUT', '/api/profile', { user, body: { regionId: 'demo-two-oge', grade: 9, path: 'school10', interests: [] } });
+    const items = (await call('GET', '/api/plan', { user })).json().items;
+    const ids = items.map((item) => item.id);
+    assert.ok(ids.includes('2627-rec-profile-choice'), 'профиль 10 класса нужно выбрать и в регионе эксперимента');
+    const application = items.find((item) => item.id === '2627-fed-gia-application-two-oge');
+    assert.match(application.description, /четыр/, 'для 10 класса нужны четыре ОГЭ');
+  });
+
   test('выключение напоминаний', async () => {
     const response = await call('PUT', '/api/profile/reminders', { user: PARENT, body: { enabled: false } });
     assert.equal(response.json().profile.remindersEnabled, false);
