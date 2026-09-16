@@ -215,5 +215,160 @@
       { "specialtyCode": "23.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.61, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
       { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.02, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
     ]
+  },
+  {
+    "id": "tat-kazan-energy-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский энергетический колледж",
+    "address": "Казань, ул. Спартаковская, 111",
+    "website": "https://edu.tatar.ru/vahit/org6237",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "13.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/vahit/org6237/page1872427.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "13.02.07", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/vahit/org6237/page1872427.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "13.02.12", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/vahit/org6237/page1872427.htm", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-radiomechanical-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский радиомеханический колледж",
+    "address": "Казань, ул. Красного Пожарника, 1а",
+    "website": "https://krmk.org",
+    "hasDormitory": false,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "09.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://krmk.org/abiturientu/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "11.02.16", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://krmk.org/abiturientu/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "15.02.10", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://krmk.org/abiturientu/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "54.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://krmk.org/abiturientu/", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-medical-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский медицинский колледж",
+    "address": null,
+    "website": "https://kbmk.ru",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "31.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 60, "passingScore": null, "scoreYear": null, "entranceTest": "Обязательный медосмотр. Нужны четыре ОГЭ, документы — до 10 августа", "sourceUrl": "https://kbmk.ru/abitur/plan-priema.php", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "31.02.02", "form": "full_time", "duration": "3 г. 6 мес.", "budgetPlaces": 30, "passingScore": null, "scoreYear": null, "entranceTest": "Обязательный медосмотр. Нужны четыре ОГЭ, документы — до 10 августа", "sourceUrl": "https://kbmk.ru/abitur/plan-priema.php", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "34.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 360, "passingScore": null, "scoreYear": null, "entranceTest": "Обязательный медосмотр. Нужны четыре ОГЭ, документы — до 10 августа", "sourceUrl": "https://kbmk.ru/abitur/plan-priema.php", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-autotransport-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский автотранспортный техникум им. А. П. Обыденнова",
+    "address": "Казань, ул. Карбышева, 64",
+    "website": "https://edu.tatar.ru/priv/org6253",
+    "hasDormitory": false,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "09.02.11", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6253/files/%D0%9F%D0%BB%D0%B0%D0%BD%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026(1).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "23.01.17", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6253/files/%D0%9F%D0%BB%D0%B0%D0%BD%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026(1).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "23.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6253/files/%D0%9F%D0%BB%D0%B0%D0%BD%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026(1).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "23.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 75, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6253/files/%D0%9F%D0%BB%D0%B0%D0%BD%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026(1).pdf", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-construction-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский строительный колледж",
+    "address": "Казань, ул. Липатова, 25",
+    "website": "https://edu.tatar.ru/sovetcki/KCK",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "08.01.27", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6262/files/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%86%D0%B8%D1%84%D1%80%D1%8B%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026.docx", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "08.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 70, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6262/files/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%86%D0%B8%D1%84%D1%80%D1%8B%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026.docx", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "08.02.12", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6262/files/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%86%D0%B8%D1%84%D1%80%D1%8B%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026.docx", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "35.02.12", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": "Вступительное испытание", "sourceUrl": "https://edu.tatar.ru/upload/storage/org6262/files/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%86%D0%B8%D1%84%D1%80%D1%8B%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026.docx", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-international-service-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Международный колледж сервиса",
+    "address": "Казань, ул. Адоратского, 58Б",
+    "website": "https://college-service.ru",
+    "hasDormitory": false,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "43.01.09", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 100, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/nsav/page2322.htm/page5602196.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "43.02.15", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 100, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/nsav/page2322.htm/page5602196.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "43.02.16", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 75, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/nsav/page2322.htm/page5602196.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "43.02.17", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 50, "passingScore": null, "scoreYear": null, "entranceTest": "Вступительное испытание: рисунок", "sourceUrl": "https://edu.tatar.ru/nsav/page2322.htm/page5602196.htm", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-technology-design-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский колледж технологии и дизайна",
+    "address": "Казань, ул. Шигабутдина Марджани, 26",
+    "website": "https://kktd.ru",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "09.02.09", "form": "full_time", "duration": null, "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://kktd.ru/specialties/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "54.02.01", "form": "full_time", "duration": null, "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": "Колледж проводит вступительное испытание по рисунку — проверьте в правилах приёма", "sourceUrl": "https://kktd.ru/specialties/", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-pedagogical-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский педагогический колледж",
+    "address": "Казань, ул. Даурская, 30",
+    "website": "https://edu.tatar.ru/sovetcki/org6264",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "44.02.01", "form": "full_time", "duration": null, "budgetPlaces": 75, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/sovetcki/org6264/page5772678.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "44.02.02", "form": "full_time", "duration": null, "budgetPlaces": 100, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/sovetcki/org6264/page5772678.htm", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "49.02.01", "form": "full_time", "duration": null, "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": "Вступительные испытания по физической культуре", "sourceUrl": "https://edu.tatar.ru/sovetcki/org6264/page5772678.htm", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-trade-economic-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский торгово-экономический техникум",
+    "address": "Казань, ул. Горсоветская, 2",
+    "website": "https://ktet.ru",
+    "hasDormitory": true,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://ktet.ru/specialties/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "43.01.11", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 20, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://ktet.ru/specialties/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "43.02.15", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 15, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://ktet.ru/specialties/", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "54.02.08", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 15, "passingScore": null, "scoreYear": null, "entranceTest": "Вступительное испытание", "sourceUrl": "https://ktet.ru/specialties/", "checkedAt": "2026-09-16" }
+    ]
+  },
+  {
+    "id": "tat-kazan-aviation-technical-college",
+    "regionId": "tatarstan",
+    "city": "Казань",
+    "name": "Казанский авиационно-технический колледж им. П. В. Дементьева",
+    "address": "Казань, ул. Копылова, 2Б",
+    "website": "https://kaviat.ru",
+    "hasDormitory": false,
+    "isDemo": false,
+    "programs": [
+      { "specialtyCode": "09.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 30, "passingScore": 4.45, "scoreYear": 2025, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6234/files/%D0%BA%D1%86%D0%BF%202026(2).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "09.02.11", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 30, "passingScore": 4.69, "scoreYear": 2025, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6234/files/%D0%BA%D1%86%D0%BF%202026(2).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "15.02.16", "form": "full_time", "duration": "3 г. 6 мес.", "budgetPlaces": 50, "passingScore": 4.25, "scoreYear": 2025, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6234/files/%D0%BA%D1%86%D0%BF%202026(2).pdf", "checkedAt": "2026-09-16" },
+      { "specialtyCode": "24.02.01", "form": "full_time", "duration": "3 г. 6 мес.", "budgetPlaces": 50, "passingScore": 4.43, "scoreYear": 2025, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6234/files/%D0%BA%D1%86%D0%BF%202026(2).pdf", "checkedAt": "2026-09-16" }
+    ]
   }
 ]

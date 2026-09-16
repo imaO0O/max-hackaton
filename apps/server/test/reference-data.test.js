@@ -25,6 +25,18 @@ test('валидатор находит ошибки в данных', () => {
   assert.equal(errors.length, 4, errors.join('\n'));
 });
 
+test('реальные данные без источника и даты проверки не проходят', () => {
+  const data = loadReferenceData(testConfig().dataDir);
+  const real = data.colleges.filter((college) => college.isDemo === false);
+  assert.ok(real.length >= 10, 'пилотный регион: не меньше 10 реальных колледжей');
+
+  const broken = structuredClone(data);
+  broken.colleges.find((college) => college.isDemo === false).programs[0].sourceUrl = null;
+  broken.regions.find((region) => region.isDemo === false).checkedAt = null;
+  const errors = validateReferenceData(broken);
+  assert.equal(errors.length, 2, errors.join('\n'));
+});
+
 test('повторная загрузка справочников сохраняет избранное и удаляет исчезнувшие записи', () => {
   const db = openDatabase(':memory:');
   const data = loadReferenceData(testConfig().dataDir);

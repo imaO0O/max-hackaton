@@ -69,6 +69,9 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(Number.isInteger(region.utcOffsetHours), `regions.json: utcOffsetHours у «${region.id}» должен быть целым`);
     check(typeof region.twoOgeExperiment === 'boolean', `regions.json: twoOgeExperiment у «${region.id}» должен быть true/false`);
     check(isDateOrNull(region.checkedAt), `regions.json: checkedAt у «${region.id}» — YYYY-MM-DD или null`);
+    if (region.isDemo === false) {
+      check(Boolean(region.checkedAt), `regions.json: у реального региона «${region.id}» нужна дата проверки checkedAt`);
+    }
   }
 
   const interestIds = uniqueIds(interests, 'id', 'interests.json');
@@ -95,6 +98,10 @@ export function validateReferenceData({ regions, interests, specialties, college
       check(program.passingScore === null || (program.passingScore >= 2 && program.passingScore <= 5),
         `${label}: проходной балл ${program.specialtyCode} должен быть от 2 до 5 или null`);
       check(isDateOrNull(program.checkedAt), `${label}: checkedAt у ${program.specialtyCode} — YYYY-MM-DD или null`);
+      if (college.isDemo === false) {
+        check(Boolean(program.sourceUrl) && Boolean(program.checkedAt),
+          `${label}: у реальной программы ${program.specialtyCode} нужны sourceUrl и checkedAt`);
+      }
     }
   }
 
