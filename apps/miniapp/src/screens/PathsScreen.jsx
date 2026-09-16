@@ -1,7 +1,7 @@
 import { Button, Typography } from '@maxhub/max-ui';
 
 import { ErrorState, LoadingState } from '../components/states.jsx';
-import { Card, ScreenHeader, Tag } from '../components/ui.jsx';
+import { Card, ScreenHeader, SourceNote, Tag } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { useAsync } from '../lib/use-async.js';
 
@@ -32,7 +32,20 @@ export function PathsScreen({ profile, region, onOpenTab }) {
           : 'Сравнение, чтобы спокойно обсудить решение с подростком'}
       />
 
-      {region?.twoOgeExperiment && (
+      {region?.profileClassRules && (
+        <Card className="notice">
+          <Typography.Label variant="medium-strong">{`Правила региона: ${region.name}`}</Typography.Label>
+          <Typography.Body variant="small">{region.profileClassRules}</Typography.Body>
+          <SourceNote
+            title="Источник"
+            url={region.profileClassRulesUrl}
+            checkedAt={region.checkedAt}
+            isDemo={region.isDemo}
+          />
+        </Card>
+      )}
+
+      {!region?.profileClassRules && region?.twoOgeExperiment && (
         <Card className="notice">
           <Typography.Body variant="small">
             В вашем регионе идёт эксперимент: аттестат можно получить, сдав ОГЭ только по русскому языку и математике.
