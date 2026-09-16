@@ -85,13 +85,16 @@ export function buildApp({ config, services, runtime, logger = true }) {
   const indexHtml = path.join(config.miniappDistDir, 'index.html');
   const hasMiniapp = fs.existsSync(indexHtml);
   if (hasMiniapp) {
-    app.register(fastifyStatic, { root: config.miniappDistDir, wildcard: false, index: ['index.html'] });
+    app.register(fastifyStatic, { root: config.miniappDistDir, index: ['index.html'] });
   }
 
   app.setNotFoundHandler((request, reply) => {
-    if (request.url.startsWith('/api/') || !hasMiniapp || request.method !== 'GET') {
+    const pathname = request.url.split('?')[0];
+    const looksLikeFile = /\.[a-z0-9]+$/i.test(pathname);
+    if (pathname.startsWith('/api/') || !hasMiniapp || request.method !== 'GET' || looksLikeFile) {
       return reply.status(404).send({ error: { code: 'not_found', message: 'Не найдено' } });
     }
+    // Любой другой путь — точка входа мини-приложения
     return reply.type('text/html').sendFile('index.html');
   });
 

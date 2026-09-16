@@ -191,3 +191,37 @@ describe('локальная разработка', () => {
     ctx.db.close();
   });
 });
+
+describe('раздача мини-приложения', () => {
+  test('SPA: маршруты отдают index.html, отсутствующие файлы и /api — 404', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'posle9-dist-'));
+    fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><div id="root"></div>');
+    fs.mkdirSync(path.join(dist, 'assets'));
+    fs.writeFileSync(path.join(dist, 'assets', 'app.js'), 'console.log(1)');
+
+    const ctx = createTestApp({ config: { miniappDistDir: dist } });
+    const page = await ctx.app.inject({ method: 'GET', url: '/plan?startapp=x' });
+    assert.equal(page.statusCode, 200);
+    assert.match(page.headers['content-type'], /text\/html/);
+
+    const asset = await ctx.app.inject({ method: 'GET', url: '/assets/app.js' });
+    assert.equal(asset.statusCode, 200);
+    assert.match(asset.headers['content-type'], /javascript/);
+
+    // Файл, появившийся после старта сервера (пересборка), тоже раздаётся
+    fs.writeFileSync(path.join(dist, 'assets', 'new.js'), 'console.log(2)');
+    assert.equal((await ctx.app.inject({ method: 'GET', url: '/assets/new.js' })).statusCode, 200);
+
+    assert.equal((await ctx.app.inject({ method: 'GET', url: '/assets/missing.js' })).statusCode, 404);
+    const api = await ctx.app.inject({ method: 'GET', url: '/api/nope' });
+    assert.equal(api.statusCode, 404);
+    assert.equal(api.json().error.code, 'not_found');
+
+    await ctx.app.close();
+    ctx.db.close();
+    fs.rmSync(dist, { recursive: true, force: true });
+  });
+});
