@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>После 9-го — презентация</title>
+<style>
+  :root {
+    --ink: #16191d;
+    --muted: #5b6470;
+    --line: #dfe3e8;
+    --accent: #0a66ff;
+    --accent-soft: #e8f0ff;
+    --surface: #f4f6f9;
+    --ok: #1f8a3a;
+    --ok-soft: #e6f5ea;
+    --warn: #9a5200;
+    --warn-soft: #fff1dc;
+    --todo: #fff27a;
+  }
+
+  @page { size: 13.333in 7.5in; margin: 0; }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: #c9ced6;
+    color: var(--ink);
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .slide {
+    position: relative;
+    width: 13.333in;
+    height: 7.5in;
+    margin: 24px auto;
+    padding: 0.5in 0.65in 0.55in;
+    overflow: hidden;
+    background: #fff;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  @media print {
+    html, body { background: #fff; }
+    .slide { margin: 0; }
+  }
+
+  .slide__footer {
+    position: absolute;
+    left: 0.65in;
+    right: 0.65in;
+    bottom: 0.22in;
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 11pt;
+  }
+
+  h1 { margin: 0 0 0.12in; font-size: 44pt; line-height: 1.05; letter-spacing: -0.01em; }
+  h2 { margin: 0 0 0.22in; font-size: 25pt; line-height: 1.15; letter-spacing: -0.01em; }
+  h3 { margin: 0 0 0.08in; font-size: 15pt; }
+  p { margin: 0 0 0.1in; }
+
+  .lead { color: var(--muted); font-size: 18pt; line-height: 1.3; }
+  .kicker { margin-bottom: 0.08in; color: var(--accent); font-size: 12pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .muted { color: var(--muted); }
+  .small { font-size: 11pt; }
+  .todo { padding: 0 4px; border-radius: 3px; background: var(--todo); }
+
+  .grid { display: grid; gap: 0.22in; }
+  .grid-2 { grid-template-columns: 1fr 1fr; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+  .card {
+    padding: 0.18in 0.22in;
+    border-radius: 14px;
+    background: var(--surface);
+    font-size: 13pt;
+    line-height: 1.35;
+  }
+  .card--accent { background: var(--accent-soft); }
+  .card--warn { background: var(--warn-soft); }
+
+  ul.points { margin: 0; padding-left: 0.22in; font-size: 15pt; line-height: 1.4; }
+  ul.points li { margin-bottom: 0.08in; }
+  .card ul.points { font-size: 13pt; }
+
+  .stat { font-size: 26pt; font-weight: 700; line-height: 1; color: var(--accent); }
+  .stat-caption { margin-top: 0.08in; font-size: 12.5pt; line-height: 1.3; }
+  .source { margin-top: 0.06in; color: var(--muted); font-size: 9.5pt; }
+
+  .phone {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 6px 18px rgba(20, 30, 50, 0.12);
+  }
+  .shot { display: flex; flex-direction: column; gap: 0.08in; }
+  .shot .phone { height: 4.6in; object-fit: cover; object-position: top; }
+  .shot figcaption { font-size: 11.5pt; line-height: 1.3; }
+
+  .steps { counter-reset: step; display: grid; gap: 0.14in; }
+  .step { display: grid; grid-template-columns: 0.42in 1fr; gap: 0.12in; align-items: start; font-size: 14pt; line-height: 1.35; }
+  .step::before {
+    counter-increment: step;
+    content: counter(step);
+    display: grid;
+    place-items: center;
+    width: 0.42in;
+    height: 0.42in;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5pt; line-height: 1.3; }
+  th, td { padding: 0.07in 0.1in; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-size: 11pt; font-weight: 600; }
+
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 10.5pt; font-weight: 600; white-space: nowrap; }
+  .tag--ok { background: var(--ok-soft); color: var(--ok); }
+  .tag--warn { background: var(--warn-soft); color: var(--warn); }
+  .tag--muted { background: var(--surface); color: var(--muted); }
+
+  .arch { display: grid; grid-template-columns: 1fr 0.35in 1.35fr 0.35in 0.9fr; align-items: center; gap: 0.08in; }
+  .arch__group { padding: 0.16in; border: 2px solid var(--line); border-radius: 16px; }
+  .arch__title { margin-bottom: 0.1in; color: var(--muted); font-size: 11pt; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+  .arch__box { margin-bottom: 0.08in; padding: 0.09in 0.12in; border-radius: 10px; background: var(--surface); font-size: 12pt; line-height: 1.3; }
+  .arch__box:last-child { margin-bottom: 0; }
+  .arch__box b { display: block; }
+  .arch__arrow { color: var(--muted); font-size: 22pt; text-align: center; }
+
+  .sources { columns: 2; column-gap: 0.4in; margin: 0; padding-left: 0.2in; font-size: 11pt; line-height: 1.35; }
+  .sources li { margin-bottom: 0.07in; break-inside: avoid; }
+  .sources a { color: var(--accent); text-decoration: none; word-break: break-all; }
+</style>
+</head>
+<body>
+
+<!-- 1. Титул и порядок проверки -->
+<section class="slide">
+  <div class="grid grid-2" style="grid-template-columns: 1.1fr 1fr; gap: 0.5in; height: 100%;">
+    <div style="display: flex; flex-direction: column; justify-content: center;">
+      <div class="kicker">Чат-бот и мини-приложение в MAX</div>
+      <h1>После 9-го</h1>
+      <p class="lead">План выбора пути для семьи девятиклассника: 10 класс или колледж — с датами региона, средним баллом, колледжами и напоминаниями родителю и подростку</p>
+      <p class="muted" style="margin-top: 0.25in; font-size: 13pt;">Пилотный регион — Республика Татарстан</p>
+    </div>
+    <div class="card" style="align-self: center; font-size: 13.5pt;">
+      <h3>Для проверки</h3>
+      <table style="font-size: 12.5pt; margin-bottom: 0.12in;">
+        <tr><th style="width: 1.3in;">Бот</th><td><span class="todo">https://max.ru/…_bot — после модерации</span></td></tr>
+        <tr><th>Репозиторий</th><td>github.com/imaO0O/max-hackaton</td></tr>
+        <tr><th>Commit</th><td><span class="todo">хэш коммита на момент сдачи</span></td></tr>
+      </table>
+      <div class="steps" style="font-size: 12.5pt;">
+        <div class="step" style="font-size: 12.5pt;"><span>Бот → «Начать» → Республика Татарстан, Казань, 9 класс, IT, Колледж</span></div>
+        <div class="step" style="font-size: 12.5pt;"><span>«Открыть план» → «Балл», «Колледжи»: ☆ у двух программ → «Сравнить рядом»</span></div>
+        <div class="step" style="font-size: 12.5pt;"><span>«Мой план» → «Отправить план подростку» → со второго аккаунта открыть ссылку → «Получать напоминания»</span></div>
+        <div class="step" style="font-size: 12.5pt;"><span>Команда <b>/test_reminder</b>. Подробно — README, «Пошаговый сценарий проверки»</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>1</span></div>
+</section>
+
+<!-- 2. Проблема и аудитория -->
+<section class="slide">
+  <div class="kicker">Проблема и аудитория</div>
+  <h2>Путь после 9 класса выбирают вслепую, а важные сроки узнают слишком поздно</h2>
+  <div class="grid grid-2" style="grid-template-columns: 1.15fr 1fr; gap: 0.4in;">
+    <div>
+      <p style="font-size: 15pt;"><b>Кто:</b> родители учеников 8–9 классов и сами подростки.</p>
+      <ul class="points">
+        <li>Сроки разбросаны по разным источникам: предметы ОГЭ — до 1 марта, документы в колледж — с 20 июня, оригинал аттестата — только в один колледж.</li>
+        <li>На бюджет в колледж проходят по результатам аттестата, а средний балл обычно считают уже после экзаменов, когда оценки не исправить.</li>
+        <li>С 2026 года в 12 регионах можно сдать два ОГЭ вместо четырёх, но такой аттестат закрывает путь в 10 класс.</li>
+      </ul>
+      <div class="card card--warn" style="margin-top: 0.2in;">
+        <b>Интервью с родителями:</b> <span class="todo">«N из 7 родителей не знали, что…» — 2–3 цифры и цитата после интервью</span>
+      </div>
+    </div>
+    <div class="grid" style="gap: 0.12in;">
+      <div class="card card--accent">
+        <div class="stat">≈ 1,3 млн</div>
+        <div class="stat-caption">студентов зачислено в колледжи в 2025 году; бюджетных мест — 850 тыс.</div>
+        <div class="source">Данные Правительства РФ, РБК, 18.12.2025</div>
+      </div>
+      <div class="card card--accent">
+        <div class="stat">26%</div>
+        <div class="stat-caption">девятиклассников в регионах эксперимента в 2025 году сдавали только обязательные предметы — 47,3 тыс. из 180,6 тыс.</div>
+        <div class="source">Пояснительная записка к законопроекту о продлении эксперимента, РБК, 18.12.2025</div>
+      </div>
+      <div class="card card--accent">
+        <div class="stat">12 регионов</div>
+        <div class="stat-caption">в эксперименте с двумя ОГЭ до 2029 года, среди них Татарстан, Москва, Санкт-Петербург</div>
+        <div class="source">Федеральный закон № 40-ФЗ в ред. от 29.12.2025</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>2</span></div>
+</section>
+
+<!-- 3. Решение и сценарий -->
+<section class="slide">
+  <div class="kicker">Решение и сценарий</div>
+  <h2>Всё о выборе пути — в одном чате MAX, с напоминаниями для всей семьи</h2>
+  <div class="grid" style="grid-template-columns: 1.3fr 1fr 1fr; gap: 0.35in; align-items: start;">
+    <div class="steps">
+      <div class="step"><span><b>Бот задаёт 5 вопросов</b> кнопками: регион, город, класс, интересы подростка, к какому пути склоняется семья</span></div>
+      <div class="step"><span><b>Мини-приложение собирает план</b> года с датами региона и выбранного пути, сравнивает два пути, считает средний балл, подбирает колледжи</span></div>
+      <div class="step"><span><b>Родитель отправляет план подростку</b> в чат MAX, подросток открывает тот же план по ссылке</span></div>
+      <div class="step"><span><b>Бот напоминает обоим</b> о ключевых датах в 10:00 по времени региона</span></div>
+      <p class="muted small" style="margin-top: 0.1in;">Сервис не подаёт заявления, не рассчитывает шансы на поступление и не заменяет официальные правила: у каждого факта — ссылка на первоисточник и дата проверки.</p>
+    </div>
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/01-paths.png" alt="Экран «Два пути» с правилами региона">
+      <figcaption><b>Два пути</b> и правила региона с источником</figcaption>
+    </figure>
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/06-plan.png" alt="Экран «Мой план»">
+      <figcaption><b>Мой план:</b> ближайший шаг, отправка подростку, напоминания</figcaption>
+    </figure>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>3</span></div>
+</section>
+
+<!-- 4. Мини-приложение -->
+<section class="slide">
+  <div class="kicker">Мини-приложение</div>
+  <h2>Экраны, которые отвечают на главные вопросы семьи</h2>
+  <div class="grid grid-4" style="gap: 0.28in;">
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/02-grades.png" alt="Средний балл">
+      <figcaption><b>Средний балл</b> по порядку выдачи аттестатов, математика из трёх курсов. Оценки хранятся только на телефоне</figcaption>
+    </figure>
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/04-college.png" alt="Карточка колледжа">
+      <figcaption><b>Колледжи региона:</b> места, сроки, испытания, общежитие; источник и дата проверки у каждой программы</figcaption>
+    </figure>
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/05-compare.png" alt="Сравнение программ">
+      <figcaption><b>Сравнение</b> избранных программ рядом, фильтр «Только различия»</figcaption>
+    </figure>
+    <figure class="shot" style="margin: 0;">
+      <img class="phone" src="screens/07-plan-dates.png" alt="Даты плана">
+      <figcaption><b>Даты года:</b> федеральные, региональные и советы; ориентировочные даты помечены</figcaption>
+    </figure>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>4</span></div>
+</section>
+
+<!-- 5. Возможности MAX -->
+<section class="slide">
+  <div class="kicker">Возможности MAX</div>
+  <h2>Сверх минимума: план уходит подростку в MAX, и напоминания получают оба</h2>
+  <div class="grid grid-2" style="gap: 0.4in;">
+    <div class="card card--accent" style="font-size: 14pt;">
+      <h3>Отправка плана подростку — от начала до результата</h3>
+      <div class="steps" style="margin-top: 0.12in;">
+        <div class="step" style="font-size: 13.5pt;"><span>«Отправить план подростку» открывает экран выбора чата: <b>shareMaxContent</b></span></div>
+        <div class="step" style="font-size: 13.5pt;"><span>В сообщении — диплинк <b>max.ru/&lt;бот&gt;?startapp=plan_&lt;токен&gt;</b></span></div>
+        <div class="step" style="font-size: 13.5pt;"><span>Подросток открывает план только для чтения и нажимает «Получать напоминания»</span></div>
+        <div class="step" style="font-size: 13.5pt;"><span>Бот присылает напоминания обоим; родитель видит, что план открыли</span></div>
+      </div>
+    </div>
+    <div>
+      <table>
+        <tr><th style="width: 1.9in;">Возможность</th><th>Как используется</th></tr>
+        <tr><td><b>Чат-бот, Bot API</b></td><td>опрос из 5 шагов, команды, напоминания с кнопкой «Открыть план», остановка после блокировки бота</td></tr>
+        <tr><td><b>Мини-приложение</b></td><td>React и MAX UI: интерфейс в стиле MAX, светлая и тёмная темы</td></tr>
+        <tr><td><b>Подпись initData</b></td><td>сервер проверяет HMAC-SHA256 с токеном бота и срок действия</td></tr>
+        <tr><td><b>MAX Bridge</b></td><td>BackButton, openLink для источников, тактильный отклик; у каждого метода есть запасной вариант для веб-версии</td></tr>
+        <tr><td><b>Диплинки</b></td><td>открытие плана по ссылке с параметром запуска</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>5</span></div>
+</section>
+
+<!-- 6. Эффект и метрики -->
+<section class="slide">
+  <div class="kicker">Эффект и метрики</div>
+  <h2>Семья принимает решение до 1 марта и не пропускает сроки приёма</h2>
+  <div class="grid grid-2" style="grid-template-columns: 1fr 1.1fr; gap: 0.45in;">
+    <div>
+      <h3>Какой эффект ожидаем</h3>
+      <ul class="points">
+        <li>Выбор двух или четырёх ОГЭ делается осознанно, путь в 10 класс не закрывается случайно.</li>
+        <li>Средний балл считают в течение года, пока оценки можно подтянуть.</li>
+        <li>Документы подают вовремя и в несколько колледжей, оригинал аттестата — в выбранный.</li>
+        <li>Подросток участвует в решении: видит тот же план и получает те же напоминания.</li>
+      </ul>
+      <div class="card card--warn" style="margin-top: 0.15in;">
+        <b>Из интервью:</b> <span class="todo">подтверждённые гипотезы и цитата родителя</span>
+      </div>
+    </div>
+    <div>
+      <h3>Что измеряем в пилоте <span class="tag tag--muted">ориентиры, не результаты</span></h3>
+      <table>
+        <tr><th>Метрика</th><th>Как считаем</th><th>Ориентир</th></tr>
+        <tr><td>Активация</td><td>закончили опрос / запустили бота</td><td>70%</td></tr>
+        <tr><td>Вовлечение подростка</td><td>планы, которые открыли по ссылке и подписались</td><td>25%</td></tr>
+        <tr><td>Напоминания</td><td>не выключили до 1 марта</td><td>80%</td></tr>
+        <tr><td>Возвращаемость</td><td>открыли мини-приложение в феврале</td><td>40%</td></tr>
+        <tr><td>Понимание правил</td><td>опрос в марте: «знали до 1 марта, сколько ОГЭ сдавать»</td><td>большинство «да»</td></tr>
+      </table>
+      <p class="muted small" style="margin-top: 0.12in;">Считаем без персональных данных: ID в MAX, ответы опроса, отметки плана и напоминания.</p>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>6</span></div>
+</section>
+
+<!-- 7. Архитектура -->
+<section class="slide">
+  <div class="kicker">Архитектура</div>
+  <h2>Один контейнер: API, бот и напоминания</h2>
+  <div class="arch">
+    <div class="arch__group">
+      <div class="arch__title">MAX</div>
+      <div class="arch__box"><b>Родитель и подросток</b>мобильный и веб-клиент</div>
+      <div class="arch__box"><b>Чат с ботом</b>опрос, команды, напоминания</div>
+      <div class="arch__box"><b>Мини-приложение</b>React 19, MAX UI, MAX Bridge</div>
+    </div>
+    <div class="arch__arrow">⇄</div>
+    <div class="arch__group">
+      <div class="arch__title">Контейнер app · Node.js 24</div>
+      <div class="grid grid-2" style="gap: 0.08in;">
+        <div class="arch__box"><b>HTTP API /api</b>Fastify, проверка подписи initData</div>
+        <div class="arch__box"><b>Бот</b>long polling, опрос из 5 шагов</div>
+        <div class="arch__box"><b>Планировщик</b>напоминания в 10:00 региона, повтор при сбое</div>
+        <div class="arch__box"><b>packages/core</b>план, средний балл — общий для сервера и мини-приложения</div>
+        <div class="arch__box"><b>SQLite</b>профиль, отметки, избранное, напоминания</div>
+        <div class="arch__box"><b>Статика</b>собранное мини-приложение</div>
+      </div>
+    </div>
+    <div class="arch__arrow">⇄</div>
+    <div class="arch__group">
+      <div class="arch__title">Внешнее</div>
+      <div class="arch__box"><b>MAX Bot API</b>сообщения бота</div>
+      <div class="arch__box"><b>data/*.json</b>регионы, колледжи, даты — с источником и датой проверки</div>
+      <div class="arch__box"><b>Caddy</b>HTTPS и сертификат</div>
+    </div>
+  </div>
+  <div class="grid grid-3" style="margin-top: 0.22in;">
+    <div class="card"><b>Запуск:</b> <code>docker compose up --build</code>, HTTPS — профиль <code>https</code> с Caddy</div>
+    <div class="card"><b>Качество:</b> 44 автотеста ядра и сервера, валидатор справочников <code>npm run data:check</code></div>
+    <div class="card"><b>Документация:</b> README со сценарием проверки, OpenAPI 3.1 в <code>docs/openapi.yaml</code></div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>7</span></div>
+</section>
+
+<!-- 8. Данные -->
+<section class="slide">
+  <div class="kicker">Данные</div>
+  <h2>Что в сервисе реальное, что демонстрационное и что модельное</h2>
+  <div class="grid grid-2" style="grid-template-columns: 1.2fr 1fr; gap: 0.4in;">
+    <table>
+      <tr><th style="width: 2.6in;">Данные</th><th>Статус</th></tr>
+      <tr><td>Татарстан: правила эксперимента, 10 колледжей Казани, 35 программ, региональные даты</td><td><span class="tag tag--ok">реальные</span> источник и дата проверки 16.09.2026 у каждой записи</td></tr>
+      <tr><td>Федеральные даты 2026/27</td><td><span class="tag tag--ok">реальные</span> порядок ГИА-9, ФИПИ, порядок приёма в СПО; основной период ОГЭ — ориентировочно, расписание 2027 не утверждено</td></tr>
+      <tr><td>Проходные баллы</td><td><span class="tag tag--warn">частично</span> колледжи Казани почти не публикуют прошлогодний балл — в интерфейсе «нет данных» и ссылка на источник</td></tr>
+      <tr><td>Демо-регионы А и Б</td><td><span class="tag tag--muted">демо</span> вымышленные колледжи и баллы для сценария проверки, помечены «демо-данные»</td></tr>
+    </table>
+    <div>
+      <table>
+        <tr><th style="width: 1.9in;">Интеграция</th><th>Статус</th></tr>
+        <tr><td>MAX Bot API, MAX Bridge</td><td><span class="tag tag--ok">реальная</span></td></tr>
+        <tr><td>Сайты колледжей, Минобрнауки РТ, ФИПИ, Рособрнадзор</td><td><span class="tag tag--warn">модельная</span> данные собраны вручную, не автоматическая загрузка</td></tr>
+        <tr><td>Госуслуги, «Моя школа», системы колледжей</td><td><span class="tag tag--muted">нет</span></td></tr>
+      </table>
+      <div class="card" style="margin-top: 0.2in;">
+        <b>Персональные данные:</b> сервер хранит только ID в MAX и ответы опроса. Имя ребёнка не спрашиваем, оценки остаются на телефоне.
+      </div>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>8</span></div>
+</section>
+
+<!-- 9. Масштабирование -->
+<section class="slide">
+  <div class="kicker">Масштабирование</div>
+  <h2>Новый регион — это данные, а не код</h2>
+  <div class="grid grid-3" style="gap: 0.3in;">
+    <div class="card">
+      <h3>Регионы</h3>
+      <ul class="points">
+        <li>Регион добавляется записями в <code>regions.json</code>, <code>colleges.json</code> и <code>key-dates.json</code>.</li>
+        <li>Валидатор не пропустит реальные данные без источника и даты проверки.</li>
+        <li>Очередь: 12 регионов эксперимента с той же проблемой выбора, затем остальные.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Данные</h3>
+      <ul class="points">
+        <li>Обновление раз в год к сентябрю: планы приёма, федеральные даты.</li>
+        <li>Точечно — при публикации перечня эксперимента и расписания ОГЭ.</li>
+        <li>Федеральные даты и логика плана общие для всех регионов.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Каналы и техника</h3>
+      <ul class="points">
+        <li>Родительские чаты 9 классов в MAX и школы региона.</li>
+        <li>Отправка плана подростку — встроенный канал роста.</li>
+        <li>Для нескольких экземпляров сервера — общая база и блокировка задач напоминаний.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>9</span></div>
+</section>
+
+<!-- 10. Риски -->
+<section class="slide">
+  <div class="kicker">Риски</div>
+  <h2>Что может пойти не так и что мы делаем</h2>
+  <table style="font-size: 14pt;">
+    <tr><th style="width: 4.6in;">Риск</th><th>Что делаем</th></tr>
+    <tr><td>Данные устаревают, правила меняются</td><td>у каждого факта дата проверки; «не проверено», если даты нет; обновление по публикациям</td></tr>
+    <tr><td>Правила эксперимента различаются по регионам</td><td>правила региона и региональные даты с источником; дисклеймер «не заменяет официальные правила»</td></tr>
+    <tr><td>Сервис принимают за прогноз поступления</td><td>шансы не считаем; рядом с баллом — «ориентир, а не прогноз»</td></tr>
+    <tr><td>Колледжи не публикуют проходные баллы</td><td>«нет данных» и ссылка на сайт колледжа вместо догадок</td></tr>
+    <tr><td>Часть методов MAX Bridge не работает в веб-версии</td><td>запасные варианты: ссылка копируется, источник открывается в браузере</td></tr>
+    <tr><td>Родители опасаются за данные ребёнка</td><td>не собираем имя и оценки; оценки хранятся только на устройстве</td></tr>
+  </table>
+  <div class="slide__footer"><span>После 9-го</span><span>10</span></div>
+</section>
+
+<!-- 11. Пилот -->
+<section class="slide">
+  <div class="kicker">Пилот</div>
+  <h2>Татарстан, 3–5 школ Казани, декабрь 2026 — март 2027</h2>
+  <div class="grid grid-2" style="grid-template-columns: 1.2fr 1fr; gap: 0.4in;">
+    <table>
+      <tr><th style="width: 1.5in;">Когда</th><th>Что</th></tr>
+      <tr><td>Ноябрь</td><td>договорённость со школами, обновление данных, 15 минут для классных руководителей</td></tr>
+      <tr><td>Декабрь</td><td>запуск в родительских чатах 9 классов и на собраниях после полугодия</td></tr>
+      <tr><td>Январь</td><td>перечень колледжей эксперимента на 2027 год — обновить за неделю и разослать</td></tr>
+      <tr><td>Февраль</td><td>итоговое собеседование 10 февраля, выбор двух или четырёх ОГЭ до 1 марта</td></tr>
+      <tr><td>Март</td><td>метрики, опрос в боте, 5–7 интервью, решение о масштабировании</td></tr>
+    </table>
+    <div class="grid" style="gap: 0.16in;">
+      <div class="card card--accent">
+        <h3>Почему Татарстан</h3>
+        С 2026 года в эксперименте: 51 колледж и 40 профессий в перечне. Семьи выбирают, сдавать два или четыре ОГЭ, — ошибка стоит 10 класса.
+      </div>
+      <div class="card">
+        <h3>Каналы</h3>
+        Родительские чаты 9 классов в MAX через классных руководителей, родительские собрания, педагоги-навигаторы по профориентации, отправка плана подростку.
+      </div>
+      <div class="card">
+        <h3>Охват</h3>
+        300–500 семей: 3–5 школ по 3–4 девятых класса.
+      </div>
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>11</span></div>
+</section>
+
+<!-- 12. Источники -->
+<section class="slide">
+  <div class="kicker">Источники</div>
+  <h2>Факты сверены с первоисточниками 16.09.2026</h2>
+  <ul class="sources">
+    <li>Федеральный закон от 01.04.2025 № 40-ФЗ «О проведении эксперимента по расширению доступности СПО» (ред. от 29.12.2025) — <a href="https://www.consultant.ru/document/cons_doc_LAW_502174/">consultant.ru/document/cons_doc_LAW_502174</a></li>
+    <li>Порядок проведения ГИА-9, приказ Минпросвещения России и Рособрнадзора № 232/551 — <a href="http://publication.pravo.gov.ru/Document/View/0001202305120014">publication.pravo.gov.ru/Document/View/0001202305120014</a></li>
+    <li>ФИПИ: итоговое собеседование, основные и дополнительные сроки — <a href="https://fipi.ru/itogovoye-sobesedovaniye">fipi.ru/itogovoye-sobesedovaniye</a></li>
+    <li>Порядок приёма на обучение по программам СПО, приказ Минпросвещения России № 457 (ред. от 02.07.2026) — <a href="https://www.consultant.ru/document/cons_doc_LAW_366971/">consultant.ru/document/cons_doc_LAW_366971</a></li>
+    <li>Порядок заполнения, учёта и выдачи аттестатов, приказ Минпросвещения России № 546 (ред. от 29.05.2026) — <a href="https://legalacts.ru/doc/prikaz-minprosveshchenija-rossii-ot-05102020-n-546-ob-utverzhdenii/">legalacts.ru, приказ № 546</a></li>
+    <li>Минобрнауки Татарстана: «ОГЭ по новым правилам в Татарстане», 10.02.2026 — <a href="https://mon.tatarstan.ru/index.htm/news/2491991.htm">mon.tatarstan.ru/index.htm/news/2491991.htm</a></li>
+    <li>РБК: «Госдума продлила эксперимент по сдаче двух ОГЭ», 18.12.2025 — <a href="https://www.rbc.ru/life/news/6943ec299a79474651eb05c6">rbc.ru/life/news/6943ec299a79474651eb05c6</a></li>
+    <li>Сайты и планы приёма колледжей Казани на 2026/27 — ссылка у каждой программы в <code>data/colleges.json</code></li>
+    <li>MAX для разработчиков: мини-приложения, MAX Bridge, диплинки — <a href="https://dev.max.ru/docs/webapps/introduction">dev.max.ru/docs/webapps/introduction</a></li>
+  </ul>
+  <div class="slide__footer"><span>После 9-го</span><span>12</span></div>
+</section>
+
+</body>
+</html>
