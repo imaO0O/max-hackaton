@@ -15,6 +15,9 @@ import { useAsync } from '../lib/use-async.js';
 export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
   const plan = useAsync(() => api.plan(), []);
   const favorites = useAsync(() => api.favorites(), []);
+  // Ссылка на план постоянная, поэтому готовим её заранее: MAX Bridge открывает экран шеринга
+  // только сразу после нажатия, а ожидание ответа сервера в обработчике может это нарушить
+  const preparedShare = useAsync(() => api.sharePlan(), []);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [sharing, setSharing] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
@@ -57,7 +60,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
   const sharePlan = async () => {
     setSharing(true);
     try {
-      const share = await api.sharePlan();
+      const share = preparedShare.data ?? await api.sharePlan();
       const result = await shareToMax({ text: share.text, link: share.link });
       if (result === 'copied') showToast('Ссылка скопирована — отправьте её подростку в MAX');
       if (result === 'failed') showToast(`Не удалось открыть отправку. Ссылка: ${share.link}`, 'error');
