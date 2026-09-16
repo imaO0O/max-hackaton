@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
 import { STUDY_FORMS } from '@posle9/core';
 
+import { ProgramCompare } from '../components/ProgramCompare.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
 import {
   Card, Chip, DemoTag, ScreenHeader, SectionTitle, SourceNote, Tag, useToast,
@@ -104,7 +105,7 @@ function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, 
   );
 }
 
-export function CollegesScreen({ profile }) {
+export function CollegesScreen({ profile, initialCompare = false }) {
   const [filters, setFilters] = useState({
     city: profile.city ?? null,
     interests: profile.interests ?? [],
@@ -113,6 +114,8 @@ export function CollegesScreen({ profile }) {
   });
   const [openCollegeId, setOpenCollegeId] = useState(null);
   const closeCollege = useCallback(() => setOpenCollegeId(null), []);
+  const [comparing, setComparing] = useState(initialCompare);
+  const closeCompare = useCallback(() => setComparing(false), []);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [toast, showToast] = useToast();
 
@@ -152,6 +155,21 @@ export function CollegesScreen({ profile }) {
   const setFilter = (patch) => setFilters((previous) => ({ ...previous, ...patch }));
   const resetFilters = () => setFilters({ city: null, interests: [], form: null, budgetOnly: false });
 
+  if (comparing) {
+    return (
+      <>
+        <ProgramCompare
+          favorites={favorites}
+          myAverage={loadLocal(AVERAGE_STORAGE_KEY, null)}
+          pendingIds={pendingIds}
+          onToggleFavorite={toggleFavorite}
+          onBack={closeCompare}
+        />
+        {toast}
+      </>
+    );
+  }
+
   if (openCollegeId) {
     return (
       <>
@@ -180,7 +198,13 @@ export function CollegesScreen({ profile }) {
 
       {favorites.data?.length > 0 && (
         <>
-          <SectionTitle>{`Избранное (${favorites.data.length})`}</SectionTitle>
+          <SectionTitle
+            after={favorites.data.length >= 2
+              ? <button type="button" className="link-button" onClick={() => setComparing(true)}>Сравнить рядом</button>
+              : null}
+          >
+            {`Избранное (${favorites.data.length})`}
+          </SectionTitle>
           <CellList mode="island" filled>
             {favorites.data.map((program) => (
               <CellSimple

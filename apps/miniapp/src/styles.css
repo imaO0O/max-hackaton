@@ -615,6 +615,99 @@ button {
   color: #ff9f0a;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Сравнение программ */
+
+.compare-toggle {
+  padding: 0 4px;
+}
+
+.compare {
+  overflow-x: auto;
+  border-radius: var(--size-border-radius-semantic-border-radius-card, 16px);
+  background: var(--background-card);
+  -webkit-overflow-scrolling: touch;
+}
+
+.compare__table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.compare__label-col {
+  width: 108px;
+}
+
+.compare__program-col {
+  width: 148px;
+}
+
+.compare__table th,
+.compare__table td {
+  padding: 10px 8px;
+  vertical-align: top;
+  text-align: left;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.compare__table tbody th,
+.compare__table tbody td {
+  border-top: 1px solid var(--divider-primary);
+}
+
+.compare__label {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--background-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.compare__head {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.compare__head-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.compare__head-title {
+  min-width: 0;
+}
+
+.compare__remove {
+  flex: 0 0 auto;
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.compare__cell .source-note {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
 /* План */
 
 .next-step {

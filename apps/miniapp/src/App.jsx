@@ -26,6 +26,7 @@ export function App() {
   const [editingProfile, setEditingProfile] = useState(false);
   const [tab, setTab] = useState(() => (loadLocal('visited', false) ? 'plan' : 'paths'));
   const [regionsById, setRegionsById] = useState({});
+  const [compareOnOpen, setCompareOnOpen] = useState(false);
 
   useEffect(() => {
     if (!session.data) return;
@@ -39,8 +40,9 @@ export function App() {
       .catch(() => setRegionsById({}));
   }, []);
 
-  const changeTab = (next) => {
+  const changeTab = (next, { compare = false } = {}) => {
     saveLocal('visited', true);
+    setCompareOnOpen(compare);
     setTab(next);
     window.scrollTo({ top: 0 });
   };
@@ -78,7 +80,7 @@ export function App() {
       <main className="app__content">
         {tab === 'paths' && <PathsScreen profile={profile} region={region} onOpenTab={changeTab} />}
         {tab === 'grades' && <GradesScreen region={region} />}
-        {tab === 'colleges' && <CollegesScreen profile={profile} />}
+        {tab === 'colleges' && <CollegesScreen profile={profile} initialCompare={compareOnOpen} />}
         {tab === 'plan' && (
           <PlanScreen
             onEditProfile={() => setEditingProfile(true)}
