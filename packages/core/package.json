@@ -1,0 +1,14 @@
+{
+  "name": "@posle9/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Доменная логика: расчёт среднего балла аттестата и построение плана 9 класса",
+  "type": "module",
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@posle9/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "HTTP API мини-приложения, чат-бот MAX и планировщик напоминаний",
+  "type": "module",
+  "main": "./src/index.js",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/index.js",
+    "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=../../.env --watch src/index.js",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "data:check": "node --disable-warning=ExperimentalWarning src/db/check-data.js"
+  },
+  "dependencies": {
+    "@fastify/static": "10.1.3",
+    "@maxhub/max-bot-api": "0.3.1",
+    "@posle9/core": "0.1.0",
+    "fastify": "5.12.5"
+  }
+}

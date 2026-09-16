@@ -1,0 +1,56 @@
+import { buildApp } from './api/app.js';
+import { createBot } from './bot/bot.js';
+import { loadConfig } from './config.js';
+import { createContainer } from './container.js';
+import { createReminderScheduler } from './scheduler/reminder-scheduler.js';
+
+async function main() {
+  const config = loadConfig();
+  const { db, repos, services, runtime } = createContainer(config);
+  const app = buildApp({ config, services, runtime });
+  const logger = app.log;
+
+  let bot = null;
+  let scheduler = null;
+  if (config.botEnabled) {
+    bot = createBot({ config, repos, services, runtime, logger: logger.child({ module: 'bot' }) });
+    try {
+      await bot.start();
+    } catch (error) {
+      runtime.botStatus = 'failed';
+      logger.error({ err: error }, 'bot failed to start: check BOT_TOKEN and network access to MAX Bot API');
+      throw error;
+    }
+    scheduler = createReminderScheduler({
+      repos,
+      runtime,
+      sendMessage: (userId, text, extra) => bot.api.sendMessageToUser(userId, text, extra),
+      logger: logger.child({ module: 'reminders' }),
+      intervalMs: config.reminderIntervalMs,
+    });
+    scheduler.start();
+  } else {
+    logger.warn('BOT_ENABLED=false: bot and reminders are disabled');
+  }
+
+  await app.listen({ host: config.host, port: config.port });
+
+  let shuttingDown = false;
+  const shutdown = async (signal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    logger.info({ signal }, 'shutting down');
+    scheduler?.stop();
+    bot?.stop();
+    await app.close();
+    db.close();
+    process.exit(0);
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

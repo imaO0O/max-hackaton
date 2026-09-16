@@ -1,0 +1,19 @@
+[
+  { "code": "09.02.07", "title": "Информационные системы и программирование", "interestId": "it" },
+  { "code": "09.02.01", "title": "Компьютерные системы и комплексы", "interestId": "it" },
+  { "code": "10.02.05", "title": "Обеспечение информационной безопасности автоматизированных систем", "interestId": "it" },
+  { "code": "34.02.01", "title": "Сестринское дело", "interestId": "medicine" },
+  { "code": "31.02.01", "title": "Лечебное дело", "interestId": "medicine" },
+  { "code": "33.02.01", "title": "Фармация", "interestId": "medicine" },
+  { "code": "23.02.07", "title": "Техническое обслуживание и ремонт автотранспортных средств", "interestId": "engineering" },
+  { "code": "15.02.16", "title": "Технология машиностроения", "interestId": "engineering" },
+  { "code": "08.02.01", "title": "Строительство и эксплуатация зданий и сооружений", "interestId": "construction" },
+  { "code": "38.02.01", "title": "Экономика и бухгалтерский учёт (по отраслям)", "interestId": "economics" },
+  { "code": "40.02.04", "title": "Юриспруденция", "interestId": "economics" },
+  { "code": "44.02.02", "title": "Преподавание в начальных классах", "interestId": "education" },
+  { "code": "44.02.01", "title": "Дошкольное образование", "interestId": "education" },
+  { "code": "54.02.01", "title": "Дизайн (по отраслям)", "interestId": "creative" },
+  { "code": "43.02.15", "title": "Поварское и кондитерское дело", "interestId": "service" },
+  { "code": "43.02.16", "title": "Туризм и гостеприимство", "interestId": "service" },
+  { "code": "49.02.01", "title": "Физическая культура", "interestId": "sport" }
+]

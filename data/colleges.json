@@ -1,0 +1,219 @@
+[
+  {
+    "id": "demo-it-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-колледж информационных технологий",
+    "address": "Демоград, ул. Учебная, 1",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "09.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 4.62, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "10.02.05", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.55, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "09.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.31, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-medical-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-медицинский колледж",
+    "address": "Демоград, пр. Здоровья, 12",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "34.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 75, "passingScore": 4.41, "scoreYear": 2026, "entranceTest": "Обязательный предварительный медицинский осмотр", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "31.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 4.68, "scoreYear": 2026, "entranceTest": "Обязательный предварительный медицинский осмотр", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "33.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.47, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-auto-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-автомобильно-дорожный колледж",
+    "address": "Демоград, ул. Моторная, 7",
+    "website": null,
+    "hasDormitory": false,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "23.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.78, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "23.02.07", "form": "extramural", "duration": "3 г. 10 мес.", "budgetPlaces": 0, "passingScore": null, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-polytech",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-политехнический колледж",
+    "address": "Демоград, ул. Заводская, 30",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "15.02.16", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.65, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "08.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.94, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "09.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.12, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-economics-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-колледж экономики и права",
+    "address": "Демоград, ул. Финансовая, 4",
+    "website": null,
+    "hasDormitory": false,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.21, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "40.02.04", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.58, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "40.02.04", "form": "extramural", "duration": "3 г. 6 мес.", "budgetPlaces": 0, "passingScore": null, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-pedagogical-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-педагогический колледж",
+    "address": "Демоград, ул. Школьная, 15",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "44.02.02", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 4.18, "scoreYear": 2026, "entranceTest": "Психологическое испытание", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "44.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.96, "scoreYear": 2026, "entranceTest": "Психологическое испытание", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "49.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.87, "scoreYear": 2026, "entranceTest": "Физическое испытание", "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-arts-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-колледж искусств и дизайна",
+    "address": "Демоград, ул. Художников, 9",
+    "website": null,
+    "hasDormitory": false,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "54.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.36, "scoreYear": 2026, "entranceTest": "Творческое испытание (рисунок)", "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-service-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-колледж сервиса и туризма",
+    "address": "Демоград, наб. Речная, 21",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "43.02.15", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.52, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "43.02.16", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.91, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-prirechny-industrial",
+    "regionId": "demo-standard",
+    "city": "Приречный",
+    "name": "Демо-индустриальный техникум Приречного",
+    "address": "Приречный, ул. Мастеров, 3",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "23.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.44, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "08.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.58, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "43.02.15", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.35, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-prirechny-multi",
+    "regionId": "demo-standard",
+    "city": "Приречный",
+    "name": "Демо-многопрофильный колледж Приречного",
+    "address": "Приречный, пр. Молодёжный, 18",
+    "website": null,
+    "hasDormitory": false,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "09.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.05, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "34.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.02, "scoreYear": 2026, "entranceTest": "Обязательный предварительный медицинский осмотр", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 3.83, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "44.02.02", "form": "part_time", "duration": "4 г. 10 мес.", "budgetPlaces": 15, "passingScore": 3.71, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-sport-college",
+    "regionId": "demo-standard",
+    "city": "Приречный",
+    "name": "Демо-училище олимпийского резерва",
+    "address": "Приречный, ул. Стадионная, 2",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "49.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 30, "passingScore": 3.62, "scoreYear": 2026, "entranceTest": "Физическое испытание", "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-construction-college",
+    "regionId": "demo-standard",
+    "city": "Демоград",
+    "name": "Демо-строительный колледж",
+    "address": "Демоград, ул. Кирпичная, 11",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "08.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 75, "passingScore": 3.73, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "54.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.09, "scoreYear": 2026, "entranceTest": "Творческое испытание (рисунок)", "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-b-it-college",
+    "regionId": "demo-two-oge",
+    "city": "Демополь",
+    "name": "Демо-колледж цифровых технологий Демополя",
+    "address": "Демополь, ул. Цифровая, 5",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "09.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 4.48, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "10.02.05", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.39, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-b-medical-college",
+    "regionId": "demo-two-oge",
+    "city": "Демополь",
+    "name": "Демо-медицинский колледж Демополя",
+    "address": "Демополь, ул. Больничная, 8",
+    "website": null,
+    "hasDormitory": true,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "34.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 4.33, "scoreYear": 2026, "entranceTest": "Обязательный предварительный медицинский осмотр", "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "33.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.24, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  },
+  {
+    "id": "demo-b-technical-college",
+    "regionId": "demo-two-oge",
+    "city": "Демополь",
+    "name": "Демо-технический колледж Демополя",
+    "address": "Демополь, ул. Инженерная, 14",
+    "website": null,
+    "hasDormitory": false,
+    "isDemo": true,
+    "programs": [
+      { "specialtyCode": "15.02.16", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.58, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "23.02.07", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 50, "passingScore": 3.61, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null },
+      { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": 4.02, "scoreYear": 2026, "entranceTest": null, "sourceUrl": null, "checkedAt": null }
+    ]
+  }
+]

@@ -1,0 +1,11 @@
+[
+  { "id": "it", "title": "IT и программирование", "emoji": "💻" },
+  { "id": "medicine", "title": "Медицина", "emoji": "🩺" },
+  { "id": "engineering", "title": "Техника и транспорт", "emoji": "🔧" },
+  { "id": "construction", "title": "Строительство", "emoji": "🏗️" },
+  { "id": "economics", "title": "Экономика и право", "emoji": "📊" },
+  { "id": "education", "title": "Педагогика", "emoji": "📚" },
+  { "id": "creative", "title": "Творчество и дизайн", "emoji": "🎨" },
+  { "id": "service", "title": "Сервис и гостеприимство", "emoji": "🍳" },
+  { "id": "sport", "title": "Спорт", "emoji": "⚽" }
+]

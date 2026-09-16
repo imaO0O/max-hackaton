@@ -1,0 +1,99 @@
+import fs from 'node:fs';
+import path from 'node:path';
+
+import Fastify from 'fastify';
+import fastifyStatic from '@fastify/static';
+
+import { AppError } from '../services/errors.js';
+import { validateInitData } from './init-data.js';
+import { registerCatalogRoutes } from './routes/catalog.js';
+import { registerPlanRoutes } from './routes/plan.js';
+
+/**
+ * HTTP-сервер: REST API мини-приложения под /api и статика собранного мини-приложения.
+ * Маршруты с config.auth = true требуют заголовок X-Max-Init-Data с подписанными данными запуска.
+ */
+export function buildApp({ config, services, runtime, logger = true }) {
+  const app = Fastify({
+    logger: logger === true ? { level: config.logLevel } : logger,
+    trustProxy: true,
+    bodyLimit: 64 * 1024,
+  });
+
+  app.decorateRequest('maxUser', null);
+  app.decorateRequest('startParam', null);
+
+  app.addHook('onRequest', async (request) => {
+    if (!request.routeOptions.config?.auth) return;
+
+    if (config.authDevBypass && request.headers['x-dev-user-id']) {
+      const id = Number(request.headers['x-dev-user-id']);
+      if (!Number.isSafeInteger(id) || id <= 0) {
+        throw new AppError(401, 'unauthorized', 'Некорректный X-Dev-User-Id');
+      }
+      request.maxUser = { id };
+      request.startParam = request.headers['x-dev-start-param'] ?? null;
+      return;
+    }
+
+    const result = validateInitData(request.headers['x-max-init-data'], config.botToken, {
+      maxAgeSeconds: config.initDataMaxAgeSeconds,
+    });
+    if (!result.ok) {
+      request.log.warn({ reason: result.reason }, 'init data rejected');
+      const message = result.reason === 'expired'
+        ? 'Сессия устарела. Закройте и снова откройте мини-приложение'
+        : 'Откройте мини-приложение из чата с ботом в MAX';
+      throw new AppError(401, 'unauthorized', message);
+    }
+    request.maxUser = { id: result.user.id };
+    request.startParam = result.startParam;
+  });
+
+  app.setErrorHandler((error, request, reply) => {
+    if (error instanceof AppError) {
+      return reply.status(error.statusCode).send({ error: { code: error.code, message: error.message } });
+    }
+    if (error.validation) {
+      return reply.status(400).send({
+        error: { code: 'validation_error', message: 'Некорректные параметры запроса', details: error.message },
+      });
+    }
+    if (error.statusCode && error.statusCode < 500) {
+      return reply.status(error.statusCode).send({ error: { code: 'bad_request', message: error.message } });
+    }
+    request.log.error(error);
+    return reply.status(500).send({ error: { code: 'internal_error', message: 'Что-то пошло не так. Попробуйте ещё раз' } });
+  });
+
+  app.get('/api/health', async () => ({
+    status: 'ok',
+    bot: runtime.botStatus,
+    academicYear: services.plan.currentAcademicYear(),
+  }));
+
+  app.get('/api/meta', async () => ({
+    academicYear: services.plan.currentAcademicYear(),
+    botUsername: runtime.botUsername,
+  }));
+
+  app.register(async (api) => {
+    registerCatalogRoutes(api, services);
+    registerPlanRoutes(api, services);
+  }, { prefix: '/api' });
+
+  const indexHtml = path.join(config.miniappDistDir, 'index.html');
+  const hasMiniapp = fs.existsSync(indexHtml);
+  if (hasMiniapp) {
+    app.register(fastifyStatic, { root: config.miniappDistDir, wildcard: false, index: ['index.html'] });
+  }
+
+  app.setNotFoundHandler((request, reply) => {
+    if (request.url.startsWith('/api/') || !hasMiniapp || request.method !== 'GET') {
+      return reply.status(404).send({ error: { code: 'not_found', message: 'Не найдено' } });
+    }
+    return reply.type('text/html').sendFile('index.html');
+  });
+
+  return app;
+}

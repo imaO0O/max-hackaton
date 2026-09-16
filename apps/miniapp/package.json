@@ -1,0 +1,22 @@
+{
+  "name": "@posle9/miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Мини-приложение MAX: два пути, средний балл, колледжи, план, что дальше",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@maxhub/max-ui": "0.5.0",
+    "@posle9/core": "0.1.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.1",
+    "vite": "8.3.0"
+  }
+}

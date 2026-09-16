@@ -1,0 +1,23 @@
+{
+  "name": "posle-9",
+  "version": "0.1.0",
+  "private": true,
+  "description": "«После 9-го»: план выбора пути для семьи девятиклассника — чат-бот и мини-приложение в MAX",
+  "type": "module",
+  "workspaces": [
+    "packages/core",
+    "apps/server",
+    "apps/miniapp"
+  ],
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev:server": "npm run dev --workspace apps/server",
+    "dev:miniapp": "npm run dev --workspace apps/miniapp",
+    "build": "npm run build --workspace apps/miniapp",
+    "start": "npm run start --workspace apps/server",
+    "test": "npm test --workspace packages/core && npm test --workspace apps/server",
+    "data:check": "npm run data:check --workspace apps/server"
+  }
+}
