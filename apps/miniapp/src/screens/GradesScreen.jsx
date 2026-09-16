@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Input, Switch, Typography } from '@maxhub/max-ui';
 import {
-  DEFAULT_SUBJECTS, ELECTIVE_EXAM_SUBJECT_IDS, MAX_ELECTIVE_EXAMS, calculateAttestat,
+  DEFAULT_SUBJECTS, ELECTIVE_EXAM_SUBJECT_IDS, MATH_COURSES, MAX_ELECTIVE_EXAMS, calculateAttestat,
 } from '@posle9/core';
 
 import { Card, ScreenHeader, SectionTitle, Tag, useToast } from '../components/ui.jsx';
@@ -11,6 +11,8 @@ import { loadLocal, removeLocal, saveLocal } from '../lib/storage.js';
 
 const STORAGE_KEY = 'grades:v1';
 export const AVERAGE_STORAGE_KEY = 'grades:average';
+
+const emptyCourses = () => Object.fromEntries(MATH_COURSES.map((course) => [course.id, null]));
 
 function initialSubjects() {
   return DEFAULT_SUBJECTS.map((subject) => ({
@@ -22,12 +24,14 @@ function initialSubjects() {
     electiveExam: false,
     finishedEarlier: Boolean(subject.finishedEarlier),
     custom: false,
+    // По ФООП математика в 7–9 классах — три курса. Отметки по курсам можно выключить в настройках предмета
+    courses: subject.id === 'math' ? emptyCourses() : null,
   }));
 }
 
-function GradePicker({ value, onChange, label }) {
+function GradePicker({ value, onChange, label, ariaLabel = label }) {
   return (
-    <div className="grade-picker" role="group" aria-label={label}>
+    <div className="grade-picker" role="group" aria-label={ariaLabel}>
       <span className="grade-picker__label">{label}</span>
       {[2, 3, 4, 5].map((grade) => (
         <button
@@ -55,16 +59,17 @@ export function GradesScreen({ region }) {
   const twoOge = Boolean(region?.twoOgeExperiment);
 
   const electiveCount = subjects.filter((subject) => subject.electiveExam).length;
-  const takesExam = (subject) => subject.required || (!twoOge && subject.electiveExam);
+  const takesExam = (subject) => subject.required || subject.electiveExam;
 
   const result = useMemo(() => calculateAttestat(subjects.map((subject) => ({
     id: subject.id,
     title: subject.title,
     annual: subject.annual,
+    courses: subject.courses ? MATH_COURSES.map((course) => subject.courses[course.id]) : undefined,
     exam: subject.exam,
     takesExam: takesExam(subject),
     finishedEarlier: subject.finishedEarlier,
-  }))), [subjects, twoOge]);
+  }))), [subjects]);
 
   useEffect(() => {
     saveLocal(STORAGE_KEY, subjects);
@@ -73,6 +78,12 @@ export function GradesScreen({ region }) {
 
   const updateSubject = (id, patch) => {
     setSubjects((previous) => previous.map((subject) => (subject.id === id ? { ...subject, ...patch } : subject)));
+  };
+
+  const updateCourse = (id, courseId, grade) => {
+    setSubjects((previous) => previous.map((subject) => (
+      subject.id === id ? { ...subject, courses: { ...subject.courses, [courseId]: grade } } : subject
+    )));
   };
 
   const toggleElective = (subject) => {
@@ -150,9 +161,10 @@ export function GradesScreen({ region }) {
       </Card>
 
       <Typography.Body variant="small" className="muted hint">
+        Итоговая по предметам ОГЭ — среднее годовой и экзаменационной с округлением.
         {twoOge
-          ? 'В регионе эксперимент: ОГЭ только по русскому языку и математике.'
-          : `Итоговая по предметам ОГЭ — среднее годовой и экзаменационной с округлением. Отметьте до ${MAX_ELECTIVE_EXAMS} предметов по выбору.`}
+          ? ` В регионе эксперимент: для колледжа можно сдать только русский язык и математику, для 10 класса нужны ещё ${MAX_ELECTIVE_EXAMS} предмета по выбору — отметьте их, если подросток сдаёт.`
+          : ` Отметьте до ${MAX_ELECTIVE_EXAMS} предметов по выбору.`}
         {' '}Сверьте список предметов с аттестатом у классного руководителя.
       </Typography.Body>
 
@@ -163,7 +175,7 @@ export function GradesScreen({ region }) {
       <div className="subjects">
         {subjects.map((subject) => {
           const exam = takesExam(subject);
-          const canBeElective = !twoOge && ELECTIVE_EXAM_SUBJECT_IDS.includes(subject.id);
+          const canBeElective = ELECTIVE_EXAM_SUBJECT_IDS.includes(subject.id);
           const expanded = expandedId === subject.id;
           return (
             <Card key={subject.id} className="subject">
@@ -184,11 +196,21 @@ export function GradesScreen({ region }) {
                 </button>
               </div>
 
-              <GradePicker
-                label={subject.finishedEarlier ? 'Итоговая' : 'Годовая'}
-                value={subject.annual}
-                onChange={(annual) => updateSubject(subject.id, { annual })}
-              />
+              {subject.courses ? MATH_COURSES.map((course) => (
+                <GradePicker
+                  key={course.id}
+                  label={course.shortTitle}
+                  ariaLabel={`Годовая: ${course.title}`}
+                  value={subject.courses[course.id]}
+                  onChange={(grade) => updateCourse(subject.id, course.id, grade)}
+                />
+              )) : (
+                <GradePicker
+                  label={subject.finishedEarlier ? 'Итоговая' : 'Годовая'}
+                  value={subject.annual}
+                  onChange={(annual) => updateSubject(subject.id, { annual })}
+                />
+              )}
               {exam && (
                 <GradePicker
                   label="За ОГЭ"
@@ -206,6 +228,15 @@ export function GradesScreen({ region }) {
                       onChange={() => updateSubject(subject.id, { finishedEarlier: !subject.finishedEarlier })}
                     />
                   </label>
+                  {subject.id === 'math' && (
+                    <label className="switch-row">
+                      <span>В журнале три курса: алгебра, геометрия, вероятность и статистика</span>
+                      <Switch
+                        checked={Boolean(subject.courses)}
+                        onChange={() => updateSubject(subject.id, { courses: subject.courses ? null : emptyCourses() })}
+                      />
+                    </label>
+                  )}
                   {canBeElective && (
                     <label className="switch-row">
                       <span>Сдаёт ОГЭ по этому предмету</span>

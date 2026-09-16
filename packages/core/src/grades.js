@@ -1,10 +1,15 @@
 /**
  * Калькулятор среднего балла аттестата об основном общем образовании.
  *
- * Правило (сверить с действующим порядком выдачи аттестатов перед пилотом):
- * по предметам, которые сдаются на ОГЭ, итоговая отметка — среднее арифметическое
- * годовой и экзаменационной отметок, округлённое по правилам математического округления;
- * по остальным предметам итоговая отметка равна годовой.
+ * Правило — Порядок заполнения, учёта и выдачи аттестатов (приказ Минпросвещения России
+ * от 05.10.2020 № 546, ред. от 29.05.2026), сверено 16.09.2026:
+ * - по русскому языку, математике и двум предметам по выбору, которые сдавались на ОГЭ,
+ *   итоговая отметка — среднее арифметическое годовой и экзаменационной отметок,
+ *   целым числом по правилам математического округления;
+ * - если в учебном плане математика разделена на курсы «Алгебра», «Геометрия»
+ *   и «Вероятность и статистика», итоговая отметка по математике — среднее арифметическое
+ *   годовых отметок по этим курсам и экзаменационной отметки;
+ * - по остальным предметам итоговая отметка выставляется на основе годовой.
  *
  * Расчёт выполняется на устройстве пользователя, оценки на сервер не отправляются.
  */
@@ -32,7 +37,14 @@ export const DEFAULT_SUBJECTS = Object.freeze([
   { id: 'art', title: 'Изобразительное искусство', finishedEarlier: true },
 ].map((subject) => Object.freeze(subject)));
 
-/** Предметы, которые можно выбрать на ОГЭ в регионах без эксперимента с двумя экзаменами. */
+/** Учебные курсы, из которых складывается итоговая отметка по математике. */
+export const MATH_COURSES = Object.freeze([
+  { id: 'algebra', title: 'Алгебра', shortTitle: 'Алгебра' },
+  { id: 'geometry', title: 'Геометрия', shortTitle: 'Геометрия' },
+  { id: 'probability', title: 'Вероятность и статистика', shortTitle: 'Вероятн.' },
+].map((course) => Object.freeze(course)));
+
+/** Предметы, которые можно выбрать для ОГЭ в дополнение к русскому языку и математике. */
 export const ELECTIVE_EXAM_SUBJECT_IDS = Object.freeze([
   'literature', 'foreign', 'informatics', 'history', 'social',
   'geography', 'physics', 'chemistry', 'biology',
@@ -49,28 +61,34 @@ export function roundFinalGrade(value) {
   return Math.floor(value + 0.5);
 }
 
+const mean = (values) => values.reduce((total, value) => total + value, 0) / values.length;
+
 /**
  * Итоговая отметка по одному предмету.
+ * courses — годовые отметки по курсам предмета (алгебра, геометрия, вероятность и статистика).
+ * Если courses задан, annual не используется, а отметка считается только когда заполнены все курсы.
  * @returns {{ grade: number|null, awaitingExam: boolean }}
  */
-export function finalGrade({ annual, exam, takesExam }) {
-  if (!isValidGrade(annual)) {
+export function finalGrade({ annual, courses, exam, takesExam }) {
+  const annualGrades = Array.isArray(courses) && courses.length > 0 ? courses : [annual];
+  if (!annualGrades.every(isValidGrade)) {
     return { grade: null, awaitingExam: false };
   }
+  const annualGrade = annualGrades.length === 1 ? annualGrades[0] : roundFinalGrade(mean(annualGrades));
   if (!takesExam) {
-    return { grade: annual, awaitingExam: false };
+    return { grade: annualGrade, awaitingExam: false };
   }
   if (!isValidGrade(exam)) {
-    return { grade: annual, awaitingExam: true };
+    return { grade: annualGrade, awaitingExam: true };
   }
-  return { grade: roundFinalGrade((annual + exam) / 2), awaitingExam: false };
+  return { grade: roundFinalGrade(mean([...annualGrades, exam])), awaitingExam: false };
 }
 
 /**
  * Считает средний балл и подсказки, где оценку ещё можно улучшить.
  *
- * @param {Array<{ id: string, title: string, annual?: number|null, exam?: number|null,
- *   takesExam?: boolean, finishedEarlier?: boolean }>} subjects
+ * @param {Array<{ id: string, title: string, annual?: number|null, courses?: Array<number|null>,
+ *   exam?: number|null, takesExam?: boolean, finishedEarlier?: boolean }>} subjects
  */
 export function calculateAttestat(subjects) {
   const rows = subjects.map((subject) => {

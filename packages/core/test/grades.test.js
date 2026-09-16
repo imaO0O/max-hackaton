@@ -15,6 +15,17 @@ test('без экзаменационной отметки берётся год
   assert.deepEqual(finalGrade({ annual: 4, exam: null, takesExam: true }), { grade: 4, awaitingExam: true });
 });
 
+test('математика из трёх курсов: среднее годовых по курсам и экзаменационной отметки', () => {
+  // (4 + 3 + 5 + 5) / 4 = 4,25 → 4. По одной годовой «4» и экзамену «5» вышло бы 5
+  assert.deepEqual(finalGrade({ courses: [4, 3, 5], exam: 5, takesExam: true }), { grade: 4, awaitingExam: false });
+  // (4 + 4 + 5 + 5) / 4 = 4,5 → 5
+  assert.deepEqual(finalGrade({ courses: [4, 4, 5], exam: 5, takesExam: true }), { grade: 5, awaitingExam: false });
+  // До экзамена — округлённое среднее по курсам: (4 + 4 + 5) / 3 ≈ 4,33 → 4
+  assert.deepEqual(finalGrade({ courses: [4, 4, 5], exam: null, takesExam: true }), { grade: 4, awaitingExam: true });
+  // Не все курсы заполнены — отметка не считается, annual игнорируется
+  assert.deepEqual(finalGrade({ annual: 5, courses: [4, null, 5], exam: 5, takesExam: true }), { grade: null, awaitingExam: false });
+});
+
 test('некорректные и пустые оценки не учитываются', () => {
   assert.deepEqual(finalGrade({ annual: 6 }), { grade: null, awaitingExam: false });
   assert.deepEqual(finalGrade({ annual: null }), { grade: null, awaitingExam: false });

@@ -82,7 +82,7 @@ export function OnboardingScreen({ initialProfile, onSaved, onCancel }) {
             key={region.id}
             as="label"
             title={region.name}
-            subtitle={region.twoOgeExperiment ? 'Эксперимент: на ОГЭ только русский язык и математика' : undefined}
+            subtitle={region.twoOgeExperiment ? 'Эксперимент: для колледжа можно сдать два ОГЭ вместо четырёх' : undefined}
             after={region.isDemo ? <DemoTag /> : undefined}
             before={(
               <Radio
