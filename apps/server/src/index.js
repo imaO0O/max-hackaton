@@ -9,6 +9,7 @@ async function main() {
   const { db, repos, services, runtime } = createContainer(config);
   const app = buildApp({ config, services, runtime });
   const logger = app.log;
+  for (const warning of config.warnings) logger.warn(warning);
 
   let bot = null;
   let scheduler = null;

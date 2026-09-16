@@ -1,0 +1,518 @@
+openapi: 3.1.0
+info:
+  title: «После 9-го» — API мини-приложения
+  version: 0.1.0
+  description: |
+    Внутренний API, который вызывает мини-приложение MAX. Справочные методы открыты,
+    личные методы требуют заголовок `X-Max-Init-Data` — строку `window.WebApp.initData`,
+    подписанную платформой MAX (проверяется HMAC-SHA256 с токеном бота).
+
+    Ошибки возвращаются в едином формате `{ "error": { "code", "message" } }`.
+servers:
+  - url: http://localhost:8080
+    description: Локальный запуск
+tags:
+  - name: service
+  - name: reference
+    description: Справочники и колледжи
+  - name: profile
+    description: Ответы семьи
+  - name: plan
+    description: План, отметки, отправка подростку
+  - name: favorites
+    description: Избранные программы колледжей
+
+components:
+  securitySchemes:
+    maxInitData:
+      type: apiKey
+      in: header
+      name: X-Max-Init-Data
+      description: Строка `window.WebApp.initData` из MAX Bridge.
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              examples: [unauthorized, validation_error, not_found, profile_incomplete, bot_unavailable]
+            message:
+              type: string
+    Region:
+      type: object
+      required: [id, name, utcOffsetHours, twoOgeExperiment, isDemo]
+      properties:
+        id: { type: string, examples: [demo-standard] }
+        name: { type: string }
+        utcOffsetHours: { type: integer }
+        twoOgeExperiment: { type: boolean, description: Регион участвует в эксперименте с двумя ОГЭ }
+        isDemo: { type: boolean }
+        profileClassRules: { type: [string, 'null'] }
+        profileClassRulesUrl: { type: [string, 'null'] }
+        checkedAt: { type: [string, 'null'], format: date }
+    Interest:
+      type: object
+      required: [id, title]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        emoji: { type: [string, 'null'] }
+    Program:
+      type: object
+      required: [id, specialtyCode, specialtyTitle, form]
+      properties:
+        id: { type: string, examples: [demo-it-college--090207--full_time] }
+        specialtyCode: { type: string, examples: ['09.02.07'] }
+        specialtyTitle: { type: string }
+        interestId: { type: string }
+        form: { type: string, enum: [full_time, part_time, extramural] }
+        duration: { type: [string, 'null'] }
+        budgetPlaces: { type: [integer, 'null'] }
+        passingScore: { type: [number, 'null'], description: Проходной средний балл прошлого года }
+        scoreYear: { type: [integer, 'null'] }
+        entranceTest: { type: [string, 'null'] }
+        sourceUrl: { type: [string, 'null'] }
+        checkedAt: { type: [string, 'null'], format: date }
+    College:
+      type: object
+      required: [id, regionId, city, name, isDemo, programs]
+      properties:
+        id: { type: string }
+        regionId: { type: string }
+        city: { type: string }
+        name: { type: string }
+        address: { type: [string, 'null'] }
+        website: { type: [string, 'null'] }
+        hasDormitory: { type: boolean }
+        isDemo: { type: boolean }
+        programs:
+          type: array
+          items: { $ref: '#/components/schemas/Program' }
+    FavoriteProgram:
+      allOf:
+        - $ref: '#/components/schemas/Program'
+        - type: object
+          required: [college]
+          properties:
+            college:
+              type: object
+              properties:
+                id: { type: string }
+                name: { type: string }
+                city: { type: string }
+                isDemo: { type: boolean }
+    Profile:
+      type: object
+      required: [interests, remindersEnabled, isComplete]
+      properties:
+        regionId: { type: [string, 'null'] }
+        city: { type: [string, 'null'] }
+        grade: { type: [integer, 'null'], enum: [8, 9, null] }
+        path: { type: [string, 'null'], enum: [school10, college, undecided, null] }
+        interests: { type: array, items: { type: string } }
+        remindersEnabled: { type: boolean }
+        isComplete: { type: boolean }
+    ProfileInput:
+      type: object
+      required: [regionId, grade, path]
+      additionalProperties: false
+      properties:
+        regionId: { type: string }
+        city: { type: [string, 'null'] }
+        grade: { type: integer, enum: [8, 9] }
+        path: { type: string, enum: [school10, college, undecided] }
+        interests: { type: array, maxItems: 20, items: { type: string } }
+        remindersEnabled: { type: boolean }
+    PlanItem:
+      type: object
+      required: [id, scope, kind, path, dateStart, title, description, status, done]
+      properties:
+        id: { type: string }
+        academicYear: { type: string, examples: [2026/2027] }
+        scope: { type: string, enum: [federal, regional, recommendation] }
+        regionId: { type: [string, 'null'] }
+        kind: { type: string, enum: [deadline, event, period, checklist] }
+        path: { type: string, enum: [any, school10, college] }
+        experiment: { type: string, enum: [any, two_oge, standard] }
+        dateStart: { type: string, format: date }
+        dateEnd: { type: [string, 'null'], format: date }
+        isApproximate: { type: boolean }
+        title: { type: string }
+        description: { type: string }
+        reminders:
+          type: array
+          items:
+            type: object
+            properties:
+              anchor: { type: string, enum: [start, end] }
+              daysBefore: { type: integer }
+        sourceTitle: { type: [string, 'null'] }
+        sourceUrl: { type: [string, 'null'] }
+        checkedAt: { type: [string, 'null'], format: date }
+        status: { type: string, enum: [past, current, upcoming] }
+        daysLeft: { type: [integer, 'null'] }
+        done: { type: boolean }
+    Plan:
+      type: object
+      required: [academicYear, today, region, profile, items, nextItemId]
+      properties:
+        academicYear: { type: string }
+        today: { type: string, format: date }
+        region: { $ref: '#/components/schemas/Region' }
+        profile: { $ref: '#/components/schemas/Profile' }
+        items: { type: array, items: { $ref: '#/components/schemas/PlanItem' } }
+        nextItemId: { type: [string, 'null'] }
+        followersCount: { type: integer }
+        pendingReminders: { type: integer }
+  responses:
+    Unauthorized:
+      description: Нет или неверна подпись initData
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    BadRequest:
+      description: Некорректные параметры
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: Не найдено
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    ProfileIncomplete:
+      description: Профиль семьи не заполнен (code = profile_incomplete)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+paths:
+  /api/health:
+    get:
+      tags: [service]
+      summary: Проверка работоспособности
+      responses:
+        '200':
+          description: Сервис работает
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: ok }
+                  bot: { type: string, enum: [starting, running, stopped, failed, disabled] }
+                  academicYear: { type: string }
+
+  /api/regions:
+    get:
+      tags: [reference]
+      summary: Регионы
+      responses:
+        '200':
+          description: Список регионов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regions: { type: array, items: { $ref: '#/components/schemas/Region' } }
+
+  /api/regions/{regionId}/cities:
+    get:
+      tags: [reference]
+      summary: Города региона, в которых есть колледжи
+      parameters:
+        - { name: regionId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Список городов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cities: { type: array, items: { type: string } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/interests:
+    get:
+      tags: [reference]
+      summary: Сферы интересов
+      responses:
+        '200':
+          description: Список сфер
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  interests: { type: array, items: { $ref: '#/components/schemas/Interest' } }
+
+  /api/content:
+    get:
+      tags: [reference]
+      summary: Тексты экранов «Два пути» и «Что дальше» с источниками
+      responses:
+        '200':
+          description: Содержимое экранов
+
+  /api/colleges:
+    get:
+      tags: [reference]
+      summary: Поиск колледжей региона
+      parameters:
+        - { name: regionId, in: query, required: true, schema: { type: string } }
+        - { name: city, in: query, schema: { type: string } }
+        - { name: interests, in: query, description: Сферы через запятую, schema: { type: string, examples: ['it,medicine'] } }
+        - { name: specialty, in: query, schema: { type: string, examples: ['09.02.07'] } }
+        - { name: form, in: query, schema: { type: string, enum: [full_time, part_time, extramural] } }
+        - { name: budgetOnly, in: query, schema: { type: boolean } }
+      responses:
+        '200':
+          description: Колледжи с подходящими программами
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  colleges: { type: array, items: { $ref: '#/components/schemas/College' } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/colleges/{collegeId}:
+    get:
+      tags: [reference]
+      summary: Колледж со всеми программами
+      parameters:
+        - { name: collegeId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Колледж
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  college: { $ref: '#/components/schemas/College' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/session:
+    get:
+      tags: [profile]
+      summary: Текущий пользователь, параметр запуска и профиль
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Сессия
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId: { type: integer }
+                  startParam: { type: [string, 'null'], examples: [plan_Ej-h4c_6uvdC9Spst6DkIw] }
+                  profile: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/profile:
+    get:
+      tags: [profile]
+      summary: Профиль семьи
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/Profile' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    put:
+      tags: [profile]
+      summary: Сохранить ответы семьи и пересобрать напоминания
+      security: [{ maxInitData: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileInput' }
+      responses:
+        '200':
+          description: Сохранённый профиль
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile: { $ref: '#/components/schemas/Profile' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/profile/reminders:
+    put:
+      tags: [profile]
+      summary: Включить или выключить напоминания
+      security: [{ maxInitData: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled: { type: boolean }
+      responses:
+        '200':
+          description: Профиль
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/plan:
+    get:
+      tags: [plan]
+      summary: План на учебный год под профиль семьи
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: План
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Plan' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/ProfileIncomplete' }
+
+  /api/plan/items/{itemId}:
+    put:
+      tags: [plan]
+      summary: Отметить пункт плана выполненным
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [done]
+              properties:
+                done: { type: boolean }
+      responses:
+        '200':
+          description: Отметка сохранена
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ProfileIncomplete' }
+
+  /api/plan/share:
+    post:
+      tags: [plan]
+      summary: Ссылка на план для подростка или второго родителя
+      description: Возвращает постоянную ссылку вида `https://max.ru/<бот>?startapp=plan_<токен>`.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Ссылка и готовый текст сообщения
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  link: { type: string, format: uri }
+                  text: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/ProfileIncomplete' }
+        '503':
+          description: Бот не подключён, имя бота для ссылки неизвестно
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/shared-plans/{token}:
+    get:
+      tags: [plan]
+      summary: План семьи по ссылке (только чтение)
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: План, признак владельца и подписки, избранное семьи
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/shared-plans/{token}/follow:
+    put:
+      tags: [plan]
+      summary: Подписаться на напоминания по чужому плану
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: token, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [follow]
+              properties:
+                follow: { type: boolean }
+      responses:
+        '200':
+          description: Новое состояние подписки
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isFollowing: { type: boolean }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/favorites:
+    get:
+      tags: [favorites]
+      summary: Избранные программы
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Список
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  favorites: { type: array, items: { $ref: '#/components/schemas/FavoriteProgram' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/favorites/{programId}:
+    put:
+      tags: [favorites]
+      summary: Добавить программу в избранное
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: programId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Добавлено (повторный вызов не создаёт дубликат)
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [favorites]
+      summary: Убрать программу из избранного
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: programId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: Убрано
+        '401': { $ref: '#/components/responses/Unauthorized' }

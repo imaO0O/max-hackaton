@@ -1,11 +1,11 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
-import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
+import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, openAppKeyboard, parseSurveyPayload, pathStep, regionStep, startKeyboard,
 } from './survey.js';
-import { summaryText, texts } from './texts.js';
+import { reminderText, summaryText, texts } from './texts.js';
 
 /**
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
@@ -51,10 +51,33 @@ export function createBot({ config, repos, services, runtime, logger }) {
     await ctx.reply(profile.remindersEnabled ? texts.remindersOn : texts.remindersOff);
   }
 
+  /** Пример напоминания по ближайшему пункту плана — чтобы проверить формат, не дожидаясь даты. */
+  async function sendTestReminder(ctx) {
+    const userId = userIdOf(ctx);
+    if (!isProfileComplete(users.ensure(userId))) {
+      await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
+      return;
+    }
+    const plan = services.plan.getPlan(userId);
+    const item = plan.items.find((row) => row.id === plan.nextItemId) ?? plan.items.at(-1);
+    if (!item) {
+      await ctx.reply('В плане пока нет дат на этот учебный год.');
+      return;
+    }
+    const inProgress = item.status === 'current' && item.dateEnd;
+    const example = reminderText({
+      keyDate: item,
+      anchor: inProgress ? 'end' : 'start',
+      daysBefore: Math.max(0, inProgress ? daysBetween(plan.today, item.dateEnd) : (item.daysLeft ?? 0)),
+    });
+    await ctx.reply(`Так будет выглядеть напоминание:\n\n${example}`, { attachments: [openAppKeyboard(runtime.botUsername)] });
+  }
+
   bot.on('bot_started', sendStart);
   bot.command('start', sendStart);
   bot.command('plan', sendOpenApp);
   bot.command('reminders', toggleReminders);
+  bot.command('test_reminder', sendTestReminder);
   bot.command('help', (ctx) => ctx.reply(texts.help));
 
   bot.action(/^survey:/, async (ctx) => {

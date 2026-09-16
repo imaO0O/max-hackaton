@@ -46,8 +46,13 @@ export function loadConfig(env = process.env) {
   if (config.botEnabled && !config.botToken) {
     throw new Error('BOT_TOKEN не задан. Укажите токен или выключите бота: BOT_ENABLED=false');
   }
+
+  config.warnings = [];
   if (!config.botToken && !config.authDevBypass) {
-    throw new Error('Без BOT_TOKEN невозможно проверить подпись мини-приложения. Для локальной разработки включите AUTH_DEV_BYPASS=true');
+    config.warnings.push('BOT_TOKEN не задан: подпись мини-приложения проверить нельзя, личные разделы API будут отвечать 401');
+  }
+  if (env.AUTH_DEV_BYPASS === 'true' && isProduction) {
+    config.warnings.push('AUTH_DEV_BYPASS игнорируется при NODE_ENV=production');
   }
 
   return config;

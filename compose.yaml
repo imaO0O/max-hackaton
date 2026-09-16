@@ -1,0 +1,39 @@
+# Запуск всех локальных компонентов одной командой:
+#   docker compose up --build
+# С HTTPS-прокси (нужен домен, направленный на сервер, и открытые порты 80/443):
+#   docker compose --profile https up --build -d
+
+services:
+  app:
+    build: .
+    image: posle9:local
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8080
+      DATABASE_PATH: /app/storage/posle9.sqlite
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - storage:/app/storage
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["https"]
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to app:8080
+    volumes:
+      - caddy_data:/data
+    restart: unless-stopped
+
+volumes:
+  storage:
+  caddy_data:
