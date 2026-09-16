@@ -249,3 +249,11 @@ npm run dev:miniapp   # мини-приложение на http://localhost:5173
 ```
 
 Без токена бота: в `.env` поставьте `BOT_ENABLED=false` и `AUTH_DEV_BYPASS=true`. Для мини-приложения вне MAX создайте `apps/miniapp/.env.development.local` со строкой `VITE_DEV_USER_ID=100`. Другого пользователя и открытие плана по ссылке можно проверить через адрес `?devUser=200&startapp=plan_<токен>`. В обычной сборке (`npm run build`) эти параметры не работают.
+
+## Материалы команды
+
+- [План разработки](docs/development-plan.md)
+- [Сценарий интервью с родителями](docs/interview-guide.md)
+- [Чек-лист проверки в MAX и журнал проблем](docs/max-check.md)
+- [Сценарий пилота](docs/pilot-scenario.md)
+- [Презентация](docs/presentation/presentation.pdf) и [инструкция по обновлению](docs/presentation/README.md)
