@@ -3,6 +3,7 @@ import { createBot } from './bot/bot.js';
 import { loadConfig } from './config.js';
 import { createContainer } from './container.js';
 import { createReminderScheduler } from './scheduler/reminder-scheduler.js';
+import { trustRussianRootCa } from './tls-ca.js';
 
 async function main() {
   const config = loadConfig();
@@ -14,6 +15,9 @@ async function main() {
   let bot = null;
   let scheduler = null;
   if (config.botEnabled) {
+    if (trustRussianRootCa() === 'unsupported' && !process.env.NODE_EXTRA_CA_CERTS) {
+      logger.warn('Node.js older than 24.5: set NODE_EXTRA_CA_CERTS=apps/server/certs/russian-trusted-root-ca.pem to reach MAX Bot API');
+    }
     bot = createBot({ config, repos, services, runtime, logger: logger.child({ module: 'bot' }) });
     try {
       await bot.start();
