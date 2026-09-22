@@ -9,6 +9,8 @@ info:
 
     Ошибки возвращаются в едином формате `{ "error": { "code", "message" } }`.
 servers:
+  - url: https://158-160-18-41.sslip.io
+    description: Развёрнутый сервис
   - url: http://localhost:8080
     description: Локальный запуск
 tags:
@@ -252,6 +254,33 @@ paths:
                 type: object
                 properties:
                   interests: { type: array, items: { $ref: '#/components/schemas/Interest' } }
+
+  /api/specialties:
+    get:
+      tags: [reference]
+      summary: Специальности СПО
+      parameters:
+        - name: interestId
+          in: query
+          required: false
+          schema: { type: string }
+          description: Оставить только специальности выбранной сферы
+      responses:
+        '200':
+          description: Список специальностей
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  specialties:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string, examples: ['09.02.07'] }
+                        title: { type: string }
+                        interestId: { type: string }
 
   /api/content:
     get:

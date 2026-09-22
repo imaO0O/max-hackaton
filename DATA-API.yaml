@@ -1,0 +1,149 @@
+# DATA-API 1.0 — обязательные HTTP-проверки API мини-приложения «После 9-го».
+#
+# Проверяются только открытые методы: справочники регионов, колледжей и текстов экранов.
+# Личные методы (профиль семьи, план, избранное) требуют заголовок X-Max-Init-Data —
+# строку window.WebApp.initData, подписанную платформой MAX. Выдать её может только MAX,
+# поэтому автоматической проверке доступен лишь отказ в доступе без подписи (проверка plan-requires-max-signature).
+# Тестовые учётные записи не нужны: любой пользователь MAX, открывший бота, получает свой профиль.
+# Секретов в файле нет.
+
+schemaVersion: "1.0"
+
+solution:
+  name: "После 9-го — план выбора пути после 9 класса для семьи девятиклассника"
+
+api:
+  baseUrl: "https://158-160-18-41.sslip.io"
+  openapi: "./docs/openapi.yaml"
+  defaultHeaders:
+    Accept: "application/json"
+
+checks:
+  - id: "health"
+    name: "Доступность сервиса"
+    description: "Сервер отвечает, показывает состояние бота и учебный год плана"
+    method: "GET"
+    path: "/api/health"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "status"
+        - "bot"
+        - "academicYear"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "regions"
+    name: "Справочник регионов"
+    description: "Список регионов для первого вопроса опроса"
+    method: "GET"
+    path: "/api/regions"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "regions"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "region-cities"
+    name: "Города пилотного региона"
+    description: "Города, по которым можно фильтровать колледжи Республики Татарстан"
+    method: "GET"
+    path: "/api/regions/{regionId}/cities"
+    role: "public"
+    request:
+      path:
+        regionId: "tatarstan"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "cities"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "interests"
+    name: "Справочник сфер интересов"
+    description: "Сферы интересов подростка для опроса и фильтров"
+    method: "GET"
+    path: "/api/interests"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "interests"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "colleges"
+    name: "Колледжи региона с фильтрами"
+    description: "Поиск колледжей пилотного региона; из ответа берётся идентификатор первого колледжа"
+    method: "GET"
+    path: "/api/colleges"
+    role: "public"
+    request:
+      query:
+        regionId: "tatarstan"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "colleges"
+    timeoutMs: 5000
+    repeatable: true
+    extract:
+      collegeId: "$.colleges[0].id"
+
+  - id: "college-details"
+    name: "Карточка колледжа"
+    description: "Программы колледжа: форма обучения, бюджетные места, проходной балл, источник и дата проверки"
+    method: "GET"
+    path: "/api/colleges/{collegeId}"
+    role: "public"
+    dependsOn:
+      - "colleges"
+    request:
+      path:
+        collegeId: "${collegeId}"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "college"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "content"
+    name: "Тексты экранов «Два пути» и «Что дальше»"
+    description: "Содержимое сравнения путей с источниками и дисклеймером"
+    method: "GET"
+    path: "/api/content"
+    role: "public"
+    expected:
+      statusCodes: [200]
+      contentType: "application/json"
+      requiredFields:
+        - "paths"
+        - "nextSteps"
+        - "disclaimer"
+    timeoutMs: 5000
+    repeatable: true
+
+  - id: "plan-requires-max-signature"
+    name: "Личные данные закрыты без подписи MAX"
+    description: "Без заголовка X-Max-Init-Data план семьи не отдаётся: ожидается 401 с телом ошибки"
+    method: "GET"
+    path: "/api/plan"
+    role: "public"
+    expected:
+      statusCodes: [401]
+      contentType: "application/json"
+      requiredFields:
+        - "error"
+    timeoutMs: 5000
+    repeatable: true
