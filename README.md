@@ -201,6 +201,12 @@ curl http://localhost:8080/api/plan
 # 401 {"error":{"code":"unauthorized","message":"Откройте мини-приложение из чата с ботом в MAX"}}
 ```
 
+Те же проверки для технической оценки описаны в [DATA-API.yaml](DATA-API.yaml) (формат DATA-API 1.0). Проверить файл валидатором организаторов:
+
+```bash
+python validate_data_api.py /path/to/DATA-API.yaml --schema /path/to/DATA-API.schema.json
+```
+
 ## Примеры ожидаемого поведения
 
 | Ситуация | Поведение |
@@ -256,4 +262,5 @@ npm run dev:miniapp   # мини-приложение на http://localhost:5173
 - [Сценарий интервью с родителями](docs/interview-guide.md)
 - [Чек-лист проверки в MAX и журнал проблем](docs/max-check.md)
 - [Сценарий пилота](docs/pilot-scenario.md)
+- [DATA-API.yaml](DATA-API.yaml) — обязательные HTTP-проверки API для технической оценки, формат DATA-API 1.0
 - [Презентация](docs/presentation/presentation.pdf) и [инструкция по обновлению](docs/presentation/README.md)
