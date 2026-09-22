@@ -153,23 +153,76 @@
     </div>
     <div class="card" style="align-self: center; font-size: 13.5pt;">
       <h3>Для проверки</h3>
-      <table style="font-size: 12.5pt; margin-bottom: 0.12in;">
-        <tr><th style="width: 1.3in;">Бот</th><td><span class="todo">https://max.ru/…_bot — после модерации</span></td></tr>
+      <table style="font-size: 11.5pt; margin-bottom: 0.1in;">
+        <tr><th style="width: 1.45in;">Бот в MAX</th><td>https://max.ru/t567_hakaton_max_bot</td></tr>
+        <tr><th>Мини-приложение</th><td>https://158-160-18-41.sslip.io/ — открывается кнопкой в чате с ботом</td></tr>
         <tr><th>Репозиторий</th><td>github.com/imaO0O/max-hackaton</td></tr>
         <tr><th>Commit</th><td><span class="todo">хэш коммита на момент сдачи</span></td></tr>
+        <tr><th>API</th><td>https://158-160-18-41.sslip.io/api · описание <code>docs/openapi.yaml</code> · проверки <code>DATA-API.yaml</code></td></tr>
+        <tr><th>Тестовые доступы</th><td>не нужны: справочники API открыты, личные методы подписывает MAX. Тестовые данные — демо-регионы А и Б в опросе</td></tr>
       </table>
-      <div class="steps" style="font-size: 12.5pt;">
-        <div class="step" style="font-size: 12.5pt;"><span>Бот → «Начать» → Республика Татарстан, Казань, 9 класс, IT, Колледж</span></div>
-        <div class="step" style="font-size: 12.5pt;"><span>«Открыть план» → «Балл», «Колледжи»: ☆ у двух программ → «Сравнить рядом»</span></div>
-        <div class="step" style="font-size: 12.5pt;"><span>«Мой план» → «Отправить план подростку» → со второго аккаунта открыть ссылку → «Получать напоминания»</span></div>
-        <div class="step" style="font-size: 12.5pt;"><span>Команда <b>/test_reminder</b>. Подробно — README, «Пошаговый сценарий проверки»</span></div>
+      <div class="steps" style="font-size: 12pt; gap: 0.1in;">
+        <div class="step" style="font-size: 12pt;"><span>Бот → «Начать» → Республика Татарстан, Казань, 9 класс, IT, Колледж</span></div>
+        <div class="step" style="font-size: 12pt;"><span>«Открыть план» → «Балл», «Колледжи»: ☆ у двух программ → «Сравнить рядом»</span></div>
+        <div class="step" style="font-size: 12pt;"><span>«Мой план» → «Отправить план подростку» → со второго аккаунта открыть ссылку → «Получать напоминания»</span></div>
+        <div class="step" style="font-size: 12pt;"><span>Команда <b>/test_reminder</b>. Подробно — README, «Пошаговый сценарий проверки»</span></div>
       </div>
+      <p class="muted" style="margin: 0.1in 0 0; font-size: 10.5pt;">Слайд с технической информацией для проверки, в оценке не участвует.</p>
     </div>
   </div>
   <div class="slide__footer"><span>После 9-го</span><span>1</span></div>
 </section>
 
-<!-- 2. Проблема и аудитория -->
+<!-- 2. Команда и решение -->
+<section class="slide">
+  <div class="kicker">Команда и решение</div>
+  <h2>Кто сделал «После 9-го»</h2>
+  <div class="grid grid-2" style="grid-template-columns: 1fr 1.05fr; gap: 0.4in;">
+    <div>
+      <table style="font-size: 13pt;">
+        <tr><th style="width: 1.5in;">Команда</th><td><span class="todo">название или номер команды</span></td></tr>
+        <tr><th>Трек</th><td><span class="todo">трек хакатона</span></td></tr>
+        <tr><th>Решение</th><td>чат-бот и мини-приложение в MAX для семьи девятиклассника</td></tr>
+        <tr><th>Пилотный регион</th><td>Республика Татарстан, Казань</td></tr>
+      </table>
+      <div class="card" style="margin-top: 0.2in;">
+        <b>Что уже работает:</b> опрос из 5 вопросов в боте, план года с датами региона, калькулятор среднего балла, 10 колледжей Казани с источниками, сравнение программ, отправка плана подростку и напоминания обоим.
+      </div>
+    </div>
+    <div>
+      <h3>Роли</h3>
+      <table style="font-size: 12.5pt;">
+        <tr><th style="width: 1.7in;">Участник</th><th>Зона ответственности</th></tr>
+        <tr>
+          <td><span class="todo">имя участника А</span></td>
+          <td>сервер и платформа: API мини-приложения и проверка подписи MAX, чат-бот и опрос, планировщик напоминаний, Docker и деплой, MAX Bridge</td>
+        </tr>
+        <tr>
+          <td><span class="todo">имя участника Б</span></td>
+          <td>мини-приложение и продукт: экраны на MAX UI, калькулятор среднего балла, колледжи и сравнение программ, данные пилотного региона со сверкой источников, материалы и презентация</td>
+        </tr>
+      </table>
+      <p class="muted small" style="margin-top: 0.15in;">Решение каждого участника проверял второй: изменения шли отдельными ветками и pull request'ами с ревью.</p>
+    </div>
+  </div>
+  <div class="grid grid-3" style="margin-top: 0.3in;">
+    <div class="card">
+      <h3>Документация</h3>
+      README с запуском одной командой и пошаговым сценарием проверки, описание API в OpenAPI, <code>DATA-API.yaml</code> для технической проверки.
+    </div>
+    <div class="card">
+      <h3>Качество</h3>
+      45 автотестов ядра и сервера, валидатор справочников: реальные данные не проходят без источника и даты проверки.
+    </div>
+    <div class="card">
+      <h3>Готовность</h3>
+      Сервис развёрнут по HTTPS и работает круглосуточно, запуск в Docker одной командой, секретов в репозитории нет.
+    </div>
+  </div>
+  <div class="slide__footer"><span>После 9-го</span><span>2</span></div>
+</section>
+
+<!-- 3. Проблема и аудитория -->
 <section class="slide">
   <div class="kicker">Проблема и аудитория</div>
   <h2>Путь после 9 класса выбирают вслепую, а важные сроки узнают слишком поздно</h2>
@@ -203,7 +256,7 @@
       </div>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>2</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>3</span></div>
 </section>
 
 <!-- 3. Решение и сценарий -->
@@ -227,7 +280,7 @@
       <figcaption><b>Мой план:</b> ближайший шаг, отправка подростку, напоминания</figcaption>
     </figure>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>3</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>4</span></div>
 </section>
 
 <!-- 4. Мини-приложение -->
@@ -252,7 +305,7 @@
       <figcaption><b>Даты года:</b> федеральные, региональные и советы; ориентировочные даты помечены</figcaption>
     </figure>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>4</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>5</span></div>
 </section>
 
 <!-- 5. Возможности MAX -->
@@ -280,7 +333,7 @@
       </table>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>5</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>6</span></div>
 </section>
 
 <!-- 6. Эффект и метрики -->
@@ -313,7 +366,7 @@
       <p class="muted small" style="margin-top: 0.12in;">Считаем без персональных данных: ID в MAX, ответы опроса, отметки плана и напоминания.</p>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>6</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>7</span></div>
 </section>
 
 <!-- 7. Архитектура -->
@@ -352,7 +405,7 @@
     <div class="card"><b>Качество:</b> 44 автотеста ядра и сервера, валидатор справочников <code>npm run data:check</code></div>
     <div class="card"><b>Документация:</b> README со сценарием проверки, OpenAPI 3.1 в <code>docs/openapi.yaml</code></div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>7</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>8</span></div>
 </section>
 
 <!-- 8. Данные -->
@@ -379,7 +432,7 @@
       </div>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>8</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>9</span></div>
 </section>
 
 <!-- 9. Масштабирование -->
@@ -412,7 +465,7 @@
       </ul>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>9</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>10</span></div>
 </section>
 
 <!-- 10. Риски -->
@@ -428,7 +481,7 @@
     <tr><td>Часть методов MAX Bridge не работает в веб-версии</td><td>запасные варианты: ссылка копируется, источник открывается в браузере</td></tr>
     <tr><td>Родители опасаются за данные ребёнка</td><td>не собираем имя и оценки; оценки хранятся только на устройстве</td></tr>
   </table>
-  <div class="slide__footer"><span>После 9-го</span><span>10</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>11</span></div>
 </section>
 
 <!-- 11. Пилот -->
@@ -459,7 +512,7 @@
       </div>
     </div>
   </div>
-  <div class="slide__footer"><span>После 9-го</span><span>11</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>12</span></div>
 </section>
 
 <!-- 12. Источники -->
@@ -477,7 +530,7 @@
     <li>Сайты и планы приёма колледжей Казани на 2026/27 — ссылка у каждой программы в <code>data/colleges.json</code></li>
     <li>MAX для разработчиков: мини-приложения, MAX Bridge, диплинки — <a href="https://dev.max.ru/docs/webapps/introduction">dev.max.ru/docs/webapps/introduction</a></li>
   </ul>
-  <div class="slide__footer"><span>После 9-го</span><span>12</span></div>
+  <div class="slide__footer"><span>После 9-го</span><span>13</span></div>
 </section>
 
 </body>
