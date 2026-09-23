@@ -517,7 +517,7 @@ paths:
                 type: object
                 required: [url, fileName, expiresInSeconds, eventsCount]
                 properties:
-                  url: { type: string, format: uri, examples: ['https://158-160-18-41.sslip.io/api/calendar/7007.1790000000.abc….ics'] }
+                  url: { type: string, format: uri, examples: ['https://158-160-18-41.sslip.io/api/calendar/7007.1790000000.abc.ics'] }
                   fileName: { type: string, examples: [posle9-plan-2026-2027.ics] }
                   expiresInSeconds: { type: integer, examples: [600] }
                   eventsCount: { type: integer, description: Сколько дат попадёт в календарь }
@@ -530,87 +530,12 @@ paths:
       summary: Файл календаря (iCalendar) по одноразовой ссылке
       description: События на весь день для непрошедших пунктов плана, у каждого — напоминание накануне в 9:00.
       parameters:
-        - { name: file, in: path, required: true, schema: { type: string, pattern: '^[0-9.A-Za-z_-]{1,120}.ics
-    get:
-      tags: [plan]
-      summary: План семьи по ссылке (только чтение)
-      security: [{ maxInitData: [] }]
-      parameters:
-        - { name: token, in: path, required: true, schema: { type: string } }
-      responses:
-        '200':
-          description: План, признак владельца и подписки, избранное семьи
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /api/shared-plans/{token}/follow:
-    put:
-      tags: [plan]
-      summary: Подписаться на напоминания по чужому плану
-      security: [{ maxInitData: [] }]
-      parameters:
-        - { name: token, in: path, required: true, schema: { type: string } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [follow]
-              properties:
-                follow: { type: boolean }
-      responses:
-        '200':
-          description: Новое состояние подписки
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  isFollowing: { type: boolean }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /api/favorites:
-    get:
-      tags: [favorites]
-      summary: Избранные программы
-      security: [{ maxInitData: [] }]
-      responses:
-        '200':
-          description: Список
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  favorites: { type: array, items: { $ref: '#/components/schemas/FavoriteProgram' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-
-  /api/favorites/{programId}:
-    put:
-      tags: [favorites]
-      summary: Добавить программу в избранное
-      security: [{ maxInitData: [] }]
-      parameters:
-        - { name: programId, in: path, required: true, schema: { type: string } }
-      responses:
-        '200':
-          description: Добавлено (повторный вызов не создаёт дубликат)
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-    delete:
-      tags: [favorites]
-      summary: Убрать программу из избранного
-      security: [{ maxInitData: [] }]
-      parameters:
-        - { name: programId, in: path, required: true, schema: { type: string } }
-      responses:
-        '200':
-          description: Убрано
-        '401': { $ref: '#/components/responses/Unauthorized' }
- } }
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9.A-Za-z_-]{1,120}\.ics$'
       responses:
         '200':
           description: Файл .ics
