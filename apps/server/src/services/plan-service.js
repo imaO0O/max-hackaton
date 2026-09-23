@@ -215,6 +215,20 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       };
     },
 
+    /** Отозвать ссылку на план: по старой ссылке план больше не открывается, подписчики отключены. */
+    revokeShareLink(userId) {
+      const plan = plans.getByUser(userId);
+      if (!plan || !plan.shareToken) return { revoked: false, followersRemoved: 0 };
+      const followersRemoved = transaction(db, () => plans.revokeShare(plan.id));
+      return { revoked: true, followersRemoved };
+    },
+
+    /** Удалить все данные пользователя по его запросу. */
+    deleteUserData(userId) {
+      const deleted = transaction(db, () => users.delete(userId));
+      return { deleted };
+    },
+
     setFollowing(viewerId, token, follow) {
       users.ensure(viewerId);
       const plan = plans.getByShareToken(token);

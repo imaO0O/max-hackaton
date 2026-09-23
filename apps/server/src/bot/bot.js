@@ -105,6 +105,12 @@ export function createBot({ config, repos, services, runtime, logger }) {
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendTestReminder);
   bot.command('stats', sendStats);
+  bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
+    attachments: [Keyboard.inlineKeyboard([[
+      Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
+      Keyboard.button.callback('Отмена', 'data:delete-cancel'),
+    ]])],
+  }));
   bot.command('help', (ctx) => ctx.reply(texts.help));
 
   bot.action(/^survey:/, async (ctx) => {
@@ -192,6 +198,16 @@ export function createBot({ config, repos, services, runtime, logger }) {
     await ctx.answerOnCallback({
       message: { text: planText(plan), attachments: [openAppKeyboard(runtime.botUsername)] },
     });
+  });
+
+  bot.action('data:delete-confirm', async (ctx) => {
+    services.plan.deleteUserData(userIdOf(ctx));
+    services.analytics.track(EVENTS.DATA_DELETED, null);
+    await ctx.answerOnCallback({ message: { text: texts.deleteDone } });
+  });
+
+  bot.action('data:delete-cancel', async (ctx) => {
+    await ctx.answerOnCallback({ message: { text: texts.deleteCancelled } });
   });
 
   bot.action('reminders:toggle', async (ctx) => {

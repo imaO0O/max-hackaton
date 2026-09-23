@@ -387,6 +387,21 @@ paths:
                   profile: { $ref: '#/components/schemas/Profile' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [profile]
+      summary: Удалить все данные пользователя
+      description: Профиль, план, отметки, избранное, подписки и напоминания удаляются, в журнале событий ID обнуляется. Повторный вызов безопасен.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Данные удалены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/profile/reminders:
     put:
@@ -468,6 +483,22 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [plan]
+      summary: Отозвать ссылку на план
+      description: Старая ссылка перестаёт открываться, подписчики и их напоминания по плану удаляются. Следующий POST создаст новую ссылку.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Результат отзыва
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked: { type: boolean, description: false — ссылки не было }
+                  followersRemoved: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/plan/calendar-link:
     post:

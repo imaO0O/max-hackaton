@@ -35,6 +35,14 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     },
   }, async (request) => ({ profile: plan.saveProfile(request.maxUser.id, request.body) }));
 
+  /** Удаление всех данных пользователя: профиль, план, отметки, избранное, подписки, напоминания. */
+  api.delete('/profile', { config: { auth: true } }, async (request) => {
+    const result = plan.deleteUserData(request.maxUser.id);
+    // Событие без ID пользователя: считаем только количество удалений
+    analytics.track(EVENTS.DATA_DELETED, null);
+    return result;
+  });
+
   api.put('/profile/reminders', {
     config: { auth: true },
     schema: {
@@ -71,6 +79,8 @@ export function registerPlanRoutes(api, { plan, analytics }) {
   });
 
   api.post('/plan/share', { config: { auth: true } }, async (request) => plan.createShareLink(request.maxUser.id));
+
+  api.delete('/plan/share', { config: { auth: true } }, async (request) => plan.revokeShareLink(request.maxUser.id));
 
   api.get('/shared-plans/:token', {
     config: { auth: true },

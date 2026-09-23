@@ -16,6 +16,7 @@ export const EVENTS = Object.freeze({
   FAVORITE_ADDED: 'favorite_added',
   CALENDAR_DOWNLOADED: 'calendar_downloaded',
   REMINDER_SENT: 'reminder_sent',
+  DATA_DELETED: 'data_deleted',
 });
 
 /** Откуда открыто мини-приложение — по параметру запуска. */
