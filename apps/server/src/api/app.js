@@ -7,6 +7,7 @@ import fastifyStatic from '@fastify/static';
 import { AppError } from '../services/errors.js';
 import { validateInitData } from './init-data.js';
 import { registerCatalogRoutes } from './routes/catalog.js';
+import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerPlanRoutes } from './routes/plan.js';
 
 /**
@@ -85,6 +86,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
   app.register(async (api) => {
     registerCatalogRoutes(api, services);
     registerPlanRoutes(api, services);
+    registerCalendarRoutes(api, services);
   }, { prefix: '/api' });
 
   const indexHtml = path.join(config.miniappDistDir, 'index.html');

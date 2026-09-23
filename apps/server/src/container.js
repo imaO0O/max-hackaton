@@ -5,6 +5,7 @@ import { createPlanRepository } from './repositories/plans.js';
 import { createReferenceRepository } from './repositories/reference.js';
 import { createReminderRepository } from './repositories/reminders.js';
 import { createUserRepository } from './repositories/users.js';
+import { calendarSecret, createCalendarLinks, createCalendarService } from './services/calendar.js';
 import { createCatalogService } from './services/catalog-service.js';
 import { createPlanService } from './services/plan-service.js';
 
@@ -30,9 +31,14 @@ export function createContainer(config, { clock } = {}) {
     reminders: createReminderRepository(db),
   };
 
+  const plan = createPlanService({ db, repos, config, runtime, clock });
   const services = {
     catalog: createCatalogService({ repos, content: referenceData.content }),
-    plan: createPlanService({ db, repos, config, runtime, clock }),
+    plan,
+    calendar: createCalendarService({
+      plan,
+      links: createCalendarLinks({ secret: calendarSecret(config.botToken), clock }),
+    }),
   };
 
   return { db, repos, services, runtime };
