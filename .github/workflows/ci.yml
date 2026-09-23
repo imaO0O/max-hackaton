@@ -1,0 +1,62 @@
+name: Проверка
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Тесты, справочники, сборка мини-приложения
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run data:check
+      - run: npm run build
+
+  docker:
+    name: Docker-сборка не дольше 5 минут
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Базовые образы скачиваем заранее: требование кейса — 5 минут без учёта их загрузки
+      - name: Загрузка базовых образов
+        run: docker pull node:24-alpine
+
+      - name: Сборка образа с замером времени
+        run: |
+          start=$(date +%s)
+          docker build --no-cache -t posle9:ci .
+          seconds=$(( $(date +%s) - start ))
+          echo "Время сборки: ${seconds} с" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$seconds" -gt 300 ]; then
+            echo "::error::Сборка дольше 5 минут: ${seconds} с"
+            exit 1
+          fi
+
+      - name: Запуск контейнера и проверка /api/health
+        run: |
+          docker run -d --name posle9 -p 8080:8080 -e BOT_ENABLED=false posle9:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/health; then
+              echo
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs posle9
+          exit 1
+
+      - name: Проверка открытых методов API
+        run: |
+          curl -fsS http://localhost:8080/api/regions > /dev/null
+          curl -fsS "http://localhost:8080/api/colleges?regionId=demo-standard" > /dev/null
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/plan)
+          test "$status" = "401"

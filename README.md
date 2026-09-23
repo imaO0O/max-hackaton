@@ -254,6 +254,25 @@ docker compose logs -f app   # логи
 docker compose down -v       # остановить и удалить данные (том storage)
 ```
 
+### Резервная копия базы
+
+Скрипт [scripts/backup-db.sh](scripts/backup-db.sh) делает согласованную копию SQLite из работающего контейнера и хранит 14 последних копий в папке `backups/`:
+
+```bash
+./scripts/backup-db.sh
+```
+
+На сервере он запускается раз в сутки через cron — строка для `crontab -e` есть в начале скрипта.
+
+Восстановление из копии (сервис будет недоступен около минуты):
+
+```bash
+docker compose stop app
+docker compose run --rm --no-deps app sh -c "rm -f /app/storage/posle9.sqlite-wal /app/storage/posle9.sqlite-shm"
+docker compose cp backups/posle9-<дата>.sqlite app:/app/storage/posle9.sqlite
+docker compose start app
+```
+
 ## Сдача решения
 
 - Сдача — до 30 сентября 2026 года, 12:00 МСК, в личном кабинете. После дедлайна переданная версия не изменяется.
@@ -282,6 +301,8 @@ npm run data:check    # проверка справочников
 npm run dev:server    # сервер с перезапуском при изменениях
 npm run dev:miniapp   # мини-приложение на http://localhost:5173, /api проксируется на 8080
 ```
+
+На каждый pull request и push в `main` GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)) запускает тесты, проверку справочников и сборку мини-приложения, собирает Docker-образ с замером времени (проверка падает, если сборка дольше 5 минут без учёта загрузки базовых образов), запускает контейнер и проверяет открытые методы API.
 
 Без токена бота: в `.env` поставьте `BOT_ENABLED=false` и `AUTH_DEV_BYPASS=true`. Для мини-приложения вне MAX создайте `apps/miniapp/.env.development.local` со строкой `VITE_DEV_USER_ID=100`. Другого пользователя и открытие плана по ссылке можно проверить через адрес `?devUser=200&startapp=plan_<токен>`. В обычной сборке (`npm run build`) эти параметры не работают.
 

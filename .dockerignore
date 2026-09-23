@@ -12,3 +12,4 @@ docs
 **/test
 .vscode
 .idea
+backups/
