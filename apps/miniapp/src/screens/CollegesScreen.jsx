@@ -105,13 +105,26 @@ function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, 
   );
 }
 
-export function CollegesScreen({ profile, initialCompare = false }) {
+const NO_FILTERS = { city: null, interests: [], form: null, budgetOnly: false, withinMyScore: false };
+
+/** Программы, где прошлогодний проходной балл не выше расчёта семьи. Без опубликованного балла — не показываем. */
+function withinScore(colleges, average) {
+  return colleges
+    .map((college) => ({
+      ...college,
+      programs: college.programs.filter((program) => program.passingScore !== null && program.passingScore <= average),
+    }))
+    .filter((college) => college.programs.length > 0);
+}
+
+export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
   const [filters, setFilters] = useState({
+    ...NO_FILTERS,
     city: profile.city ?? null,
     interests: profile.interests ?? [],
-    form: null,
-    budgetOnly: false,
   });
+  // Средний балл считается и хранится только на устройстве, фильтр по нему тоже работает на устройстве
+  const myAverage = loadLocal(AVERAGE_STORAGE_KEY, null);
   const [openCollegeId, setOpenCollegeId] = useState(null);
   const closeCollege = useCallback(() => setOpenCollegeId(null), []);
   const [comparing, setComparing] = useState(initialCompare);
@@ -121,11 +134,18 @@ export function CollegesScreen({ profile, initialCompare = false }) {
 
   const reference = useAsync(() => Promise.all([api.cities(profile.regionId), api.interests()]), [profile.regionId]);
   const colleges = useAsync(
-    () => api.colleges({ regionId: profile.regionId, ...filters }),
+    () => api.colleges({
+      regionId: profile.regionId, city: filters.city, interests: filters.interests, form: filters.form, budgetOnly: filters.budgetOnly,
+    }),
     [profile.regionId, filters.city, filters.interests.join(','), filters.form, filters.budgetOnly],
   );
   const favorites = useAsync(() => api.favorites(), []);
   const favoriteIds = useMemo(() => new Set((favorites.data ?? []).map((item) => item.id)), [favorites.data]);
+  const scoreFilterOn = filters.withinMyScore && myAverage !== null;
+  const list = useMemo(
+    () => (scoreFilterOn ? withinScore(colleges.data ?? [], myAverage) : colleges.data ?? []),
+    [colleges.data, scoreFilterOn, myAverage],
+  );
 
   const toggleFavorite = async (programId) => {
     const isFavorite = favoriteIds.has(programId);
@@ -153,7 +173,7 @@ export function CollegesScreen({ profile, initialCompare = false }) {
   };
 
   const setFilter = (patch) => setFilters((previous) => ({ ...previous, ...patch }));
-  const resetFilters = () => setFilters({ city: null, interests: [], form: null, budgetOnly: false });
+  const resetFilters = () => setFilters(NO_FILTERS);
 
   if (comparing) {
     return (
@@ -186,8 +206,7 @@ export function CollegesScreen({ profile, initialCompare = false }) {
   }
 
   const [cities, interests] = reference.data ?? [[], []];
-  const list = colleges.data ?? [];
-  const hasFilters = filters.city || filters.interests.length || filters.form || filters.budgetOnly;
+  const hasFilters = filters.city || filters.interests.length || filters.form || filters.budgetOnly || filters.withinMyScore;
 
   return (
     <div className="page">
@@ -257,7 +276,31 @@ export function CollegesScreen({ profile, initialCompare = false }) {
             <span>Только с бюджетными местами</span>
             <Switch checked={filters.budgetOnly} onChange={() => setFilter({ budgetOnly: !filters.budgetOnly })} />
           </label>
+          <label className="switch-row">
+            <span>
+              <span>Где в прошлом году проходили с моим баллом</span>
+              <Typography.Body variant="small" className="muted">
+                {myAverage !== null
+                  ? `Ваш расчёт — ${formatScore(myAverage)}. Это ориентир, а не прогноз: проходной балл меняется каждый год`
+                  : 'Сначала посчитайте средний балл на вкладке «Балл»'}
+              </Typography.Body>
+            </span>
+            <Switch
+              checked={scoreFilterOn}
+              disabled={myAverage === null}
+              onChange={() => setFilter({ withinMyScore: !filters.withinMyScore })}
+            />
+          </label>
+          {myAverage === null && onOpenTab && (
+            <button type="button" className="link-button" onClick={() => onOpenTab('grades')}>Посчитать средний балл</button>
+          )}
         </div>
+      )}
+
+      {scoreFilterOn && (
+        <Typography.Body variant="small" className="muted hint">
+          Показаны программы, где прошлогодний проходной балл не выше вашего расчёта. Программы, по которым колледж не опубликовал балл, скрыты — их можно посмотреть без этого фильтра.
+        </Typography.Body>
       )}
 
       {list.some((college) => college.isDemo) && (
@@ -272,7 +315,14 @@ export function CollegesScreen({ profile, initialCompare = false }) {
 
       {!colleges.data && colleges.status === 'loading' && <LoadingState text="Ищем колледжи…" />}
       {colleges.status === 'error' && <ErrorState error={colleges.error} onRetry={colleges.reload} />}
-      {colleges.data && list.length === 0 && (
+      {colleges.data && list.length === 0 && scoreFilterOn && (colleges.data.length > 0) && (
+        <EmptyState
+          title="С вашим баллом совпадений нет"
+          text="В прошлом году проходные баллы по этой подборке были выше вашего расчёта или колледжи их не опубликовали. Баллы меняются каждый год — посмотрите все программы и подтяните оценки, пока это возможно"
+          action={<Button size="medium" variant="secondary" onClick={() => setFilter({ withinMyScore: false })}>Показать все программы</Button>}
+        />
+      )}
+      {colleges.data && list.length === 0 && !(scoreFilterOn && colleges.data.length > 0) && (
         <EmptyState
           title="По этим фильтрам ничего не нашлось"
           text="Попробуйте выбрать другой город или убрать часть фильтров"
