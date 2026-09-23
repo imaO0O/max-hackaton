@@ -51,6 +51,7 @@ export function loadConfig(env = process.env) {
     initDataMaxAgeSeconds: parseInteger('INIT_DATA_MAX_AGE_SECONDS', env.INIT_DATA_MAX_AGE_SECONDS, 86400, { min: 60 }),
     authDevBypass: !isProduction && parseBoolean(env.AUTH_DEV_BYPASS, false),
     adminUserIds: parseIdList('ADMIN_USER_IDS', env.ADMIN_USER_IDS),
+    rateLimitPerMinute: parseInteger('RATE_LIMIT_PER_MINUTE', env.RATE_LIMIT_PER_MINUTE, 300, { min: 0 }),
   };
 
   if (config.botEnabled && !config.botToken) {

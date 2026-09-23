@@ -16,8 +16,9 @@ const HEALTH_FAILURES_BEFORE_ALERT = 3;
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
-export function createBot({ config, repos, services, runtime, logger }) {
-  const bot = new Bot(config.botToken);
+export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
+  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX
+  const bot = new Bot(config.botToken, clientOptions ? { clientOptions } : undefined);
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
@@ -288,6 +289,9 @@ export function createBot({ config, repos, services, runtime, logger }) {
     },
 
     checkHealth,
+
+    /** Обработка одного обновления — для тестов диалога. */
+    handleUpdate: (update) => bot.handleUpdate(update),
 
     stop() {
       clearInterval(healthTimer);

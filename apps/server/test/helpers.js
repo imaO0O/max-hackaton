@@ -27,6 +27,7 @@ export function testConfig(overrides = {}) {
     initDataMaxAgeSeconds: 86400,
     authDevBypass: false,
     adminUserIds: [],
+    rateLimitPerMinute: 0,
     ...overrides,
   };
 }
