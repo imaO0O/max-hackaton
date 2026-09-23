@@ -1,5 +1,6 @@
 import { openAppKeyboard } from '../bot/survey.js';
 import { reminderText } from '../bot/texts.js';
+import { EVENTS } from '../services/analytics.js';
 
 /** Напоминание, которое опоздало больше чем на сутки (например, сервер был выключен), не отправляется. */
 const STALE_AFTER_MS = 24 * 3600 * 1000;
@@ -15,7 +16,7 @@ function isPermanentError(error) {
  * Работает в одном процессе с ботом; при нескольких экземплярах нужна блокировка задач.
  */
 export function createReminderScheduler({
-  repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date(),
+  repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date(), analytics = null,
   resyncAll = null, resyncIntervalMs = 24 * 3600 * 1000,
 }) {
   let timer = null;
@@ -37,9 +38,10 @@ export function createReminderScheduler({
         }
         try {
           await sendMessage(reminder.recipientId, reminderText(reminder), {
-            attachments: [openAppKeyboard(runtime.botUsername)],
+            attachments: [openAppKeyboard(runtime.botUsername, [], 'from_reminder')],
           });
           repos.reminders.markSent(reminder.id);
+          analytics?.track(EVENTS.REMINDER_SENT, reminder.recipientId, { keyDateId: reminder.keyDate.id });
           sent += 1;
         } catch (error) {
           failed += 1;

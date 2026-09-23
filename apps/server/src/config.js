@@ -18,6 +18,15 @@ function parseInteger(name, value, fallback, { min = 0 } = {}) {
   return parsed;
 }
 
+function parseIdList(name, value) {
+  if (!value) return [];
+  const ids = value.split(',').map((item) => Number(item.trim())).filter((item) => item !== 0);
+  if (ids.some((id) => !Number.isSafeInteger(id) || id < 0)) {
+    throw new Error(`${name} — список ID пользователей MAX через запятую`);
+  }
+  return ids;
+}
+
 /** Читает и проверяет настройки из переменных окружения. */
 export function loadConfig(env = process.env) {
   const isProduction = env.NODE_ENV === 'production';
@@ -41,6 +50,7 @@ export function loadConfig(env = process.env) {
     reminderIntervalMs: parseInteger('REMINDER_INTERVAL_SECONDS', env.REMINDER_INTERVAL_SECONDS, 300, { min: 10 }) * 1000,
     initDataMaxAgeSeconds: parseInteger('INIT_DATA_MAX_AGE_SECONDS', env.INIT_DATA_MAX_AGE_SECONDS, 86400, { min: 60 }),
     authDevBypass: !isProduction && parseBoolean(env.AUTH_DEV_BYPASS, false),
+    adminUserIds: parseIdList('ADMIN_USER_IDS', env.ADMIN_USER_IDS),
   };
 
   if (config.botEnabled && !config.botToken) {

@@ -153,6 +153,7 @@ export function createCalendarService({ plan, links }) {
       if (userId === null) return null;
       const current = plan.getPlan(userId);
       return {
+        userId,
         fileName: fileNameFor(current.academicYear),
         ics: buildIcs({
           items: current.items.filter((item) => item.status !== 'past'),

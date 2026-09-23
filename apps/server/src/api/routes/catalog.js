@@ -1,7 +1,9 @@
 const idParam = { type: 'string', pattern: '^[a-z0-9-]{1,100}$' };
 const programIdParam = { type: 'string', pattern: '^[a-z0-9_-]{1,160}$' };
 
-export function registerCatalogRoutes(api, { catalog }) {
+import { EVENTS } from '../../services/analytics.js';
+
+export function registerCatalogRoutes(api, { catalog, analytics }) {
   api.get('/regions', async () => ({ regions: catalog.listRegions() }));
 
   api.get('/regions/:regionId/cities', {
@@ -62,7 +64,11 @@ export function registerCatalogRoutes(api, { catalog }) {
   api.put('/favorites/:programId', {
     config: { auth: true },
     schema: { params: { type: 'object', properties: { programId: programIdParam }, required: ['programId'] } },
-  }, async (request) => catalog.addFavorite(request.maxUser.id, request.params.programId));
+  }, async (request) => {
+    const result = catalog.addFavorite(request.maxUser.id, request.params.programId);
+    analytics.track(EVENTS.FAVORITE_ADDED, request.maxUser.id, { programId: result.programId });
+    return result;
+  });
 
   api.delete('/favorites/:programId', {
     config: { auth: true },

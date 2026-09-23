@@ -26,6 +26,7 @@ export function testConfig(overrides = {}) {
     reminderIntervalMs: 60_000,
     initDataMaxAgeSeconds: 86400,
     authDevBypass: false,
+    adminUserIds: [],
     ...overrides,
   };
 }

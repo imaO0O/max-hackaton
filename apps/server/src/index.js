@@ -37,6 +37,7 @@ async function main() {
       logger: logger.child({ module: 'reminders' }),
       intervalMs: config.reminderIntervalMs,
       resyncAll: () => services.plan.syncAllReminders(),
+      analytics: services.analytics,
     });
     scheduler.start();
     bot.startHealthMonitor();

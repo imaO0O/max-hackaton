@@ -1,6 +1,7 @@
+import { EVENTS } from '../../services/analytics.js';
 import { AppError } from '../../services/errors.js';
 
-export function registerCalendarRoutes(api, { calendar }) {
+export function registerCalendarRoutes(api, { calendar, analytics }) {
   /**
    * Одноразовая ссылка на файл .ics с датами плана. Мини-приложение передаёт её в WebApp.downloadFile:
    * нативный клиент MAX скачивает файл без заголовков авторизации, поэтому ссылка подписана и живёт 10 минут.
@@ -24,6 +25,7 @@ export function registerCalendarRoutes(api, { calendar }) {
     if (!file) {
       throw new AppError(410, 'link_expired', 'Ссылка на календарь устарела. Нажмите «Добавить в календарь» ещё раз');
     }
+    analytics.track(EVENTS.CALENDAR_DOWNLOADED, file.userId);
     return reply
       .header('Content-Type', 'text/calendar; charset=utf-8')
       .header('Content-Disposition', `attachment; filename="${file.fileName}"`)

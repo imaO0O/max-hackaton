@@ -2,6 +2,7 @@ import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
+import { EVENTS } from '../services/analytics.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, openAppKeyboard, parseSurveyPayload, pathStep, regionStep, startKeyboard,
 } from './survey.js';
@@ -55,7 +56,18 @@ export function createBot({ config, repos, services, runtime, logger }) {
       return;
     }
     const plan = services.plan.getPlan(userId);
+    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'command' });
     await ctx.reply(planText(plan, { limit: PLAN_PREVIEW_ITEMS }), { attachments: [planKeyboard()] });
+  }
+
+  /** Метрики пилота — только для команды проекта (ADMIN_USER_IDS). */
+  async function sendStats(ctx) {
+    const userId = userIdOf(ctx);
+    if (!config.adminUserIds.includes(userId)) {
+      await ctx.reply(`Команда доступна только команде проекта. Ваш ID в MAX: ${userId}`);
+      return;
+    }
+    await ctx.reply(services.analytics.report());
   }
 
   async function toggleReminders(ctx) {
@@ -92,6 +104,7 @@ export function createBot({ config, repos, services, runtime, logger }) {
   bot.command('plan', sendPlan);
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendTestReminder);
+  bot.command('stats', sendStats);
   bot.command('help', (ctx) => ctx.reply(texts.help));
 
   bot.action(/^survey:/, async (ctx) => {
@@ -108,6 +121,7 @@ export function createBot({ config, repos, services, runtime, logger }) {
     switch (action) {
       case 'start': {
         save({});
+        services.analytics.track(EVENTS.SURVEY_STARTED, userId);
         return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
       }
       case 'region': {
@@ -149,6 +163,9 @@ export function createBot({ config, repos, services, runtime, logger }) {
         if (!draft.grade || !PATH_VALUES.includes(value)) return restart();
         const profile = services.plan.saveProfile(userId, { ...draft, path: value });
         users.setSurveyState(userId, null);
+        services.analytics.track(EVENTS.SURVEY_COMPLETED, userId, {
+          regionId: profile.regionId, path: profile.path, grade: profile.grade,
+        });
         const region = reference.getRegion(profile.regionId);
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
         const preview = planText(services.plan.getPlan(userId), { limit: 3 });
@@ -171,6 +188,7 @@ export function createBot({ config, repos, services, runtime, logger }) {
       return;
     }
     const plan = services.plan.getPlan(userId);
+    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'all_dates' });
     await ctx.answerOnCallback({
       message: { text: planText(plan), attachments: [openAppKeyboard(runtime.botUsername)] },
     });
