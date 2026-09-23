@@ -66,11 +66,16 @@ export function buildApp({ config, services, runtime, logger = true }) {
     return reply.status(500).send({ error: { code: 'internal_error', message: 'Что-то пошло не так. Попробуйте ещё раз' } });
   });
 
-  app.get('/api/health', async () => ({
-    status: 'ok',
-    bot: runtime.botStatus,
-    academicYear: services.plan.currentAcademicYear(),
-  }));
+  // HTTP-сервер отвечает 200, пока жив (так ждёт автопроверка из DATA-API.yaml).
+  // Если бот потерял связь с MAX, это видно в теле ответа: status = degraded
+  app.get('/api/health', async () => {
+    const botDown = runtime.botStatus === 'failed' || runtime.botStatus === 'unreachable';
+    return {
+      status: botDown ? 'degraded' : 'ok',
+      bot: runtime.botStatus,
+      academicYear: services.plan.currentAcademicYear(),
+    };
+  });
 
   app.get('/api/meta', async () => ({
     academicYear: services.plan.currentAcademicYear(),

@@ -5,7 +5,11 @@ import { isProfileComplete } from '../repositories/users.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, openAppKeyboard, parseSurveyPayload, pathStep, regionStep, startKeyboard,
 } from './survey.js';
-import { reminderText, summaryText, texts } from './texts.js';
+import { planText, reminderText, summaryText, texts } from './texts.js';
+
+const PLAN_PREVIEW_ITEMS = 5;
+const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const HEALTH_FAILURES_BEFORE_ALERT = 3;
 
 /**
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
@@ -35,13 +39,23 @@ export function createBot({ config, repos, services, runtime, logger }) {
     });
   }
 
-  async function sendOpenApp(ctx) {
-    const user = users.ensure(userIdOf(ctx));
+  function planKeyboard(extraRows = []) {
+    return openAppKeyboard(runtime.botUsername, [
+      [Keyboard.button.callback('Все даты года', 'plan:all')],
+      ...extraRows,
+    ]);
+  }
+
+  /** План текстом прямо в чате — сценарий проходится и без мини-приложения. */
+  async function sendPlan(ctx) {
+    const userId = userIdOf(ctx);
+    const user = users.ensure(userId);
     if (!isProfileComplete(user)) {
       await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
       return;
     }
-    await ctx.reply('Ваш план — в мини-приложении:', { attachments: [openAppKeyboard(runtime.botUsername)] });
+    const plan = services.plan.getPlan(userId);
+    await ctx.reply(planText(plan, { limit: PLAN_PREVIEW_ITEMS }), { attachments: [planKeyboard()] });
   }
 
   async function toggleReminders(ctx) {
@@ -75,7 +89,7 @@ export function createBot({ config, repos, services, runtime, logger }) {
 
   bot.on('bot_started', sendStart);
   bot.command('start', sendStart);
-  bot.command('plan', sendOpenApp);
+  bot.command('plan', sendPlan);
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendTestReminder);
   bot.command('help', (ctx) => ctx.reply(texts.help));
@@ -137,8 +151,9 @@ export function createBot({ config, repos, services, runtime, logger }) {
         users.setSurveyState(userId, null);
         const region = reference.getRegion(profile.regionId);
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
-        const text = summaryText({ ...profile, region, interests: interestTitles });
-        const keyboard = openAppKeyboard(runtime.botUsername, [
+        const preview = planText(services.plan.getPlan(userId), { limit: 3 });
+        const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
+        const keyboard = planKeyboard([
           [Keyboard.button.callback(profile.remindersEnabled ? 'Выключить напоминания' : 'Включить напоминания', 'reminders:toggle')],
           [Keyboard.button.callback('Изменить ответы', 'survey:start')],
         ]);
@@ -147,6 +162,18 @@ export function createBot({ config, repos, services, runtime, logger }) {
       default:
         return restart();
     }
+  });
+
+  bot.action('plan:all', async (ctx) => {
+    const userId = userIdOf(ctx);
+    if (!isProfileComplete(users.ensure(userId))) {
+      await ctx.answerOnCallback({ message: { text: texts.needSurvey, attachments: [startKeyboard({ hasProfile: false })] } });
+      return;
+    }
+    const plan = services.plan.getPlan(userId);
+    await ctx.answerOnCallback({
+      message: { text: planText(plan), attachments: [openAppKeyboard(runtime.botUsername)] },
+    });
   });
 
   bot.action('reminders:toggle', async (ctx) => {
@@ -170,9 +197,36 @@ export function createBot({ config, repos, services, runtime, logger }) {
     });
   });
 
-  bot.catch((error, ctx) => {
+  bot.catch(async (error, ctx) => {
     logger.error({ err: error, updateType: ctx?.updateType }, 'bot update failed');
+    // Пользователь не должен остаться без ответа
+    try {
+      if (ctx?.chatId) await ctx.reply(texts.error);
+    } catch (replyError) {
+      logger.warn({ err: replyError }, 'failed to send error reply');
+    }
   });
+
+  let healthTimer = null;
+  let consecutiveFailures = 0;
+
+  /** Проверка связи с Bot API: если MAX недоступен несколько раз подряд, это видно в /api/health и в логах. */
+  async function checkHealth() {
+    try {
+      await bot.api.getMyInfo();
+      if (runtime.botStatus === 'unreachable') logger.info('MAX Bot API is reachable again');
+      consecutiveFailures = 0;
+      runtime.botStatus = 'running';
+    } catch (error) {
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= HEALTH_FAILURES_BEFORE_ALERT) {
+        runtime.botStatus = 'unreachable';
+        logger.error({ err: error, consecutiveFailures }, 'MAX Bot API is unreachable');
+      } else {
+        logger.warn({ err: error, consecutiveFailures }, 'MAX Bot API health check failed');
+      }
+    }
+  }
 
   return {
     api: bot.api,
@@ -194,7 +248,15 @@ export function createBot({ config, repos, services, runtime, logger }) {
       });
     },
 
+    startHealthMonitor(intervalMs = HEALTH_CHECK_INTERVAL_MS) {
+      healthTimer = setInterval(() => { checkHealth(); }, intervalMs);
+      healthTimer.unref?.();
+    },
+
+    checkHealth,
+
     stop() {
+      clearInterval(healthTimer);
       bot.stopPolling();
       runtime.botStatus = 'stopped';
     },

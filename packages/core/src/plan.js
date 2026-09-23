@@ -13,6 +13,20 @@ export function academicYearFor(date = new Date()) {
   return `${startYear}/${startYear + 1}`;
 }
 
+/** «2026/2027» → «2027/2028» */
+export function nextAcademicYear(academicYear) {
+  const [start] = academicYear.split('/').map(Number);
+  return `${start + 1}/${start + 2}`;
+}
+
+/**
+ * Учебный год, на который строится план: девятиклассникам — текущий,
+ * восьмиклассникам — следующий, когда они будут в 9 классе.
+ */
+export function planYearFor(grade, currentAcademicYear) {
+  return grade === 8 ? nextAcademicYear(currentAcademicYear) : currentAcademicYear;
+}
+
 /** Дата «сегодня» в формате YYYY-MM-DD с учётом часового пояса региона. */
 export function localDateString(now, utcOffsetHours) {
   const shifted = new Date(now.getTime() + utcOffsetHours * 3600 * 1000);

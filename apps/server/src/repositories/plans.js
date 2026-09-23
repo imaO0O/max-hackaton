@@ -53,6 +53,14 @@ export function createPlanRepository(db) {
       return db.prepare('SELECT user_id FROM plan_followers WHERE plan_id = ?').all(planId).map((row) => row.user_id);
     },
 
+    /** Владельцы планов с заполненным профилем — для массовой пересборки напоминаний. */
+    listOwnerIdsWithCompleteProfile() {
+      return db.prepare(`SELECT p.user_id FROM plans p
+        JOIN users u ON u.max_user_id = p.user_id
+        WHERE u.region_id IS NOT NULL AND u.grade IS NOT NULL AND u.path IS NOT NULL`).all()
+        .map((row) => row.user_id);
+    },
+
     countFollowers(planId) {
       return db.prepare('SELECT COUNT(*) AS count FROM plan_followers WHERE plan_id = ?').get(planId).count;
     },

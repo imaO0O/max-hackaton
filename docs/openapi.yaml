@@ -163,7 +163,8 @@ components:
       type: object
       required: [academicYear, today, region, profile, items, nextItemId]
       properties:
-        academicYear: { type: string }
+        academicYear: { type: string, description: 'Учебный год плана. Для 8 класса — следующий год (9 класс)' }
+        isAdvance: { type: boolean, description: 'План на следующий учебный год для восьмиклассника' }
         today: { type: string, format: date }
         region: { $ref: '#/components/schemas/Region' }
         profile: { $ref: '#/components/schemas/Profile' }
@@ -206,8 +207,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  status: { type: string, const: ok }
-                  bot: { type: string, enum: [starting, running, stopped, failed, disabled] }
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                    description: 'degraded — бот не на связи с MAX Bot API три проверки подряд или не запустился'
+                  bot: { type: string, enum: [starting, running, stopped, failed, unreachable, disabled] }
                   academicYear: { type: string }
 
   /api/regions:

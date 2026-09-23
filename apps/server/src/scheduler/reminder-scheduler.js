@@ -14,8 +14,12 @@ function isPermanentError(error) {
  * Планировщик: периодически отправляет наступившие напоминания через бота.
  * Работает в одном процессе с ботом; при нескольких экземплярах нужна блокировка задач.
  */
-export function createReminderScheduler({ repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date() }) {
+export function createReminderScheduler({
+  repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date(),
+  resyncAll = null, resyncIntervalMs = 24 * 3600 * 1000,
+}) {
   let timer = null;
+  let resyncTimer = null;
   let running = false;
 
   async function tick() {
@@ -57,10 +61,24 @@ export function createReminderScheduler({ repos, sendMessage, runtime, logger, i
         tick().catch((error) => logger.error({ err: error }, 'reminder tick failed'));
       }, intervalMs);
       timer.unref?.();
+      if (resyncAll) {
+        // Раз в сутки: подхватить смену учебного года и изменённые даты
+        resyncTimer = setInterval(() => {
+          try {
+            const result = resyncAll();
+            logger.info(result, 'reminders resynced');
+          } catch (error) {
+            logger.error({ err: error }, 'reminders resync failed');
+          }
+        }, resyncIntervalMs);
+        resyncTimer.unref?.();
+      }
     },
     stop() {
       clearInterval(timer);
+      clearInterval(resyncTimer);
       timer = null;
+      resyncTimer = null;
     },
   };
 }

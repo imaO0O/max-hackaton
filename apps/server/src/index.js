@@ -12,6 +12,10 @@ async function main() {
   const logger = app.log;
   for (const warning of config.warnings) logger.warn(warning);
 
+  // Справочник дат мог измениться с прошлого запуска — пересобираем очередь напоминаний
+  const resynced = services.plan.syncAllReminders();
+  logger.info(resynced, 'reminders resynced on startup');
+
   let bot = null;
   let scheduler = null;
   if (config.botEnabled) {
@@ -32,8 +36,10 @@ async function main() {
       sendMessage: (userId, text, extra) => bot.api.sendMessageToUser(userId, text, extra),
       logger: logger.child({ module: 'reminders' }),
       intervalMs: config.reminderIntervalMs,
+      resyncAll: () => services.plan.syncAllReminders(),
     });
     scheduler.start();
+    bot.startHealthMonitor();
   } else {
     logger.warn('BOT_ENABLED=false: bot and reminders are disabled');
   }
