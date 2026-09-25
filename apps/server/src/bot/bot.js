@@ -1,10 +1,10 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
-import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
+import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import {
-  menuKeyboard, reminderKeyboard, remindersKeyboard, startKeyboard, summaryKeyboard,
+  menuKeyboard, remindersKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
 import { registerPathsChat } from './paths-chat.js';
@@ -13,7 +13,7 @@ import { registerPlanChat } from './plan-chat.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
 } from './survey.js';
-import { planText, reminderText, summaryText, texts } from './texts.js';
+import { planText, summaryText, texts } from './texts.js';
 
 const SHARED_PLAN_PREFIX = 'plan_';
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000;
@@ -50,11 +50,13 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     if (payload?.startsWith(SHARED_PLAN_PREFIX)) {
       return planChat.openSharedPlan(ctx, payload.slice(SHARED_PLAN_PREFIX.length));
     }
-    const user = users.ensure(userIdOf(ctx));
-    const hasProfile = isProfileComplete(user);
-    return ctx.reply(hasProfile ? texts.welcomeBack : texts.welcome, {
-      attachments: [startKeyboard({ hasProfile, botUsername: runtime.botUsername, remindersEnabled: user.remindersEnabled })],
-    });
+    const view = planChat.menuView(userIdOf(ctx), { greeting: true });
+    return ctx.reply(view.text, { attachments: [view.keyboard] });
+  }
+
+  /** Справка с клавиатурой меню — своей у родителя, подписчика и нового пользователя. */
+  function sendHelp(ctx) {
+    return ctx.reply(texts.help, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] });
   }
 
   /** Метрики пилота — только для команды проекта (ADMIN_USER_IDS). */
@@ -76,33 +78,6 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     });
   }
 
-  /**
-   * Пример напоминания по ближайшему пункту плана — чтобы увидеть его, не дожидаясь даты.
-   * Выглядит и работает как настоящее: с кнопками «Сделано» и «Подробнее».
-   */
-  async function sendReminderExample(ctx) {
-    const userId = userIdOf(ctx);
-    if (!isProfileComplete(users.ensure(userId))) {
-      await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
-      return;
-    }
-    const plan = services.plan.getPlan(userId);
-    const item = plan.items.find((row) => row.id === plan.nextItemId) ?? plan.items.at(-1);
-    if (!item) {
-      await ctx.reply('В плане пока нет дат на этот учебный год.');
-      return;
-    }
-    const inProgress = item.status === 'current' && item.dateEnd;
-    const example = reminderText({
-      keyDate: item,
-      anchor: inProgress ? 'end' : 'start',
-      daysBefore: Math.max(0, inProgress ? daysBetween(plan.today, item.dateEnd) : (item.daysLeft ?? 0)),
-    });
-    await ctx.reply(`${example}\n\n${texts.reminderExampleNote}`, {
-      attachments: [reminderKeyboard(runtime.botUsername, { keyDateId: item.id, canMarkDone: true, done: item.done })],
-    });
-  }
-
   bot.on('bot_started', (ctx) => sendStart(ctx, ctx.startPayload));
   // «/start» и «/start plan_…» — так приходит параметр ссылки, если диалог с ботом уже открыт
   bot.command(/^start(?:\s+(\S+))?$/, (ctx) => sendStart(ctx, ctx.match?.[1]));
@@ -112,10 +87,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
   bot.command('paths', (ctx) => pathsChat.sendPaths(ctx));
   bot.command('reminders', toggleReminders);
-  bot.command('test_reminder', sendReminderExample);
+  bot.command('test_reminder', planChat.sendReminderExample);
   bot.action('reminder:example', async (ctx) => {
     await ctx.answerOnCallback({ notification: 'Пример напоминания — ниже' });
-    return sendReminderExample(ctx);
+    return planChat.sendReminderExample(ctx);
   });
   bot.command('stats', sendStats);
   bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
@@ -124,14 +99,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       Keyboard.button.callback('Отмена', 'data:delete-cancel'),
     ]])],
   }));
-  bot.command('help', (ctx) => {
-    const user = users.ensure(userIdOf(ctx));
-    return ctx.reply(texts.help, {
-      attachments: [startKeyboard({
-        hasProfile: isProfileComplete(user), botUsername: runtime.botUsername, remindersEnabled: user.remindersEnabled,
-      })],
-    });
-  });
+  bot.command('help', sendHelp);
 
   bot.action(/^survey:/, async (ctx) => {
     const userId = userIdOf(ctx);
@@ -233,29 +201,15 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const userId = userIdOf(ctx);
     const user = users.ensure(userId);
     const profile = services.plan.setRemindersEnabled(userId, !user.remindersEnabled);
-    const hasProfile = isProfileComplete(users.get(userId));
+    const menu = planChat.menuView(userId, { withReminderExample: profile.remindersEnabled });
     await ctx.answerOnCallback({
-      message: {
-        text: profile.remindersEnabled ? texts.remindersOn : texts.remindersOff,
-        attachments: [hasProfile
-          ? menuKeyboard({
-            botUsername: runtime.botUsername,
-            remindersEnabled: profile.remindersEnabled,
-            withReminderExample: profile.remindersEnabled,
-          })
-          : startKeyboard({ hasProfile: false })],
-      },
+      message: { text: profile.remindersEnabled ? texts.remindersOn : texts.remindersOff, attachments: [menu.keyboard] },
     });
   });
 
   bot.on('message_created', async (ctx) => {
     if (ctx.message?.recipient?.chat_type !== 'dialog') return;
-    const user = users.ensure(userIdOf(ctx));
-    await ctx.reply(texts.help, {
-      attachments: [startKeyboard({
-        hasProfile: isProfileComplete(user), botUsername: runtime.botUsername, remindersEnabled: user.remindersEnabled,
-      })],
-    });
+    await sendHelp(ctx);
   });
 
   bot.catch(async (error, ctx) => {

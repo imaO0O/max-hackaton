@@ -265,11 +265,41 @@ describe('меню, план в чате и отправка подростку'
     const itemId = ctx.services.plan.getPlan(555).nextItemId;
     await bot.handleUpdate(press(`item:${itemId}`, TEEN));
     assert.match(lastAnswer().text, /^📌 /);
+    assert.match(lastAnswer().text, /Через /, 'статус по плану семьи');
     assert.ok(!lastAnswer().buttons.some((payload) => payload.startsWith('item-done')));
+    assert.ok(lastAnswer().buttons.includes('plan:all'), '«← Все даты» ведёт к датам плана семьи');
+  });
 
+  test('у подписчика без своего плана план семьи в меню и по /plan', async () => {
+    await bot.handleUpdate(command('/start', TEEN));
+    assert.match(lastAnswer().text, /Вы получаете напоминания по плану, которым с вами поделились/);
+    assert.ok(lastAnswer().buttons.includes('plan:show'));
+    assert.equal(lastAnswer().openApp.payload, `plan_${token}`, 'мини-приложение открывается на плане семьи');
+
+    await bot.handleUpdate(command('/plan', TEEN));
+    assert.match(lastAnswer().text, /^План семьи/);
+    assert.match(lastAnswer().text, /Ближайшие даты:/);
+
+    await bot.handleUpdate(press('plan:all', TEEN));
+    assert.match(lastAnswer().text, /Даты года:/);
+    assert.match(lastAnswer().text, /Нажмите на дату — откроются подробности\./);
+    assert.ok(lastAnswer().buttons.some((payload) => payload.startsWith('item:')));
+
+    await bot.handleUpdate(press(`shared-all:${token}`, { ...TEEN, user_id: 778 }));
+    assert.match(lastAnswer().text, /Даты года:/, 'все даты по ссылке — и без подписки');
+
+    await bot.handleUpdate(command('/test_reminder', TEEN));
+    assert.match(lastAnswer().text, /^⏰ /);
+    assert.ok(!lastAnswer().buttons.some((payload) => payload.startsWith('rdone:')), 'без «Сделано» в чужом плане');
+  });
+
+  test('подписчик отписывается — план семьи пропадает из меню', async () => {
     await bot.handleUpdate(press(`unfollow:${token}`, TEEN));
     assert.match(lastAnswer().text, /выключены/);
     assert.equal(ctx.repos.reminders.countPending(777), 0);
+
+    await bot.handleUpdate(command('/plan', TEEN));
+    assert.match(lastAnswer().text, /Сначала ответьте на 5 вопросов/);
   });
 
   test('ссылка работает и командой /start с параметром; чужая и своя ссылки различаются', async () => {

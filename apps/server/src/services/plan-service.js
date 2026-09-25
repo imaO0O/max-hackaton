@@ -236,6 +236,12 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       return { deleted };
     },
 
+    /** Токен плана семьи, на который подписан пользователь, или null — чтобы показать этот план в чате. */
+    getFollowedShareToken(userId) {
+      const plan = plans.listFollowedByUser(userId).find((row) => isProfileComplete(users.get(row.userId)));
+      return plan?.shareToken ?? null;
+    },
+
     setFollowing(viewerId, token, follow) {
       users.ensure(viewerId);
       const plan = plans.getByShareToken(token);
