@@ -2,7 +2,7 @@ import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import { AppError } from '../services/errors.js';
 import {
-  planItemKeyboard, planItemsKeyboard, planPreviewKeyboard, shareKeyboard, sharedPlanKeyboard, startKeyboard,
+  planItemKeyboard, planItemsKeyboard, planPreviewKeyboard, reminderKeyboard, shareKeyboard, sharedPlanKeyboard, startKeyboard,
 } from './keyboards.js';
 import { planItemCard, planItemLabel, planText, texts } from './texts.js';
 
@@ -150,6 +150,43 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
     }
     if (done) services.analytics.track(EVENTS.ITEM_DONE, userId, { itemId, from: 'chat' });
     return show(ctx, itemView(userId, itemId), { edit: true });
+  });
+
+  // Кнопки под напоминанием: само напоминание остаётся в чате
+
+  bot.action(/^ritem:/, async (ctx) => {
+    const view = itemView(userIdOf(ctx), payloadOf(ctx).slice('ritem:'.length));
+    if (!view) return ctx.answerOnCallback({ notification: texts.itemNotFound });
+    await ctx.answerOnCallback({ notification: texts.detailsBelow });
+    return show(ctx, view, { edit: false });
+  });
+
+  bot.action(/^r(done|undo):/, async (ctx) => {
+    const userId = userIdOf(ctx);
+    const [action, itemId] = payloadOf(ctx).split(':');
+    const done = action === 'rdone';
+    try {
+      services.plan.setItemDone(userId, itemId, done);
+    } catch (error) {
+      if (error instanceof AppError && error.statusCode === 409) {
+        await ctx.answerOnCallback({ notification: texts.needSurvey });
+        return show(ctx, surveyView(), { edit: false });
+      }
+      if (isNotFound(error)) return ctx.answerOnCallback({ notification: texts.itemNotFound });
+      throw error;
+    }
+    if (done) services.analytics.track(EVENTS.ITEM_DONE, userId, { itemId, from: 'reminder' });
+    const notification = done ? texts.itemMarked : texts.itemUnmarked;
+    // Тот же текст напоминания, меняется только кнопка
+    const reminderText = ctx.message?.body?.text;
+    if (!reminderText) return ctx.answerOnCallback({ notification });
+    return ctx.answerOnCallback({
+      notification,
+      message: {
+        text: reminderText,
+        attachments: [reminderKeyboard(runtime.botUsername, { keyDateId: itemId, canMarkDone: true, done })],
+      },
+    });
   });
 
   bot.action('share:show', (ctx) => sendShare(ctx, { edit: true }));

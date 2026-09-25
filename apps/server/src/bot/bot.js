@@ -3,7 +3,9 @@ import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
-import { menuKeyboard, openAppKeyboard, startKeyboard } from './keyboards.js';
+import {
+  menuKeyboard, reminderKeyboard, remindersKeyboard, startKeyboard, summaryKeyboard,
+} from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
@@ -67,11 +69,16 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const userId = userIdOf(ctx);
     const user = users.ensure(userId);
     const profile = services.plan.setRemindersEnabled(userId, !user.remindersEnabled);
-    await ctx.reply(profile.remindersEnabled ? texts.remindersOn : texts.remindersOff);
+    await ctx.reply(profile.remindersEnabled ? texts.remindersOn : texts.remindersOff, {
+      attachments: [remindersKeyboard(profile.remindersEnabled)],
+    });
   }
 
-  /** Пример напоминания по ближайшему пункту плана — чтобы проверить формат, не дожидаясь даты. */
-  async function sendTestReminder(ctx) {
+  /**
+   * Пример напоминания по ближайшему пункту плана — чтобы увидеть его, не дожидаясь даты.
+   * Выглядит и работает как настоящее: с кнопками «Сделано» и «Подробнее».
+   */
+  async function sendReminderExample(ctx) {
     const userId = userIdOf(ctx);
     if (!isProfileComplete(users.ensure(userId))) {
       await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
@@ -89,7 +96,9 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       anchor: inProgress ? 'end' : 'start',
       daysBefore: Math.max(0, inProgress ? daysBetween(plan.today, item.dateEnd) : (item.daysLeft ?? 0)),
     });
-    await ctx.reply(`Так будет выглядеть напоминание:\n\n${example}`, { attachments: [openAppKeyboard(runtime.botUsername)] });
+    await ctx.reply(`${example}\n\n${texts.reminderExampleNote}`, {
+      attachments: [reminderKeyboard(runtime.botUsername, { keyDateId: item.id, canMarkDone: true, done: item.done })],
+    });
   }
 
   bot.on('bot_started', (ctx) => sendStart(ctx, ctx.startPayload));
@@ -100,7 +109,11 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('menu', planChat.sendMenu);
   bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
   bot.command('reminders', toggleReminders);
-  bot.command('test_reminder', sendTestReminder);
+  bot.command('test_reminder', sendReminderExample);
+  bot.action('reminder:example', async (ctx) => {
+    await ctx.answerOnCallback({ notification: 'Пример напоминания — ниже' });
+    return sendReminderExample(ctx);
+  });
   bot.command('stats', sendStats);
   bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
     attachments: [Keyboard.inlineKeyboard([[
@@ -123,7 +136,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const user = users.ensure(userId);
     const draft = user.surveyState?.draft ?? {};
     const save = (nextDraft) => users.setSurveyState(userId, { draft: nextDraft });
-    const restart = () => showStep(ctx, { text: texts.surveyExpired, keyboard: startKeyboard({ hasProfile: false }) }, { edit: true });
+    // Старая кнопка опроса: с готовым планом — меню, иначе — начать заново
+    const restart = () => showStep(ctx, isProfileComplete(user)
+      ? { text: texts.surveyDone, keyboard: menuKeyboard({ botUsername: runtime.botUsername, remindersEnabled: user.remindersEnabled }) }
+      : { text: texts.surveyExpired, keyboard: startKeyboard({ hasProfile: false }) }, { edit: true });
 
     if (!parsed) return restart();
     const { action, value } = parsed;
@@ -182,13 +198,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
         const preview = planText(services.plan.getPlan(userId), { limit: 3 });
         const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
-        const keyboard = openAppKeyboard(runtime.botUsername, [
-          [Keyboard.button.callback('Все даты года', 'plan:all')],
-          [Keyboard.button.callback('📨 Отправить план подростку', 'share:show')],
-          [Keyboard.button.callback(profile.remindersEnabled ? 'Выключить напоминания' : 'Включить напоминания', 'reminders:toggle')],
-          [Keyboard.button.callback('Изменить ответы', 'survey:start')],
-        ]);
-        return showStep(ctx, { text, keyboard }, { edit: true });
+        return showStep(ctx, { text, keyboard: summaryKeyboard(runtime.botUsername) }, { edit: true });
       }
       case 'back': {
         // Возврат на шаг назад с сохранением уже выбранных ответов
@@ -225,7 +235,11 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       message: {
         text: profile.remindersEnabled ? texts.remindersOn : texts.remindersOff,
         attachments: [hasProfile
-          ? menuKeyboard({ botUsername: runtime.botUsername, remindersEnabled: profile.remindersEnabled })
+          ? menuKeyboard({
+            botUsername: runtime.botUsername,
+            remindersEnabled: profile.remindersEnabled,
+            withReminderExample: profile.remindersEnabled,
+          })
           : startKeyboard({ hasProfile: false })],
       },
     });
@@ -284,6 +298,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'share', description: 'Отправить план подростку' },
         { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
+        { name: 'test_reminder', description: 'Пример напоминания' },
         { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },
       ]);

@@ -40,7 +40,7 @@ test('напоминание уходит в срок и не отправляе
   const buttons = sent[0].extra.attachments[0].payload.buttons.flat();
   assert.deepEqual(
     buttons.map((button) => button.payload),
-    ['from_reminder', 'item-done:2627-fed-final-interview', 'item:2627-fed-final-interview'],
+    ['from_reminder', 'rdone:2627-fed-final-interview', 'ritem:2627-fed-final-interview'],
     'кнопки: открыть план (метка источника), «Сделано», «Подробнее»',
   );
 
@@ -105,7 +105,7 @@ test('подписчику по чужому плану напоминание �
   const teen = sent.find((message) => message.userId === 11);
   const parent = sent.find((message) => message.userId === 10);
   const payloads = (message) => message.extra.attachments[0].payload.buttons.flat().map((button) => button.payload);
-  assert.ok(payloads(parent).some((payload) => payload.startsWith('item-done:')));
-  assert.ok(!payloads(teen).some((payload) => payload.startsWith('item-done:')));
+  assert.ok(payloads(parent).some((payload) => payload.startsWith('rdone:')));
+  assert.ok(!payloads(teen).some((payload) => payload.startsWith('rdone:')));
   ctx.db.close();
 });

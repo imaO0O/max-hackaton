@@ -47,7 +47,7 @@ function command(text, user = USER) {
   };
 }
 
-function press(payload, user = USER) {
+function press(payload, user = USER, text = '') {
   return {
     update_type: 'message_callback',
     timestamp: timestamp(),
@@ -56,7 +56,7 @@ function press(payload, user = USER) {
       sender: { ...USER, user_id: 1, is_bot: true },
       recipient: { chat_id: user.user_id, chat_type: 'dialog' },
       timestamp: timestamp(),
-      body: { mid: 'bot-message', seq: 1, text: '' },
+      body: { mid: 'bot-message', seq: 1, text },
     },
   };
 }
@@ -136,8 +136,9 @@ describe('опрос в боте', () => {
     assert.ok(summary.buttons.includes('open_app'), 'кнопка «Открыть план»');
     assert.equal(summary.openApp.web_app, 'posle9_test_bot');
     assert.equal(summary.openApp.payload, 'from_bot', 'источник открытия для метрик');
-    assert.ok(summary.buttons.includes('plan:all'));
-    assert.ok(summary.buttons.includes('reminders:toggle'));
+    for (const payload of ['plan:all', 'colleges:show', 'share:show', 'reminder:example', 'menu:show']) {
+      assert.ok(summary.buttons.includes(payload), payload);
+    }
 
     const profile = ctx.services.plan.getProfile(555);
     assert.deepEqual(
@@ -146,13 +147,17 @@ describe('опрос в боте', () => {
     );
   });
 
-  test('устаревшая кнопка опроса предлагает начать заново', async () => {
+  test('устаревшая кнопка опроса: с готовым планом — меню, без плана — начать заново', async () => {
     await bot.handleUpdate(press('survey:grade:9'));
+    assert.match(lastAnswer().text, /Ответы уже сохранены/);
+    assert.ok(lastAnswer().buttons.includes('plan:show'));
+
+    await bot.handleUpdate(press('survey:grade:9', { ...USER, user_id: 559 }));
     assert.match(lastAnswer().text, /Этот вопрос устарел/);
   });
 
   test('неизвестный регион в кнопке не ломает опрос', async () => {
-    await bot.handleUpdate(press('survey:region:nowhere'));
+    await bot.handleUpdate(press('survey:region:nowhere', { ...USER, user_id: 559 }));
     assert.match(lastAnswer().text, /Этот вопрос устарел/);
   });
 });
@@ -314,6 +319,45 @@ describe('меню, план в чате и отправка подростку'
   });
 });
 
+describe('напоминание остаётся в чате', () => {
+  test('пример напоминания: «Сделано» меняет только кнопку, «Подробнее» — новым сообщением', async () => {
+    await bot.handleUpdate(press('reminder:example'));
+    const example = requests.filter((item) => item.path === '/messages').at(-1).body;
+    assert.match(example.text, /^⏰ /);
+    assert.match(example.text, /Это пример/);
+    const payloads = allButtons(example).map((button) => button.payload);
+    const donePayload = payloads.find((payload) => payload?.startsWith('rdone:'));
+    assert.ok(donePayload, 'кнопка «Сделано», как в настоящем напоминании');
+    const itemId = donePayload.slice('rdone:'.length);
+    assert.ok(payloads.includes(`ritem:${itemId}`));
+
+    requests = [];
+    await bot.handleUpdate(press(donePayload, USER, example.text));
+    const answer = requests.find((item) => item.path === '/answers').body;
+    assert.equal(answer.message.text, example.text, 'текст напоминания не меняется');
+    assert.ok(allButtons(answer.message).some((button) => button.payload === `rundo:${itemId}`));
+    assert.match(answer.notification, /Отмечено в плане/);
+    assert.equal(ctx.services.plan.getPlan(555).items.find((item) => item.id === itemId).done, true);
+
+    requests = [];
+    await bot.handleUpdate(press(`ritem:${itemId}`, USER, example.text));
+    assert.ok(!requests.some((item) => item.path === '/answers' && item.body.message), 'напоминание не редактируется');
+    assert.match(requests.find((item) => item.path === '/messages').body.text, /^📌 /);
+
+    await bot.handleUpdate(press(`rundo:${itemId}`, USER, example.text));
+    assert.equal(ctx.services.plan.getPlan(555).items.find((item) => item.id === itemId).done, false);
+  });
+
+  test('/reminders: при включении — кнопка примера', async () => {
+    await bot.handleUpdate(command('/reminders'));
+    assert.match(lastAnswer().text, /Напоминания выключены/);
+    assert.ok(!lastAnswer().buttons.includes('reminder:example'));
+    await bot.handleUpdate(command('/reminders'));
+    assert.match(lastAnswer().text, /Напоминания включены/);
+    assert.ok(lastAnswer().buttons.includes('reminder:example'));
+  });
+});
+
 describe('команды', () => {
   test('/plan присылает ближайшие даты, «Все даты года» — весь план', async () => {
     await bot.handleUpdate(command('/plan'));
@@ -333,7 +377,8 @@ describe('команды', () => {
 
   test('/test_reminder показывает пример напоминания', async () => {
     await bot.handleUpdate(command('/test_reminder'));
-    assert.match(lastAnswer().text, /Так будет выглядеть напоминание:\n\n⏰/);
+    assert.match(lastAnswer().text, /^⏰ /);
+    assert.match(lastAnswer().text, /Это пример/);
   });
 
   test('/stats доступна только команде проекта', async () => {

@@ -3,11 +3,13 @@ import { Keyboard } from '@maxhub/max-bot-api';
 /**
  * Клавиатуры бота. Payload callback-кнопок:
  *   menu:show, plan:show, plan:all, item:<id>, item-done:<id>, item-undo:<id>,
- *   share:show, follow:<токен>, unfollow:<токен>, reminders:toggle, survey:…, data:…
+ *   share:show, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, survey:…, data:…
+ * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
  */
 
 const button = Keyboard.button;
 const BACK_TO_MENU = [button.callback('← Меню', 'menu:show')];
+const REMINDER_EXAMPLE = [button.callback('⏰ Пример напоминания', 'reminder:example')];
 
 /**
  * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
@@ -22,14 +24,30 @@ export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot'
 }
 
 /** Главное меню для тех, кто уже прошёл опрос: весь сценарий доступен и без мини-приложения. */
-export function menuKeyboard({ botUsername, remindersEnabled }) {
+export function menuKeyboard({ botUsername, remindersEnabled, withReminderExample = false }) {
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Даты плана', 'plan:show')],
     [button.callback('🏫 Колледжи по интересам', 'colleges:show')],
     [button.callback('📨 Отправить план подростку', 'share:show')],
     [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
+    ...(withReminderExample ? [REMINDER_EXAMPLE] : []),
     [button.callback('✏️ Изменить ответы', 'survey:start')],
   ]);
+}
+
+/** Сразу после опроса: все даты, колледжи по выбранным интересам, отправка подростку и пример напоминания. */
+export function summaryKeyboard(botUsername) {
+  return openAppKeyboard(botUsername, [
+    [button.callback('📅 Все даты', 'plan:all'), button.callback('🏫 Колледжи', 'colleges:show')],
+    [button.callback('📨 Отправить план подростку', 'share:show')],
+    REMINDER_EXAMPLE,
+    [button.callback('☰ Меню', 'menu:show')],
+  ]);
+}
+
+/** Ответ на /reminders: когда напоминания включены — можно сразу посмотреть пример. */
+export function remindersKeyboard(enabled) {
+  return Keyboard.inlineKeyboard([...(enabled ? [REMINDER_EXAMPLE] : []), BACK_TO_MENU]);
 }
 
 export function startKeyboard({ hasProfile, botUsername, remindersEnabled = true }) {
@@ -66,10 +84,17 @@ export function planItemKeyboard({ item, canMarkDone }) {
   return Keyboard.inlineKeyboard(rows);
 }
 
-/** Под напоминанием: «Сделано» снимает следующие напоминания по этому пункту. */
-export function reminderKeyboard(botUsername, { keyDateId, canMarkDone }) {
-  const rows = [[button.callback('Подробнее', `item:${keyDateId}`)]];
-  if (canMarkDone) rows.unshift([button.callback('✅ Сделано', `item-done:${keyDateId}`)]);
+/**
+ * Под напоминанием: «Сделано» снимает следующие напоминания по этому пункту.
+ * Кнопки не стирают напоминание: «Подробнее» присылает карточку новым сообщением, «Сделано» меняет только кнопку.
+ */
+export function reminderKeyboard(botUsername, { keyDateId, canMarkDone, done = false }) {
+  const rows = [[button.callback('Подробнее', `ritem:${keyDateId}`)]];
+  if (canMarkDone) {
+    rows.unshift([done
+      ? button.callback('✅ Отмечено · снять отметку', `rundo:${keyDateId}`)
+      : button.callback('✅ Сделано', `rdone:${keyDateId}`)]);
+  }
   return openAppKeyboard(botUsername, rows, 'from_reminder');
 }
 
