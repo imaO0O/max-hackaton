@@ -214,7 +214,8 @@ npm run data:check
 
 ```bash
 curl http://localhost:8080/api/health
-# {"status":"ok","bot":"running","academicYear":"2026/2027"}
+# {"status":"ok","bot":"running","academicYear":"2026/2027","version":"v0.3.0 (a95e3fa)"}
+# version — развёрнутая версия: тег и коммит (при сборке без scripts/deploy.sh — local)
 
 curl "http://localhost:8080/api/colleges?regionId=demo-standard&interests=it&city=Демоград"
 # {"colleges":[{"id":"demo-it-college","name":"Демо-колледж информационных технологий",...}]}

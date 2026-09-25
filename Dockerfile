@@ -46,6 +46,10 @@ COPY data ./data
 RUN mkdir -p /app/storage && chown -R node:node /app/storage
 USER node
 
+# Версия для /api/health: scripts/deploy.sh передаёт тег и коммит, при обычной сборке — «local»
+ARG APP_VERSION=local
+ENV APP_VERSION=$APP_VERSION
+
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/api/health > /dev/null || exit 1

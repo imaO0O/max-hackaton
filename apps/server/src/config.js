@@ -53,6 +53,7 @@ export function loadConfig(env = process.env) {
     adminUserIds: parseIdList('ADMIN_USER_IDS', env.ADMIN_USER_IDS),
     botRichText: parseBoolean(env.BOT_RICH_TEXT, true),
     rateLimitPerMinute: parseInteger('RATE_LIMIT_PER_MINUTE', env.RATE_LIMIT_PER_MINUTE, 300, { min: 0 }),
+    appVersion: env.APP_VERSION || 'local',
   };
 
   if (config.botEnabled && !config.botToken) {

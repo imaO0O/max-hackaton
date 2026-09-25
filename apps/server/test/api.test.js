@@ -30,6 +30,7 @@ describe('API мини-приложения', () => {
     const response = await call('GET', '/api/health');
     assert.equal(response.statusCode, 200);
     assert.equal(response.json().status, 'ok');
+    assert.equal(response.json().version, 'test', 'видно, какая версия развёрнута');
   });
 
   test('справочники: регионы, города, сферы', async () => {
@@ -210,7 +211,9 @@ describe('API мини-приложения', () => {
     ctx.runtime.botStatus = 'unreachable';
     const response = await call('GET', '/api/health');
     assert.equal(response.statusCode, 200);
-    assert.deepEqual(response.json(), { status: 'degraded', bot: 'unreachable', academicYear: '2026/2027' });
+    assert.deepEqual(response.json(), {
+      status: 'degraded', bot: 'unreachable', academicYear: '2026/2027', version: 'test',
+    });
     ctx.runtime.botStatus = previous;
   });
 

@@ -214,6 +214,7 @@ paths:
                     description: 'degraded — бот не на связи с MAX Bot API три проверки подряд или не запустился'
                   bot: { type: string, enum: [starting, running, stopped, failed, unreachable, disabled] }
                   academicYear: { type: string }
+                  version: { type: string, description: 'Развёрнутая версия: тег и коммит, например «v0.3.0 (a95e3fa)»; при сборке без scripts/deploy.sh — local', examples: ['v0.3.0 (a95e3fa)'] }
 
   /api/regions:
     get:
