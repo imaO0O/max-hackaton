@@ -69,6 +69,7 @@ export const texts = {
     '/plan — ближайшие даты плана прямо в чате',
     '/share — отправить план подростку',
     '/colleges — колледжи по интересам из ответов',
+    '/paths — чем отличаются 10–11 класс и колледж',
     '/reminders — включить или выключить напоминания',
     '/test_reminder — показать пример напоминания прямо сейчас',
     '/delete_data — удалить мои данные из сервиса',
@@ -99,6 +100,32 @@ export const texts = {
   remindersOn: 'Напоминания включены. Напишу за несколько дней до важных дат в 10:00 по времени вашего региона.',
   remindersOff: 'Напоминания выключены. Включить снова: /reminders',
 };
+
+const PATH_ICONS = { school10: '🎓', college: '🛠' };
+const lowerFirst = (text) => text.charAt(0).toLowerCase() + text.slice(1);
+const bullets = (lines) => lines.map((line) => `• ${line}`);
+
+/** Сравнение путей для чата — из data/content.json, как на экране «Пути» в мини-приложении. */
+export function pathsText(content) {
+  const blocks = content.paths.map((path) => [
+    `${PATH_ICONS[path.id] ?? '•'} ${path.title} — ${lowerFirst(path.subtitle)}`,
+    `Срок: ${path.duration}`,
+    'Экзамены:',
+    ...bullets(path.exams),
+    `Как поступают: ${path.admission}`,
+    'Плюсы:',
+    ...bullets(path.pros),
+    'Минусы:',
+    ...bullets(path.cons),
+    `Дальше: ${path.next}`,
+  ].join('\n'));
+  return [
+    '10–11 класс или колледж: чем отличаются пути',
+    ...blocks,
+    'Подробнее, с калькулятором среднего балла и колледжами региона, — в мини-приложении.',
+    content.disclaimer,
+  ].join('\n\n');
+}
 
 export function summaryText({ region, city, grade, interests, path, remindersEnabled }) {
   return [

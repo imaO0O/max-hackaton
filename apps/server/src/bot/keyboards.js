@@ -3,7 +3,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
 /**
  * Клавиатуры бота. Payload callback-кнопок:
  *   menu:show, plan:show, plan:all, item:<id>, item-done:<id>, item-undo:<id>,
- *   share:show, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, survey:…, data:…
+ *   share:show, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, paths:show, survey:…, data:…
  * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
  */
 
@@ -26,7 +26,7 @@ export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot'
 /** Главное меню для тех, кто уже прошёл опрос: весь сценарий доступен и без мини-приложения. */
 export function menuKeyboard({ botUsername, remindersEnabled, withReminderExample = false }) {
   return openAppKeyboard(botUsername, [
-    [button.callback('📅 Даты плана', 'plan:show')],
+    [button.callback('📅 Даты плана', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
     [button.callback('🏫 Колледжи по интересам', 'colleges:show')],
     [button.callback('📨 Отправить план подростку', 'share:show')],
     [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
@@ -52,7 +52,10 @@ export function remindersKeyboard(enabled) {
 
 export function startKeyboard({ hasProfile, botUsername, remindersEnabled = true }) {
   if (hasProfile) return menuKeyboard({ botUsername, remindersEnabled });
-  return Keyboard.inlineKeyboard([[button.callback('Начать', 'survey:start')]]);
+  return Keyboard.inlineKeyboard([
+    [button.callback('Начать', 'survey:start')],
+    [button.callback('⚖️ 10 класс или колледж?', 'paths:show')],
+  ]);
 }
 
 /** Под превью плана: все даты и возврат в меню. */

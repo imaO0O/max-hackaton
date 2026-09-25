@@ -110,7 +110,15 @@ describe('опрос в боте', () => {
   test('от /start до готового плана с датами в чате', async () => {
     await bot.handleUpdate(command('/start'));
     assert.match(lastAnswer().text, /помогу семье девятиклассника/);
-    assert.deepEqual(lastAnswer().buttons, ['survey:start']);
+    assert.deepEqual(lastAnswer().buttons, ['survey:start', 'paths:show']);
+
+    await bot.handleUpdate(press('paths:show'));
+    assert.match(lastAnswer().text, /^10–11 класс или колледж: чем отличаются пути/);
+    assert.match(lastAnswer().text, /🎓 10–11 класс — остаться в школе/);
+    assert.match(lastAnswer().text, /🛠 Колледж — получить профессию/);
+    assert.match(lastAnswer().text, /Минусы:/);
+    assert.ok(lastAnswer().text.length < 4000, 'помещается в одно сообщение');
+    assert.ok(lastAnswer().buttons.includes('survey:start'), 'до опроса — предложение собрать план');
 
     await bot.handleUpdate(press('survey:start'));
     assert.match(lastAnswer().text, /Шаг 1 из 5/);
@@ -192,7 +200,7 @@ describe('меню, план в чате и отправка подростку'
     await bot.handleUpdate(command('/start'));
     assert.match(lastAnswer().text, /С возвращением/);
     const { buttons } = lastAnswer();
-    for (const payload of ['open_app', 'plan:show', 'share:show', 'reminders:toggle', 'survey:start']) {
+    for (const payload of ['open_app', 'plan:show', 'paths:show', 'colleges:show', 'share:show', 'reminders:toggle', 'survey:start']) {
       assert.ok(buttons.includes(payload), payload);
     }
   });

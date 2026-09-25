@@ -7,6 +7,7 @@ import {
   menuKeyboard, reminderKeyboard, remindersKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
+import { registerPathsChat } from './paths-chat.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
 import {
@@ -33,6 +34,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const userIdOf = (ctx) => ctx.user?.user_id;
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
   const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
+  const pathsChat = registerPathsChat({ bot, users, services, runtime });
 
   async function showStep(ctx, step, { edit }) {
     const body = { text: step.text, attachments: [step.keyboard] };
@@ -108,6 +110,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('share', (ctx) => planChat.sendShare(ctx));
   bot.command('menu', planChat.sendMenu);
   bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
+  bot.command('paths', (ctx) => pathsChat.sendPaths(ctx));
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendReminderExample);
   bot.action('reminder:example', async (ctx) => {
@@ -297,6 +300,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'plan', description: 'Ближайшие даты плана' },
         { name: 'share', description: 'Отправить план подростку' },
         { name: 'colleges', description: 'Колледжи по интересам' },
+        { name: 'paths', description: '10 класс или колледж: сравнить' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },
         { name: 'delete_data', description: 'Удалить мои данные' },
