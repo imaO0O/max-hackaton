@@ -4,6 +4,7 @@ import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import { menuKeyboard, openAppKeyboard, startKeyboard } from './keyboards.js';
+import { registerCollegesChat } from './colleges-chat.js';
 import { registerPlanChat } from './plan-chat.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
@@ -25,6 +26,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
 
   const userIdOf = (ctx) => ctx.user?.user_id;
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
+  const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
 
   async function showStep(ctx, step, { edit }) {
     const body = { text: step.text, attachments: [step.keyboard] };
@@ -92,6 +94,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('plan', planChat.sendPlanPreview);
   bot.command('share', (ctx) => planChat.sendShare(ctx));
   bot.command('menu', planChat.sendMenu);
+  bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendTestReminder);
   bot.command('stats', sendStats);
@@ -275,6 +278,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'start', description: 'Начать или вернуться в меню' },
         { name: 'plan', description: 'Ближайшие даты плана' },
         { name: 'share', description: 'Отправить план подростку' },
+        { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },

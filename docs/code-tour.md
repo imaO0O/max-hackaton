@@ -9,7 +9,7 @@
 | `packages/core/src/grades.js` | калькулятор среднего балла аттестата | Б |
 | `packages/core/src/plan.js` | какие даты попадают в план, статусы, расписание напоминаний | А |
 | `apps/server/src/api` | HTTP API мини-приложения, проверка подписи MAX, ограничение частоты | А |
-| `apps/server/src/bot` | диалог бота: опрос (`survey.js`), меню и план в чате (`plan-chat.js`), клавиатуры (`keyboards.js`), тексты | А |
+| `apps/server/src/bot` | диалог бота: опрос (`survey.js`), меню и план в чате (`plan-chat.js`), колледжи в чате (`colleges-chat.js`), клавиатуры (`keyboards.js`), тексты | А |
 | `apps/server/src/scheduler` | отправка напоминаний | А |
 | `apps/server/src/services` | сценарии: план, каталог, календарь, метрики | А |
 | `apps/server/src/repositories`, `db` | SQL, миграции, загрузка справочников | А |
