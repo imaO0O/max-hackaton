@@ -54,9 +54,12 @@ jobs:
           docker logs posle9
           exit 1
 
-      - name: Проверка открытых методов API
-        run: |
-          curl -fsS http://localhost:8080/api/regions > /dev/null
-          curl -fsS "http://localhost:8080/api/colleges?regionId=demo-standard" > /dev/null
-          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/plan)
-          test "$status" = "401"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+
+      # Те же проверки, что выполнит платформа оценки по DATA-API.yaml, — против собранного контейнера
+      - name: Проверки DATA-API.yaml
+        run: node scripts/check-data-api.mjs http://localhost:8080
