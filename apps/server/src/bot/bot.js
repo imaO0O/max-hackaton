@@ -5,6 +5,7 @@ import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import { menuKeyboard, openAppKeyboard, startKeyboard } from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
+import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
@@ -20,8 +21,11 @@ const HEALTH_FAILURES_BEFORE_ALERT = 3;
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
 export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
-  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX
-  const bot = new Bot(config.botToken, clientOptions ? { clientOptions } : undefined);
+  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX.
+  // Поверх него — оформление сообщений (жирные заголовки), если BOT_RICH_TEXT не выключен
+  const baseFetch = clientOptions?.fetch ?? globalThis.fetch;
+  const fetch = config.botRichText ? richTextFetch(baseFetch) : baseFetch;
+  const bot = new Bot(config.botToken, { clientOptions: { ...clientOptions, fetch } });
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
