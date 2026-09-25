@@ -29,6 +29,8 @@ export function testConfig(overrides = {}) {
     adminUserIds: [],
     rateLimitPerMinute: 0,
     botRichText: false,
+    appVersion: 'test',
+    botRateLimitPerMinute: 0,
     ...overrides,
   };
 }

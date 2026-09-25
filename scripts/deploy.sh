@@ -115,7 +115,11 @@ build_image() {
   src="$DEPLOY_DIR/src-$version"
   git worktree remove --force "$src" > /dev/null 2>&1 || true
   git worktree add --quiet --detach "$src" "$version"
-  if docker build -t "$IMAGE:$version" "$src"; then
+  # Версия видна в /api/health: тег, если он есть у коммита, и сам коммит
+  label=$version
+  tag=$(git describe --tags --exact-match "$version" 2> /dev/null || true)
+  if [ -n "$tag" ]; then label="$tag ($version)"; fi
+  if docker build --build-arg "APP_VERSION=$label" -t "$IMAGE:$version" "$src"; then
     git worktree remove --force "$src"
   else
     git worktree remove --force "$src" || true

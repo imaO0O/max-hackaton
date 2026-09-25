@@ -48,7 +48,20 @@ git push origin v0.3.0
 |---|---|
 | `BOT_RICH_TEXT=false` | оформление сообщений бота — сообщения уходят обычным текстом |
 | `RATE_LIMIT_PER_MINUTE=0` | ограничение частоты запросов к API |
+| `BOT_MODE=polling` | получение событий через Webhook — бот возвращается на Long Polling, подписка Webhook снимается автоматически |
+| `BOT_RATE_LIMIT_PER_MINUTE=0` | ограничение частоты сообщений боту от одного пользователя |
 | `BOT_ENABLED=false` | бота и напоминания целиком (API и мини-приложение продолжают работать) |
+
+## Включение Webhook
+
+MAX рекомендует Webhook для production, Long Polling — для разработки. Переключение — без пересборки:
+
+1. В `.env` на сервере: `BOT_MODE=webhook` (адрес берётся из `DOMAIN`, отдельный `BOT_WEBHOOK_URL` не нужен).
+2. `docker compose up -d` — контейнер перезапустится с новыми настройками.
+3. `curl -s https://<домен>/api/health` → `"botMode":"webhook"`. Если там `polling` — MAX не принял адрес, бот сам вернулся на Long Polling, причина в `docker compose logs app`.
+4. Написать боту `/start` с телефона — ответ должен прийти как обычно.
+
+Вернуть Long Polling: `BOT_MODE=polling` и `docker compose up -d` — подписка Webhook снимается автоматически при запуске.
 
 ## Откат и данные
 

@@ -19,6 +19,10 @@
     "start": "npm run start --workspace apps/server",
     "test": "npm test --workspace packages/core && npm test --workspace apps/server",
     "data:check": "npm run data:check --workspace apps/server",
-    "stats": "npm run stats --workspace apps/server"
+    "stats": "npm run stats --workspace apps/server",
+    "api:check": "node scripts/check-data-api.mjs"
+  },
+  "devDependencies": {
+    "yaml": "^2.9.1"
   }
 }

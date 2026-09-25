@@ -1,6 +1,8 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { WEBHOOK_PATH, webhookSecretFromToken } from './bot/webhook.js';
+
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const repoRoot = path.resolve(serverRoot, '..', '..');
 
@@ -53,6 +55,8 @@ export function loadConfig(env = process.env) {
     adminUserIds: parseIdList('ADMIN_USER_IDS', env.ADMIN_USER_IDS),
     botRichText: parseBoolean(env.BOT_RICH_TEXT, true),
     rateLimitPerMinute: parseInteger('RATE_LIMIT_PER_MINUTE', env.RATE_LIMIT_PER_MINUTE, 300, { min: 0 }),
+    appVersion: env.APP_VERSION || 'local',
+    botRateLimitPerMinute: parseInteger('BOT_RATE_LIMIT_PER_MINUTE', env.BOT_RATE_LIMIT_PER_MINUTE, 40, { min: 0 }),
   };
 
   if (config.botEnabled && !config.botToken) {
@@ -60,6 +64,28 @@ export function loadConfig(env = process.env) {
   }
 
   config.warnings = [];
+
+  // Как бот получает события: polling (по умолчанию) или webhook — рекомендованный MAX для production.
+  // Адрес Webhook — BOT_WEBHOOK_URL или домен из DOMAIN (тот же, что у HTTPS-прокси).
+  const botMode = (env.BOT_MODE || 'polling').toLowerCase();
+  if (!['polling', 'webhook'].includes(botMode)) {
+    throw new Error('BOT_MODE должен быть polling или webhook');
+  }
+  const webhookBase = env.BOT_WEBHOOK_URL || (env.DOMAIN ? `https://${env.DOMAIN}` : '');
+  config.botMode = botMode;
+  config.botWebhookUrl = null;
+  config.botWebhookSecret = env.BOT_WEBHOOK_SECRET || (config.botToken ? webhookSecretFromToken(config.botToken) : null);
+  if (botMode === 'webhook') {
+    if (!/^https:\/\/[^/\s]+/.test(webhookBase)) {
+      config.botMode = 'polling';
+      config.warnings.push('BOT_MODE=webhook: нужен HTTPS-адрес сервера в BOT_WEBHOOK_URL или DOMAIN — бот работает через Long Polling');
+    } else {
+      config.botWebhookUrl = `${webhookBase.replace(/\/+$/, '')}${WEBHOOK_PATH}`;
+    }
+  }
+  if (config.botWebhookSecret && !/^[A-Za-z0-9_-]{5,256}$/.test(config.botWebhookSecret)) {
+    throw new Error('BOT_WEBHOOK_SECRET: 5–256 символов, латиница, цифры, «_» и «-»');
+  }
   if (!config.botToken && !config.authDevBypass) {
     config.warnings.push('BOT_TOKEN не задан: подпись мини-приложения проверить нельзя, личные разделы API будут отвечать 401');
   }

@@ -6,6 +6,7 @@ import { PATH_TITLES } from '@posle9/core';
  */
 
 export const EVENTS = Object.freeze({
+  BOT_STARTED: 'bot_started',
   SURVEY_STARTED: 'survey_started',
   SURVEY_COMPLETED: 'survey_completed',
   PLAN_VIEWED_IN_CHAT: 'plan_viewed_in_chat',
@@ -22,10 +23,25 @@ export const EVENTS = Object.freeze({
   DATA_DELETED: 'data_deleted',
 });
 
+/**
+ * Код ссылки для школы или класса: https://max.ru/<бот>?startapp=src_<код> (или ?start=src_<код> для чата).
+ * Допустимые символы — как у параметра запуска MAX: латиница, цифры, «_» и «-».
+ */
+export const CAMPAIGN_CODE_RE = /^[A-Za-z0-9_-]{1,40}$/;
+const CAMPAIGN_PREFIX = 'src_';
+
+/** «src_school5_9a» → «school5_9a»; иначе null. */
+export function campaignOf(startParam) {
+  if (typeof startParam !== 'string' || !startParam.startsWith(CAMPAIGN_PREFIX)) return null;
+  const code = startParam.slice(CAMPAIGN_PREFIX.length);
+  return CAMPAIGN_CODE_RE.test(code) ? code : null;
+}
+
 /** Откуда открыто мини-приложение — по параметру запуска. */
 export function launchSource(startParam) {
   if (!startParam) return 'direct';
   if (startParam.startsWith('plan_')) return 'shared_link';
+  if (campaignOf(startParam)) return 'campaign';
   if (startParam === 'from_reminder') return 'reminder';
   if (startParam === 'from_bot') return 'bot';
   return 'other';
@@ -36,6 +52,7 @@ const SOURCE_TITLES = {
   bot: 'кнопка в сообщении бота',
   reminder: 'кнопка в напоминании',
   shared_link: 'ссылка на чужой план',
+  campaign: 'ссылка для школы',
   other: 'другое',
 };
 
@@ -61,6 +78,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
     const users = (name) => events.count(name, since).users;
     const total = (name) => events.count(name, since).total;
     return {
+      botStarted: users(EVENTS.BOT_STARTED),
       surveyStarted: users(EVENTS.SURVEY_STARTED),
       surveyCompleted: users(EVENTS.SURVEY_COMPLETED),
       miniappOpened: users(EVENTS.MINIAPP_OPENED),
@@ -81,6 +99,9 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       opensBySource: events.countUsersByProp(EVENTS.MINIAPP_OPENED, 'source', since),
       completedByRegion: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'regionId', since),
       completedByPath: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'path', since),
+      campaigns: events.countCampaigns({
+        entryEvents: [EVENTS.BOT_STARTED, EVENTS.MINIAPP_OPENED], goalEvent: EVENTS.SURVEY_COMPLETED, since,
+      }),
     };
   }
 
@@ -93,8 +114,11 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       .map((row) => `${PATH_TITLES[row.value] ?? row.value}: ${row.users}`).join(', ') || '—';
     const sources = data.opensBySource
       .map((row) => `${SOURCE_TITLES[row.value] ?? row.value}: ${row.users}`).join(', ') || '—';
+    const campaigns = data.campaigns
+      .map((row) => `${row.campaign} — пришли ${row.users}, собрали план ${row.completed}`).join('; ') || '—';
     return [
       title,
+      `Запустили бота: ${data.botStarted}`,
       `Начали опрос: ${data.surveyStarted}`,
       `Прошли опрос: ${data.surveyCompleted}${percent(data.surveyCompleted, data.surveyStarted)}`,
       `Смотрели план в чате: ${data.planViewedInChat}`,
@@ -112,6 +136,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Регионы: ${regions}`,
       `Путь: ${paths}`,
       `Откуда открывали мини-приложение: ${sources}`,
+      `Ссылки для школ: ${campaigns}`,
     ].join('\n');
   }
 

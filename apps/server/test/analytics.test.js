@@ -1,7 +1,7 @@
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { EVENTS, launchSource } from '../src/services/analytics.js';
+import { campaignOf, EVENTS, launchSource } from '../src/services/analytics.js';
 import { authHeaders, createTestApp } from './helpers.js';
 
 test('источник открытия мини-приложения по параметру запуска', () => {
@@ -9,6 +9,11 @@ test('источник открытия мини-приложения по па�
   assert.equal(launchSource('from_bot'), 'bot');
   assert.equal(launchSource('from_reminder'), 'reminder');
   assert.equal(launchSource('plan_AAAAAAAAAAAAAAAA'), 'shared_link');
+  assert.equal(launchSource('src_school5'), 'campaign');
+  assert.equal(campaignOf('src_kazan_school5_9a'), 'kazan_school5_9a');
+  assert.equal(campaignOf('src_'), null);
+  assert.equal(campaignOf('src_школа'), null, 'только символы параметра запуска MAX');
+  assert.equal(campaignOf('from_bot'), null);
   assert.equal(launchSource('something'), 'other');
 });
 

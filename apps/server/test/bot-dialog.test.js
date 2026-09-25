@@ -515,6 +515,31 @@ describe('команды', () => {
     assert.match(report, /Писали боту текстом: 1, из них бот хотя бы раз не понял: 1/);
   });
 
+  test('ссылки для школ: /link для команды, переходы и собранные планы — в /stats', async () => {
+    await bot.handleUpdate(command('/link kazan_school5_9a'));
+    assert.match(lastAnswer().text, /https:\/\/max\.ru\/posle9_test_bot\?startapp=src_kazan_school5_9a/);
+    assert.match(lastAnswer().text, /\?start=src_kazan_school5_9a/);
+    assert.match(lastAnswer().text, /Текст для родительского чата/);
+    await bot.handleUpdate(command('/link школа 5'));
+    assert.match(lastAnswer().text, /^Напишите код школы или класса/);
+
+    const parent = { ...USER, user_id: 561 };
+    await bot.handleUpdate(started('src_kazan_school5_9a', parent));
+    assert.match(lastAnswer().text, /помогу семье девятиклассника/, 'обычное приветствие');
+    for (const payload of ['survey:start', 'survey:region:demo-standard', 'survey:city:0', 'survey:grade:9', 'survey:interests-done', 'survey:path:college']) {
+      await bot.handleUpdate(press(payload, parent));
+    }
+    await bot.handleUpdate(started('src_kazan_school5_9a', { ...USER, user_id: 562 }));
+
+    await bot.handleUpdate(command('/stats'));
+    assert.match(lastAnswer().text, /Ссылки для школ: kazan_school5_9a — пришли 2, собрали план 1/);
+
+    ctx.config.adminUserIds = [];
+    await bot.handleUpdate(command('/link kazan_school5_9a'));
+    assert.match(lastAnswer().text, /^Команда доступна только команде проекта/);
+    ctx.config.adminUserIds = [555];
+  });
+
   test('при ошибке бот отвечает пользователю, а не молчит', async () => {
     failNextSend = true;
     await bot.handleUpdate(command('/plan'));

@@ -89,6 +89,8 @@ export function buildApp({ config, services, runtime, logger = true }) {
       status: botDown ? 'degraded' : 'ok',
       bot: runtime.botStatus,
       academicYear: services.plan.currentAcademicYear(),
+      version: config.appVersion,
+      botMode: runtime.botMode ?? null,
     };
   });
 

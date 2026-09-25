@@ -1,8 +1,9 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
+import { createRateLimiter } from '../api/rate-limit.js';
 import { isProfileComplete } from '../repositories/users.js';
-import { EVENTS } from '../services/analytics.js';
+import { CAMPAIGN_CODE_RE, campaignOf, EVENTS } from '../services/analytics.js';
 import {
   backToMenuRow, menuKeyboard, openAppKeyboard, remindersKeyboard, remindersStatusKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
@@ -33,6 +34,23 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
+
+  // Защита от флуда: не больше BOT_RATE_LIMIT_PER_MINUTE событий в минуту от одного пользователя.
+  // На первое лишнее — одно предупреждение, дальше — тишина до конца минуты. Регистрируется до всех обработчиков.
+  if (config.botRateLimitPerMinute > 0) {
+    const limiter = createRateLimiter({ max: config.botRateLimitPerMinute });
+    bot.use(async (ctx, next) => {
+      const userId = userIdOf(ctx);
+      if (!userId) return next();
+      const { allowed, firstRejected } = limiter.hit(userId);
+      if (allowed) return next();
+      if (!firstRejected) return undefined;
+      logger.warn({ userId, updateType: ctx.updateType }, 'bot rate limit exceeded');
+      if (ctx.callback) return ctx.answerOnCallback({ notification: texts.tooFast });
+      return ctx.chatId ? ctx.reply(texts.tooFast) : undefined;
+    });
+  }
+
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
   const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
@@ -47,6 +65,9 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   }
 
   async function sendStart(ctx, payload) {
+    // Запуск бота, а по ссылке для школы — ещё и код школы: в /stats видно, сколько семей она привела
+    const campaign = campaignOf(payload);
+    services.analytics.track(EVENTS.BOT_STARTED, userIdOf(ctx), campaign ? { campaign } : {});
     // Ссылка https://max.ru/<бот>?start=plan_<токен> открывает чужой план прямо в чате
     if (payload?.startsWith(SHARED_PLAN_PREFIX)) {
       return planChat.openSharedPlan(ctx, payload.slice(SHARED_PLAN_PREFIX.length));
@@ -68,6 +89,20 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       return;
     }
     await ctx.reply(services.analytics.report());
+  }
+
+  /** Ссылка для школы или класса (только команде проекта): переходы и собранные планы по ней — в /stats. */
+  async function sendCampaignLink(ctx, code) {
+    const userId = userIdOf(ctx);
+    if (!config.adminUserIds.includes(userId)) {
+      await ctx.reply(`Команда доступна только команде проекта. Ваш ID в MAX: ${userId}`);
+      return;
+    }
+    if (!code || !CAMPAIGN_CODE_RE.test(code)) {
+      await ctx.reply(texts.linkUsage);
+      return;
+    }
+    await ctx.reply(texts.campaignLinks(runtime.botUsername, code));
   }
 
   async function toggleReminders(ctx) {
@@ -130,6 +165,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     return planChat.sendReminderExample(ctx);
   });
   bot.command('stats', sendStats);
+  bot.command(/^link(?:\s+(.+))?$/, (ctx) => sendCampaignLink(ctx, ctx.match?.[1]?.trim()));
   bot.command('delete_data', sendDeleteConfirm);
   bot.command('help', sendHelp);
 
@@ -290,11 +326,27 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     }
   }
 
+  /** Long Polling: SDK сам снимает подписку Webhook, если она была, и переподключается при сбоях сети. */
+  function startPolling() {
+    runtime.botMode = 'polling';
+    runtime.botStatus = 'running';
+    logger.info({ botUsername: runtime.botUsername }, 'bot started (long polling)');
+    bot.start().catch((error) => {
+      runtime.botStatus = 'failed';
+      logger.error({ err: error }, 'bot polling stopped');
+    });
+  }
+
   return {
     api: bot.api,
 
+    /**
+     * Запуск: имя бота и меню команд. В режиме polling сразу начинает получать события,
+     * в режиме webhook события начнут приходить после connectWebhook() — когда сервер уже слушает порт.
+     */
     async start() {
       const info = await bot.api.getMyInfo();
+      bot.botInfo = info;
       runtime.botUsername = config.botUsername ?? info.username;
       await bot.api.setMyCommands([
         { name: 'start', description: 'Начать или вернуться в меню' },
@@ -307,12 +359,26 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },
       ]);
-      runtime.botStatus = 'running';
-      logger.info({ botUsername: runtime.botUsername }, 'bot started (long polling)');
-      bot.start().catch((error) => {
-        runtime.botStatus = 'failed';
-        logger.error({ err: error }, 'bot polling stopped');
-      });
+      if (config.botMode !== 'webhook') startPolling();
+    },
+
+    /**
+     * Подписка на Webhook: MAX будет присылать события на config.botWebhookUrl. Старые подписки снимаются.
+     * Если MAX не принял адрес, бот не молчит — переходит на Long Polling.
+     */
+    async connectWebhook() {
+      const url = config.botWebhookUrl;
+      try {
+        const subscriptions = await bot.api.getSubscriptions() ?? [];
+        await Promise.all(subscriptions.filter((item) => item.url !== url).map((item) => bot.api.unsubscribe(item.url)));
+        await bot.api.subscribe(url, config.botWebhookSecret, []);
+        runtime.botMode = 'webhook';
+        runtime.botStatus = 'running';
+        logger.info({ botUsername: runtime.botUsername, url }, 'bot started (webhook)');
+      } catch (error) {
+        logger.error({ err: error, url }, 'webhook subscription failed, falling back to long polling');
+        startPolling();
+      }
     },
 
     startHealthMonitor(intervalMs = HEALTH_CHECK_INTERVAL_MS) {
@@ -325,6 +391,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     /** Обработка одного обновления — для тестов диалога. */
     handleUpdate: (update) => bot.handleUpdate(update),
 
+    /**
+     * Остановка. Подписку Webhook не снимаем: при перезапуске контейнера MAX повторит доставку,
+     * а новый процесс продолжит принимать события по тому же адресу.
+     */
     stop() {
       clearInterval(healthTimer);
       bot.stopPolling();
