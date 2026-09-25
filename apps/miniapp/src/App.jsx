@@ -80,7 +80,7 @@ export function App() {
       <main className="app__content">
         {tab === 'paths' && <PathsScreen profile={profile} region={region} onOpenTab={changeTab} />}
         {tab === 'grades' && <GradesScreen region={region} />}
-        {tab === 'colleges' && <CollegesScreen profile={profile} initialCompare={compareOnOpen} />}
+        {tab === 'colleges' && <CollegesScreen profile={profile} initialCompare={compareOnOpen} onOpenTab={changeTab} />}
         {tab === 'plan' && (
           <PlanScreen
             onEditProfile={() => setEditingProfile(true)}
