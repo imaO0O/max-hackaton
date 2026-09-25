@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { pickPrograms } from '../src/bot/colleges-chat.js';
 import { planText, plural, untilText } from '../src/bot/texts.js';
 
 const region = { name: 'Республика Татарстан' };
@@ -49,4 +50,16 @@ test('сроки по-русски: дни с правильным оконча�
   assert.equal(untilText(45), 'через 45 дней');
   assert.equal(untilText(81), 'через 3 месяца');
   assert.equal(untilText(258), 'через 8 месяцев');
+});
+
+test('колледжи в чате: программы по очереди из разных колледжей, группами', () => {
+  const college = (id) => ({ id, name: `Колледж ${id}` });
+  const program = (id, collegeId, passingScore) => ({ id, college: college(collegeId), passingScore });
+  const programs = [
+    program('a1', 'A', 4.5), program('a2', 'A', 4.1), program('a3', 'A', 4.0), program('a4', 'A', 3.9),
+    program('b1', 'B', null), program('b2', 'B', 4.2),
+    program('c1', 'C', null),
+  ];
+  const picked = pickPrograms(programs, 5);
+  assert.deepEqual(picked.map((item) => item.id), ['a1', 'a2', 'b2', 'b1', 'c1']);
 });

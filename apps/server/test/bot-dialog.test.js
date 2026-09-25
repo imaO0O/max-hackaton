@@ -127,6 +127,7 @@ describe('опрос в боте', () => {
 
     await bot.handleUpdate(press('survey:region:demo-standard'));
     assert.match(lastAnswer().text, /Шаг 2 из 5/);
+    assert.match(lastAnswer().text, /Если вашего города нет, выберите «Любой город региона»/);
     await bot.handleUpdate(press('survey:city:0'));
     assert.match(lastAnswer().text, /Шаг 3 из 5/);
     await bot.handleUpdate(press('survey:grade:9'));
@@ -319,8 +320,12 @@ describe('меню, план в чате и отправка подростку'
     await bot.handleUpdate(command('/colleges'));
     const list = lastAnswer();
     assert.match(list.text, /^Колледжи: Демо-регион А, Демоград/);
-    assert.match(list.text, /• Информационные системы и программирование — Демо-колледж информационных технологий/);
+    assert.match(list.text, /\n🏫 .+\n1\. /, 'программы пронумерованы и сгруппированы по колледжам');
+    assert.match(list.text, /🏫 Демо-колледж информационных технологий\n(\d\. .+\n)*\d\. Информационные системы и программирование — очная/);
     const programPayload = list.buttons.find((payload) => payload.startsWith('p:'));
+    const labels = allButtons(requests.at(-1).body).filter((button) => button.payload?.startsWith('p:')).map((button) => button.text);
+    assert.match(labels[0], /^1\. /);
+    assert.ok(labels.every((label) => label.length <= 40), 'подписи кнопок короткие');
     assert.ok(programPayload);
     assert.ok(programPayload.length <= 64, 'payload кнопки укладывается в ограничение длины');
     const programId = programPayload.slice(2);
