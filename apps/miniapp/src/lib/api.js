@@ -53,7 +53,9 @@ async function request(method, path, body) {
 const query = (params) => {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
+    // Пустой список (например, сферы интересов не выбраны) не передаём: сервер не принимает пустой параметр
     if (value === undefined || value === null || value === '' || value === false) continue;
+    if (Array.isArray(value) && value.length === 0) continue;
     search.set(key, Array.isArray(value) ? value.join(',') : String(value));
   }
   const string = search.toString();
