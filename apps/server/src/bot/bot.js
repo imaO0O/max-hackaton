@@ -156,9 +156,14 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       case 'region': {
         const region = reference.getRegion(value);
         if (!region) return restart();
-        const nextDraft = { regionId: region.id };
-        save(nextDraft);
-        return showStep(ctx, cityStep(reference.listCities(region.id)), { edit: true });
+        const cities = reference.listCities(region.id);
+        // Колледжей региона в справочнике нет — спрашивать город незачем
+        if (cities.length === 0) {
+          save({ ...draft, regionId: region.id, city: null });
+          return showStep(ctx, gradeStep('region'), { edit: true });
+        }
+        save({ ...draft, regionId: region.id });
+        return showStep(ctx, cityStep(cities), { edit: true });
       }
       case 'city': {
         if (!draft.regionId) return restart();
@@ -207,8 +212,11 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         // Возврат на шаг назад с сохранением уже выбранных ответов
         if (value === 'region') return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
         if (!draft.regionId) return restart();
-        if (value === 'city') return showStep(ctx, cityStep(reference.listCities(draft.regionId)), { edit: true });
-        if (value === 'grade') return showStep(ctx, gradeStep(), { edit: true });
+        const cities = reference.listCities(draft.regionId);
+        if (value === 'city') {
+          return showStep(ctx, cities.length ? cityStep(cities) : regionStep(reference.listRegions()), { edit: true });
+        }
+        if (value === 'grade') return showStep(ctx, gradeStep(cities.length ? 'city' : 'region'), { edit: true });
         if (value === 'interests' && draft.grade) {
           return showStep(ctx, interestsStep(reference.listInterests(), draft.interests ?? []), { edit: true });
         }

@@ -358,5 +358,23 @@
     "reminders": [{ "anchor": "start", "daysBefore": 3 }],
     "sourceTitle": "Минобрнауки Татарстана: ОГЭ по новым правилам",
     "sourceUrl": "https://mon.tatarstan.ru/index.htm/news/2491991.htm"
+  },
+  {
+    "id": "2627-reg-other-check-rules",
+    "academicYear": "2026/2027",
+    "scope": "regional",
+    "regionId": "other",
+    "experiment": "any",
+    "dateEnd": null,
+    "checkedAt": null,
+    "kind": "checklist",
+    "path": "any",
+    "dateStart": "2026-11-16",
+    "isApproximate": true,
+    "title": "Узнать правила своего региона",
+    "description": "Для вашего региона в плане пока только федеральные сроки. Спросите у классного руководителя или посмотрите на сайте регионального министерства образования: участвует ли регион в эксперименте с двумя ОГЭ, как проходит отбор в профильные 10 классы, когда дни открытых дверей колледжей. Напоминания приходят в 10:00 по московскому времени.",
+    "reminders": [{ "anchor": "start", "daysBefore": 0 }],
+    "sourceTitle": null,
+    "sourceUrl": null
   }
 ]

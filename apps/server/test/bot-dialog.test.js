@@ -171,6 +171,39 @@ describe('опрос в боте', () => {
   });
 });
 
+describe('опрос: регионы', () => {
+  test('пилотный регион первым, затем «Другой регион», демо — в конце', async () => {
+    await bot.handleUpdate(press('survey:start', { ...USER, user_id: 560 }));
+    const regions = lastAnswer().buttons.filter((payload) => payload.startsWith('survey:region:'));
+    assert.deepEqual(regions.slice(0, 2), ['survey:region:tatarstan', 'survey:region:other']);
+    assert.ok(regions.indexOf('survey:region:demo-standard') > 1);
+  });
+
+  test('«Другой регион»: без вопроса о городе, федеральные сроки, колледжей нет', async () => {
+    const other = { ...USER, user_id: 560 };
+    await bot.handleUpdate(press('survey:region:other', other));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/, 'городов в справочнике нет — вопрос о городе пропущен');
+    assert.ok(lastAnswer().buttons.includes('survey:back:region'));
+    await bot.handleUpdate(press('survey:grade:9', other));
+    await bot.handleUpdate(press('survey:back:grade', other));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/);
+    await bot.handleUpdate(press('survey:grade:9', other));
+    await bot.handleUpdate(press('survey:interests-done', other));
+    await bot.handleUpdate(press('survey:path:college', other));
+    assert.match(lastAnswer().text, /Регион: Другой регион/);
+    assert.match(lastAnswer().text, /федеральные сроки/);
+
+    const plan = ctx.services.plan.getPlan(560);
+    assert.ok(plan.items.some((item) => item.scope === 'federal'));
+    assert.ok(plan.items.some((item) => item.id === '2627-reg-other-check-rules'));
+    assert.ok(!plan.items.some((item) => item.scope === 'regional' && item.regionId !== 'other'));
+
+    await bot.handleUpdate(command('/colleges', other));
+    assert.match(lastAnswer().text, /Колледжей этого региона в справочнике пока нет/);
+    assert.match(lastAnswer().text, /Сейчас собраны колледжи: Республика Татарстан/);
+  });
+});
+
 describe('опрос: кнопка «Назад»', () => {
   test('возвращает на предыдущий шаг и сохраняет ответы', async () => {
     const other = { ...USER, user_id: 556 };
@@ -449,7 +482,7 @@ describe('команды', () => {
   test('/stats доступна только команде проекта', async () => {
     await bot.handleUpdate(command('/stats'));
     assert.match(lastAnswer().text, /За всё время/);
-    assert.match(lastAnswer().text, /Прошли опрос: 1/);
+    assert.match(lastAnswer().text, /Прошли опрос: 2/);
 
     ctx.config.adminUserIds = [];
     await bot.handleUpdate(command('/stats'));

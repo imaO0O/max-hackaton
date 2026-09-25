@@ -45,12 +45,13 @@ export function cityStep(cities) {
   };
 }
 
-export function gradeStep() {
+/** backTo — куда ведёт «Назад»: к городу или сразу к региону, если городов в справочнике нет. */
+export function gradeStep(backTo = 'city') {
   return {
     text: texts.askGrade,
     keyboard: Keyboard.inlineKeyboard([
       GRADE_VALUES.slice().reverse().map((grade) => button.callback(`${grade} класс`, `survey:grade:${grade}`)),
-      backRow('city'),
+      backRow(backTo),
     ]),
   };
 }

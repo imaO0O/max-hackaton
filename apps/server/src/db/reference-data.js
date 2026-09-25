@@ -141,17 +141,18 @@ const bool = (value) => (value ? 1 : 0);
  */
 export function applyReferenceData(db, data) {
   transaction(db, () => {
+    // Порядок регионов в опросе — порядок в файле
     const upsertRegion = db.prepare(`
-      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET name = excluded.name, utc_offset_hours = excluded.utc_offset_hours,
         two_oge_experiment = excluded.two_oge_experiment, is_demo = excluded.is_demo,
         profile_class_rules = excluded.profile_class_rules, profile_class_rules_url = excluded.profile_class_rules_url,
-        checked_at = excluded.checked_at`);
-    for (const region of data.regions) {
+        checked_at = excluded.checked_at, sort_order = excluded.sort_order`);
+    data.regions.forEach((region, index) => {
       upsertRegion.run(region.id, region.name, region.utcOffsetHours, bool(region.twoOgeExperiment), bool(region.isDemo),
-        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null);
-    }
+        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null, index);
+    });
 
     const upsertInterest = db.prepare(`
       INSERT INTO interests (id, title, emoji, sort_order) VALUES (?, ?, ?, ?)

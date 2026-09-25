@@ -1,4 +1,4 @@
-import { PATH_TITLES } from '@posle9/core';
+import { OTHER_REGION_ID, PATH_TITLES } from '@posle9/core';
 
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -149,7 +149,9 @@ export function pathsText(content) {
   ].join('\n\n');
 }
 
-export function summaryText({ region, city, grade, interests, path, remindersEnabled }) {
+export function summaryText({
+  region, city, grade, interests, path, remindersEnabled,
+}) {
   return [
     'Готово! План собран.',
     '',
@@ -159,6 +161,7 @@ export function summaryText({ region, city, grade, interests, path, remindersEna
     `Интересы: ${interests.length ? interests.map((item) => item.title).join(', ') : 'пока не выбраны'}`,
     `Путь: ${PATH_TITLES[path]}`,
     region.twoOgeExperiment ? '\nВ регионе идёт эксперимент: для поступления в колледж можно сдать ОГЭ только по русскому языку и математике. Для 10 класса нужны четыре экзамена.' : null,
+    region.id === OTHER_REGION_ID ? '\nДля вашего региона в плане федеральные сроки. Напоминания приходят в 10:00 по московскому времени.' : null,
     '',
     remindersEnabled ? 'Напоминания о ключевых датах включены.' : 'Напоминания выключены.',
   ].filter((line) => line !== null).join('\n');
