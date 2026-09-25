@@ -35,12 +35,12 @@ test('напоминание уходит в срок и не отправляе
   assert.equal(result.sent, 1);
   assert.equal(sent[0].userId, 1);
   assert.match(sent[0].text, /Итоговое собеседование/);
-  assert.match(sent[0].text, /Через 14 дн\. — 10 февраля/);
+  assert.match(sent[0].text, /Через 14 дней — 10 февраля/);
   assert.equal(sent[0].extra.attachments[0].type, 'inline_keyboard');
   const buttons = sent[0].extra.attachments[0].payload.buttons.flat();
   assert.deepEqual(
     buttons.map((button) => button.payload),
-    ['from_reminder', 'item-done:2627-fed-final-interview', 'item:2627-fed-final-interview'],
+    ['from_reminder', 'rdone:2627-fed-final-interview', 'ritem:2627-fed-final-interview'],
     'кнопки: открыть план (метка источника), «Сделано», «Подробнее»',
   );
 
@@ -90,7 +90,7 @@ test('текст напоминания для периода и окончан�
     dateStart: '2027-06-20', dateEnd: '2027-08-15', isApproximate: false,
   };
   assert.match(reminderText({ keyDate, anchor: 'start', daysBefore: 0 }), /Начинается сегодня \(20 июня\)/);
-  assert.match(reminderText({ keyDate, anchor: 'end', daysBefore: 7 }), /До окончания — 7 дн\. \(до 15 августа\)/);
+  assert.match(reminderText({ keyDate, anchor: 'end', daysBefore: 7 }), /До окончания — 7 дней \(до 15 августа\)/);
   assert.match(reminderText({ keyDate, anchor: 'start', daysBefore: 1 }), /Завтра, 20 июня/);
 });
 
@@ -105,7 +105,7 @@ test('подписчику по чужому плану напоминание �
   const teen = sent.find((message) => message.userId === 11);
   const parent = sent.find((message) => message.userId === 10);
   const payloads = (message) => message.extra.attachments[0].payload.buttons.flat().map((button) => button.payload);
-  assert.ok(payloads(parent).some((payload) => payload.startsWith('item-done:')));
-  assert.ok(!payloads(teen).some((payload) => payload.startsWith('item-done:')));
+  assert.ok(payloads(parent).some((payload) => payload.startsWith('rdone:')));
+  assert.ok(!payloads(teen).some((payload) => payload.startsWith('rdone:')));
   ctx.db.close();
 });

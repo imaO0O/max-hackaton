@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createBot } from '../src/bot/bot.js';
-import { escapeHtml, richTextFetch, toRichHtml } from '../src/bot/rich-text.js';
+import { canFormat, escapeHtml, richTextFetch, toRichHtml } from '../src/bot/rich-text.js';
 import { createTestApp } from './helpers.js';
 
 test('заголовок и подписи разделов жирные, спецсимволы экранированы', () => {
@@ -32,6 +32,19 @@ test('fetch-обёртка оформляет /messages и /answers и не тр
   assert.equal(calls[3].body, null);
 });
 
+test('сообщения со ссылками и командами уходят обычным текстом', async () => {
+  assert.equal(canFormat('План готов\nСсылка: https://max.ru/bot?startapp=plan_x'), false);
+  assert.equal(canFormat('Что я умею:\n/start — начать'), false);
+  assert.equal(canFormat('Выключить снова: /reminders'), false);
+  assert.equal(canFormat('План на 2026/2027 · Регион\n\nДаты года:'), true, 'дробь в учебном годе — не команда');
+
+  const calls = [];
+  const fetch = richTextFetch(async (url, init) => { calls.push(JSON.parse(init.body)); return new Response('{}'); });
+  const text = 'Я составил(а) план: https://max.ru/bot?startapp=plan_x\nЕсли не откроется — план в чате';
+  await fetch('https://api.example/messages', { method: 'POST', body: JSON.stringify({ text }) });
+  assert.deepEqual(calls[0], { text }, 'ссылка не оборачивается в разметку');
+});
+
 test('бот с BOT_RICH_TEXT отправляет сообщения в HTML', async () => {
   const ctx = createTestApp({ config: { botRichText: true } });
   const bodies = [];
@@ -49,7 +62,13 @@ test('бот с BOT_RICH_TEXT отправляет сообщения в HTML', 
     update_type: 'message_created', timestamp: 1,
     message: { sender: user, recipient: { chat_id: 5, chat_type: 'dialog' }, timestamp: 1, body: { mid: 'm', seq: 1, text: '/help' } },
   });
+  assert.equal(bodies.at(-1).format, undefined, 'в справке есть команды — без разметки');
+
+  await bot.handleUpdate({
+    update_type: 'message_created', timestamp: 2,
+    message: { sender: user, recipient: { chat_id: 5, chat_type: 'dialog' }, timestamp: 2, body: { mid: 'm2', seq: 2, text: '/start' } },
+  });
   assert.equal(bodies.at(-1).format, 'html');
-  assert.match(bodies.at(-1).text, /^<b>Что я умею:<\/b>/);
+  assert.match(bodies.at(-1).text, /^<b>Здравствуйте!/);
   ctx.db.close();
 });

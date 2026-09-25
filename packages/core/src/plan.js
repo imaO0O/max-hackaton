@@ -19,6 +19,23 @@ export function nextAcademicYear(academicYear) {
   return `${start + 1}/${start + 2}`;
 }
 
+/** «2027/2028» → «2026/2027» */
+export function previousAcademicYear(academicYear) {
+  const [start] = academicYear.split('/').map(Number);
+  return `${start - 1}/${start}`;
+}
+
+/**
+ * Подпись периода плана: у девятиклассника — учебный год, у восьмиклассника — два года,
+ * потому что в план входят шаги 8 класса и даты 9 класса.
+ */
+export function planPeriodLabel({ academicYear, isAdvance }) {
+  if (!isAdvance) return academicYear;
+  const [, end] = academicYear.split('/');
+  const [start] = previousAcademicYear(academicYear).split('/');
+  return `8–9 класс, ${start}–${end}`;
+}
+
 /**
  * Учебный год, на который строится план: девятиклассникам — текущий,
  * восьмиклассникам — следующий, когда они будут в 9 классе.
@@ -39,9 +56,21 @@ export function daysBetween(today, date) {
   return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / msPerDay);
 }
 
+/**
+ * Подходит ли дата под класс и год плана. academicYear — год 9 класса (для восьмиклассника — следующий).
+ * Даты 9 класса (grade пустой или 9) — из этого года; шаги 8 класса (grade 8) — только восьмикласснику,
+ * из текущего года, то есть предыдущего перед планом 9 класса.
+ */
+function matchesGradeYear(keyDate, { academicYear, grade = 9 }) {
+  if ((keyDate.grade ?? 9) === 9) return keyDate.academicYear === academicYear;
+  return grade === 8 && keyDate.academicYear === previousAcademicYear(academicYear);
+}
+
 /** Подходит ли запись справочника дат под профиль семьи. */
-export function matchesProfile(keyDate, { academicYear, regionId, path, twoOgeExperiment }) {
-  if (keyDate.academicYear !== academicYear) return false;
+export function matchesProfile(keyDate, {
+  academicYear, grade, regionId, path, twoOgeExperiment,
+}) {
+  if (!matchesGradeYear(keyDate, { academicYear, grade })) return false;
   if (keyDate.scope === 'regional' && keyDate.regionId !== regionId) return false;
 
   const pathMatches = keyDate.path === 'any'
@@ -67,7 +96,7 @@ function itemStatus(keyDate, today) {
  *
  * @param {object} params
  * @param {Array<object>} params.keyDates записи справочника в camelCase
- * @param {{ academicYear: string, regionId: string, path: string, twoOgeExperiment: boolean }} params.profile
+ * @param {{ academicYear: string, grade?: number, regionId: string, path: string, twoOgeExperiment: boolean }} params.profile
  * @param {Set<string>|string[]} [params.doneIds] отмеченные пункты
  * @param {Date} [params.now]
  * @param {number} [params.utcOffsetHours]

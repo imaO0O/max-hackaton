@@ -47,6 +47,7 @@ export function mapKeyDate(row) {
   return {
     id: row.id,
     academicYear: row.academic_year,
+    grade: row.grade ?? 9,
     scope: row.scope,
     regionId: row.region_id,
     kind: row.kind,
@@ -87,7 +88,7 @@ function groupColleges(rows) {
 export function createReferenceRepository(db) {
   return {
     listRegions() {
-      return db.prepare('SELECT * FROM regions ORDER BY is_demo, name').all().map(mapRegion);
+      return db.prepare('SELECT * FROM regions ORDER BY is_demo, sort_order, name').all().map(mapRegion);
     },
 
     getRegion(id) {

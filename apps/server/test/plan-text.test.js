@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { planText } from '../src/bot/texts.js';
+import { pickPrograms } from '../src/bot/colleges-chat.js';
+import { planText, plural, untilText } from '../src/bot/texts.js';
 
 const region = { name: 'Республика Татарстан' };
 const profile = { path: 'college' };
@@ -29,12 +30,44 @@ test('план в чате: ближайшие даты, остаток и вы�
   assert.match(text, /Выполнено: 1 из 4\./);
 
   const full = planText(plan);
-  assert.match(full, /• 1 марта, ориентировочно — Пункт d \(через 10 дн\.\)/);
+  assert.match(full, /• 1 марта, ориентировочно — Пункт d \(через 10 дней\)/);
   assert.doesNotMatch(full, /…и ещё/);
 });
 
 test('план для 8 класса без опубликованных дат объясняет, что будет дальше', () => {
   const text = planText({ academicYear: '2027/2028', isAdvance: true, region, profile, items: [] });
-  assert.match(text, /Это план на 9 класс/);
-  assert.match(text, /2027\/2028 учебного года ещё не опубликованы/);
+  assert.match(text, /^План на 8–9 класс, 2026–2028/);
+  assert.match(text, /Даты 9 класса \(2027\/2028\) ещё не опубликованы/);
+});
+
+test('план для 8 класса с шагами 8 класса', () => {
+  const text = planText({
+    academicYear: '2027/2028', isAdvance: true, region, profile, items: [item('prep', { title: 'Профориентация' })],
+  });
+  assert.match(text, /Сейчас — шаги 8 класса/);
+  assert.match(text, /Профориентация/);
+});
+
+test('сроки по-русски: дни с правильным окончанием, дальние даты — в месяцах', () => {
+  assert.equal(plural(1, ['день', 'дня', 'дней']), 'день');
+  assert.equal(plural(3, ['день', 'дня', 'дней']), 'дня');
+  assert.equal(plural(11, ['день', 'дня', 'дней']), 'дней');
+  assert.equal(plural(22, ['день', 'дня', 'дней']), 'дня');
+  assert.equal(untilText(1), 'через 1 день');
+  assert.equal(untilText(27), 'через 27 дней');
+  assert.equal(untilText(45), 'через 45 дней');
+  assert.equal(untilText(81), 'через 3 месяца');
+  assert.equal(untilText(258), 'через 8 месяцев');
+});
+
+test('колледжи в чате: программы по очереди из разных колледжей, группами', () => {
+  const college = (id) => ({ id, name: `Колледж ${id}` });
+  const program = (id, collegeId, passingScore) => ({ id, college: college(collegeId), passingScore });
+  const programs = [
+    program('a1', 'A', 4.5), program('a2', 'A', 4.1), program('a3', 'A', 4.0), program('a4', 'A', 3.9),
+    program('b1', 'B', null), program('b2', 'B', 4.2),
+    program('c1', 'C', null),
+  ];
+  const picked = pickPrograms(programs, 5);
+  assert.deepEqual(picked.map((item) => item.id), ['a1', 'a2', 'b2', 'b1', 'c1']);
 });

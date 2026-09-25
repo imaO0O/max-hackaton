@@ -59,6 +59,12 @@ export function createPlanRepository(db) {
       return followers;
     },
 
+    /** Планы, на которые подписан пользователь (например, подросток на план родителя), — сначала новые. */
+    listFollowedByUser(userId) {
+      return db.prepare(`SELECT p.* FROM plan_followers f JOIN plans p ON p.id = f.plan_id
+        WHERE f.user_id = ? AND p.share_token IS NOT NULL ORDER BY f.created_at DESC, f.plan_id DESC`).all(userId).map(mapPlan);
+    },
+
     listFollowerIds(planId) {
       return db.prepare('SELECT user_id FROM plan_followers WHERE plan_id = ?').all(planId).map((row) => row.user_id);
     },

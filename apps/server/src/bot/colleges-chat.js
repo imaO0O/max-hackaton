@@ -20,13 +20,34 @@ function shorten(text, maxLength) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
-/** «Казанский авиационно-технический колледж им. П. В. Дементьева» → без «им. …» — короче для кнопки */
-const shortCollegeName = (name) => name.replace(/\s+им\.\s.*$/, '');
-
-function programLine(program) {
+/** Номер программы в списке — он же на кнопке, чтобы подпись кнопки была короткой и не обрезалась на телефоне. */
+function programLine(program, number) {
   const score = program.passingScore === null ? 'балл: нет данных' : `балл ${program.scoreYear ?? ''}: ${formatScore(program.passingScore)}`;
   const places = program.budgetPlaces ? `, бюджет ${program.budgetPlaces}` : '';
-  return `• ${program.specialtyTitle} — ${program.college.name} (${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places})`;
+  return `${number}. ${program.specialtyTitle} — ${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places}`;
+}
+
+/**
+ * До limit программ так, чтобы в списке были разные колледжи: по очереди из каждого.
+ * Внутри колледжа и среди колледжей — сначала с известным баллом, по нему семье проще сориентироваться.
+ */
+export function pickPrograms(programs, limit) {
+  const sorted = [...programs].sort((a, b) => (a.passingScore === null) - (b.passingScore === null)
+    || a.college.name.localeCompare(b.college.name, 'ru'));
+  const queues = new Map();
+  for (const program of sorted) {
+    if (!queues.has(program.college.id)) queues.set(program.college.id, []);
+    queues.get(program.college.id).push(program);
+  }
+  const picked = [];
+  while (picked.length < limit && [...queues.values()].some((queue) => queue.length > 0)) {
+    for (const queue of queues.values()) {
+      if (queue.length > 0 && picked.length < limit) picked.push(queue.shift());
+    }
+  }
+  // Для списка — группами по колледжам, в порядке первого появления
+  const order = [...new Set(picked.map((program) => program.college.id))];
+  return order.flatMap((collegeId) => picked.filter((program) => program.college.id === collegeId));
 }
 
 function programCard(program, isFavorite) {
@@ -75,26 +96,35 @@ export function registerCollegesChat({ bot, users, reference, services, runtime 
     const { programs, note } = findPrograms(user);
     const region = reference.getRegion(user.regionId);
     if (!programs.length) {
-      return { text: `В справочнике пока нет колледжей региона «${region?.name ?? user.regionId}».`, keyboard: openAppKeyboard(runtime.botUsername) };
+      // Где колледжи уже собраны — чтобы было понятно, что это не ошибка, а охват пилота
+      const covered = reference.listRegions()
+        .filter((item) => !item.isDemo && reference.listCities(item.id).length > 0)
+        .map((item) => item.name);
+      return {
+        text: texts.noColleges(covered),
+        keyboard: openAppKeyboard(runtime.botUsername, [[button.callback('← Меню', 'menu:show')]]),
+      };
     }
-    // Сначала программы с известным баллом — по нему семье проще сориентироваться
-    const sorted = [...programs].sort((a, b) => (a.passingScore === null) - (b.passingScore === null)
-      || a.college.name.localeCompare(b.college.name, 'ru'));
-    const shown = sorted.slice(0, MAX_PROGRAMS);
+    const shown = pickPrograms(programs, MAX_PROGRAMS);
     const favorites = new Set(services.catalog.listFavorites(userId).map((program) => program.id));
+    // Название колледжа — один раз над его программами
+    const lines = [];
+    shown.forEach((program, index) => {
+      if (index === 0 || shown[index - 1].college.id !== program.college.id) lines.push('', `🏫 ${program.college.name}`);
+      lines.push(programLine(program, index + 1));
+    });
     const text = [
       `Колледжи: ${region?.name ?? ''}${user.city ? `, ${user.city}` : ''}`,
       note,
-      '',
-      ...shown.map(programLine),
+      ...lines,
       '',
       programs.length > shown.length
         ? `Показано ${shown.length} из ${programs.length}. Все программы, фильтры и сравнение — в мини-приложении.`
         : 'Сравнить программы рядом можно в мини-приложении.',
-      'Нажмите на программу, чтобы открыть подробности и добавить в избранное.',
+      'Нажмите на номер программы, чтобы открыть подробности и добавить в избранное.',
     ].filter((line) => line !== null).join('\n');
-    const rows = shown.map((program) => [button.callback(
-      `${favorites.has(program.id) ? '★ ' : ''}${shorten(program.specialtyTitle, 30)} · ${shorten(shortCollegeName(program.college.name), 28)}`,
+    const rows = shown.map((program, index) => [button.callback(
+      `${favorites.has(program.id) ? '★ ' : ''}${index + 1}. ${shorten(program.specialtyTitle, 34)}`,
       `p:${program.id}`,
     )]);
     rows.push([button.callback('← Меню', 'menu:show')]);

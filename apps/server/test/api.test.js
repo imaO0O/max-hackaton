@@ -167,16 +167,22 @@ describe('API мини-приложения', () => {
     assert.match(application.description, /четыр/, 'для 10 класса нужны четыре ОГЭ');
   });
 
-  test('восьмикласснику показывается план его 9 класса, а не текущих девятиклассников', async () => {
+  test('восьмикласснику — шаги 8 класса и план его 9 класса, а не даты текущих девятиклассников', async () => {
     const user = 4004;
     await call('PUT', '/api/profile', { user, body: { regionId: 'demo-standard', grade: 8, path: 'college', interests: [] } });
     const plan = (await call('GET', '/api/plan', { user })).json();
     assert.equal(plan.academicYear, '2027/2028');
     assert.equal(plan.isAdvance, true);
-    assert.ok(plan.items.every((item) => item.academicYear === '2027/2028'), 'даты текущего года не попадают в план');
-    const currentYearReminders = ctx.db.prepare(`SELECT COUNT(*) AS count FROM reminders r
-      JOIN key_dates kd ON kd.id = r.key_date_id WHERE r.user_id = ? AND kd.academic_year = '2026/2027'`).get(user).count;
-    assert.equal(currentYearReminders, 0, 'напоминания о датах текущих девятиклассников не ставятся');
+    assert.ok(plan.items.length > 0, 'план не пустой');
+    assert.ok(
+      plan.items.every((item) => item.grade === 8 || item.academicYear === '2027/2028'),
+      'даты 9 класса текущего года не попадают в план',
+    );
+    assert.ok(plan.items.some((item) => item.id === '2627-g8-oge-subjects'));
+    const ninthGradeReminders = ctx.db.prepare(`SELECT COUNT(*) AS count FROM reminders r
+      JOIN key_dates kd ON kd.id = r.key_date_id WHERE r.user_id = ? AND kd.academic_year = '2026/2027' AND kd.grade IS NULL`).get(user).count;
+    assert.equal(ninthGradeReminders, 0, 'напоминания о датах текущих девятиклассников не ставятся');
+    assert.ok(ctx.repos.reminders.countPending(user) > 0, 'напоминания о шагах 8 класса');
 
     const ninth = (await call('GET', '/api/plan', { user: PARENT })).json();
     assert.equal(ninth.academicYear, '2026/2027');

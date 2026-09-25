@@ -35,7 +35,8 @@ export function regionStep(regions) {
 
 export function cityStep(cities) {
   return {
-    text: texts.askCity,
+    // Честно о справочнике: «Любой город региона» — если своего города нет в списке
+    text: `${texts.askCity}\n\n${texts.cityHint}`,
     keyboard: Keyboard.inlineKeyboard([
       ...cities.map((city, index) => [button.callback(city, `survey:city:${index}`)]),
       [button.callback('Любой город региона', `survey:city:${ANY_CITY}`)],
@@ -44,12 +45,13 @@ export function cityStep(cities) {
   };
 }
 
-export function gradeStep() {
+/** backTo — куда ведёт «Назад»: к городу или сразу к региону, если городов в справочнике нет. */
+export function gradeStep(backTo = 'city') {
   return {
     text: texts.askGrade,
     keyboard: Keyboard.inlineKeyboard([
       GRADE_VALUES.slice().reverse().map((grade) => button.callback(`${grade} класс`, `survey:grade:${grade}`)),
-      backRow('city'),
+      backRow(backTo),
     ]),
   };
 }
