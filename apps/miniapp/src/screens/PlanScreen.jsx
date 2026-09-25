@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
-import { PATH_TITLES, STUDY_FORMS } from '@posle9/core';
+import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { ErrorState, LoadingState } from '../components/states.jsx';
@@ -32,7 +32,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
   if (!plan.data && plan.status === 'loading') return <LoadingState text="Собираем план…" />;
   if (!plan.data) return <ErrorState error={plan.error} onRetry={plan.reload} />;
 
-  const { items, region, profile, academicYear } = plan.data;
+  const { items, region, profile } = plan.data;
   const doneCount = items.filter((item) => item.done).length;
   const pastCount = items.filter((item) => item.status === 'past' && item.id !== plan.data.nextItemId).length;
 
@@ -89,7 +89,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
     <div className="page">
       <ScreenHeader
         title="Мой план"
-        subtitle={`${academicYear} · ${region.name} · ${PATH_TITLES[profile.path]}`}
+        subtitle={`${planPeriodLabel(plan.data)} · ${region.name} · ${PATH_TITLES[profile.path]}`}
         after={<button type="button" className="link-button" onClick={onEditProfile}>Изменить</button>}
       />
 

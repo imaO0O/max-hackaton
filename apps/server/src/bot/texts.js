@@ -1,4 +1,4 @@
-import { OTHER_REGION_ID, PATH_TITLES } from '@posle9/core';
+import { OTHER_REGION_ID, PATH_TITLES, planPeriodLabel } from '@posle9/core';
 
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -184,19 +184,19 @@ function planItemLine(item) {
  * @param {{ limit?: number }} [options] сколько ближайших пунктов показать; без limit — все непрошедшие
  */
 export function planText(plan, { limit } = {}) {
-  const header = `План на ${plan.academicYear} · ${plan.region.name} · ${PATH_TITLES[plan.profile.path]}`;
+  const header = `План на ${planPeriodLabel(plan)} · ${plan.region.name} · ${PATH_TITLES[plan.profile.path]}`;
   const upcoming = plan.items.filter((item) => item.status !== 'past');
 
   if (upcoming.length === 0) {
     return plan.isAdvance
-      ? `${header}\n\nЭто план на 9 класс. Даты ${plan.academicYear} учебного года ещё не опубликованы — добавим их, как только они появятся, и пришлём напоминания. А пока можно сравнить пути и посчитать средний балл: оценки по предметам, которые заканчиваются в 8 классе, тоже войдут в аттестат.`
+      ? `${header}\n\nДаты 9 класса (${plan.academicYear}) ещё не опубликованы — добавим их, как только они появятся, и пришлём напоминания. А пока можно сравнить пути и посчитать средний балл: оценки по предметам, которые заканчиваются в 8 классе, тоже войдут в аттестат.`
       : `${header}\n\nВсе даты этого учебного года уже прошли.`;
   }
 
   const shown = limit ? upcoming.slice(0, limit) : upcoming;
   const lines = [header, ''];
   if (plan.isAdvance) {
-    lines.push('Это план на 9 класс — следующий учебный год.', '');
+    lines.push(`Сейчас — шаги 8 класса. Даты 9 класса (${plan.academicYear}) добавим, когда их опубликуют, и пришлём напоминания.`, '');
   }
   lines.push(limit ? 'Ближайшие даты:' : 'Даты года:', ...shown.map(planItemLine));
   const rest = upcoming.length - shown.length;

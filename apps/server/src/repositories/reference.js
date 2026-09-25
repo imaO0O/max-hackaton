@@ -47,6 +47,7 @@ export function mapKeyDate(row) {
   return {
     id: row.id,
     academicYear: row.academic_year,
+    grade: row.grade ?? 9,
     scope: row.scope,
     regionId: row.region_id,
     kind: row.kind,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, CellList, CellSimple, Typography } from '@maxhub/max-ui';
-import { PATH_TITLES, STUDY_FORMS } from '@posle9/core';
+import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
@@ -54,7 +54,7 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
     <div className="page">
       <ScreenHeader
         title={data.isOwner ? 'Это ваш план' : 'План после 9 класса'}
-        subtitle={`${data.academicYear} · ${data.region.name} · ${PATH_TITLES[data.profile.path]}`}
+        subtitle={`${planPeriodLabel(data)} · ${data.region.name} · ${PATH_TITLES[data.profile.path]}`}
         after={data.region.isDemo ? <DemoTag /> : null}
       />
 

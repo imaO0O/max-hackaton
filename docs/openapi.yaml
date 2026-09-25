@@ -136,6 +136,7 @@ components:
       properties:
         id: { type: string }
         academicYear: { type: string, examples: [2026/2027] }
+        grade: { type: integer, enum: [8, 9], description: '8 — шаг 8 класса (из года перед планом 9 класса), 9 — дата 9 класса' }
         scope: { type: string, enum: [federal, regional, recommendation] }
         regionId: { type: [string, 'null'] }
         kind: { type: string, enum: [deadline, event, period, checklist] }
@@ -164,7 +165,7 @@ components:
       required: [academicYear, today, region, profile, items, nextItemId]
       properties:
         academicYear: { type: string, description: 'Учебный год плана. Для 8 класса — следующий год (9 класс)' }
-        isAdvance: { type: boolean, description: 'План на следующий учебный год для восьмиклассника' }
+        isAdvance: { type: boolean, description: 'План восьмиклассника: шаги 8 класса текущего года и даты 9 класса' }
         today: { type: string, format: date }
         region: { $ref: '#/components/schemas/Region' }
         profile: { $ref: '#/components/schemas/Profile' }

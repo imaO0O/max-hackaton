@@ -36,8 +36,16 @@ test('план в чате: ближайшие даты, остаток и вы�
 
 test('план для 8 класса без опубликованных дат объясняет, что будет дальше', () => {
   const text = planText({ academicYear: '2027/2028', isAdvance: true, region, profile, items: [] });
-  assert.match(text, /Это план на 9 класс/);
-  assert.match(text, /2027\/2028 учебного года ещё не опубликованы/);
+  assert.match(text, /^План на 8–9 класс, 2026–2028/);
+  assert.match(text, /Даты 9 класса \(2027\/2028\) ещё не опубликованы/);
+});
+
+test('план для 8 класса с шагами 8 класса', () => {
+  const text = planText({
+    academicYear: '2027/2028', isAdvance: true, region, profile, items: [item('prep', { title: 'Профориентация' })],
+  });
+  assert.match(text, /Сейчас — шаги 8 класса/);
+  assert.match(text, /Профориентация/);
 });
 
 test('сроки по-русски: дни с правильным окончанием, дальние даты — в месяцах', () => {
