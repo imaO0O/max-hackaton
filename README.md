@@ -295,6 +295,14 @@ docker compose start app
 - Развёрнутый сервис работает весь период проверки и соответствует сданному коммиту. После сдачи сервер не обновляется.
 - Вместе со ссылкой на репозиторий передаётся архив исходного кода зафиксированного коммита и его контрольная сумма:
 
+Проще всего — скриптом: он прогоняет тесты и проверку справочников, собирает архив зафиксированного коммита в папку `submission/` и печатает commit hash и SHA-256 для первого слайда:
+
+```bash
+./scripts/make-submission.sh
+```
+
+Вручную:
+
 ```bash
 git archive --format=zip --prefix=posle9/ -o posle9-$(git rev-parse --short HEAD).zip HEAD
 ```
@@ -328,5 +336,7 @@ npm run dev:miniapp   # мини-приложение на http://localhost:5173
 - [Сценарий интервью с родителями](docs/interview-guide.md)
 - [Чек-лист проверки в MAX и журнал проблем](docs/max-check.md)
 - [Сценарий пилота](docs/pilot-scenario.md)
+- [Разбор кода перед защитой](docs/code-tour.md) — маршрут по коду и вероятные вопросы жюри
+- [Чек-лист сдачи](docs/submission-checklist.md) — заморозка 29.09 и соответствие требованиям кейса
 - [DATA-API.yaml](DATA-API.yaml) — обязательные HTTP-проверки API для технической оценки, формат DATA-API 1.0
 - [Презентация](docs/presentation/presentation.pdf) и [инструкция по обновлению](docs/presentation/README.md)
