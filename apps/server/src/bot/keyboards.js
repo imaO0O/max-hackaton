@@ -3,7 +3,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
 /**
  * Клавиатуры бота. Payload callback-кнопок:
  *   menu:show, plan:show, plan:all, item:<id>, item-done:<id>, item-undo:<id>,
- *   share:show, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, paths:show, survey:…, data:…
+ *   share:show, share:revoke, share:revoke-confirm, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, paths:show, survey:…, data:…
  * План по ссылке: shared-all:<токен>, family:show (план семьи у того, кто на него подписан).
  * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
  */
@@ -125,8 +125,16 @@ export function shareDeepLink(text) {
 export function shareKeyboard(text) {
   return Keyboard.inlineKeyboard([
     [button.link('Отправить в MAX', shareDeepLink(text))],
+    [button.callback('🔒 Отозвать ссылку', 'share:revoke')],
     BACK_TO_MENU,
   ]);
+}
+
+export function revokeConfirmKeyboard() {
+  return Keyboard.inlineKeyboard([[
+    button.callback('Да, отозвать', 'share:revoke-confirm'),
+    button.callback('Отмена', 'menu:show'),
+  ]]);
 }
 
 /** Под чужим планом, открытым в чате по ссылке. */

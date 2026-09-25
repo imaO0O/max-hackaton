@@ -246,6 +246,8 @@ describe('меню, план в чате и отправка подростку'
     const match = /startapp=plan_([A-Za-z0-9_-]+)/.exec(forward.text);
     assert.ok(match, 'ссылка на мини-приложение');
     assert.match(forward.text, /https:\/\/max\.ru\/posle9_test_bot\?start=plan_/, 'запасная ссылка на план в чате');
+    assert.match(forward.text, /напоминания:\nhttps:\/\/max\.ru\//, 'ссылка на отдельной строке');
+    assert.ok(allButtons(intro).some((button) => button.payload === 'share:revoke'));
     token = match[1];
   });
 
@@ -354,6 +356,26 @@ describe('меню, план в чате и отправка подростку'
   test('/share работает и командой', async () => {
     await bot.handleUpdate(command('/share'));
     assert.match(requests.find((item) => item.path === '/messages').body.text, /Отправить в MAX/);
+  });
+
+  test('ссылку можно отозвать: старая перестаёт работать, подписчики отключаются', async () => {
+    await bot.handleUpdate(started(`plan_${token}`));
+    await bot.handleUpdate(press(`follow:${token}`, TEEN));
+    requests = [];
+    await bot.handleUpdate(command('/share'));
+    assert.match(requests.find((item) => item.path === '/messages').body.text, /уже подписались: 1/);
+
+    await bot.handleUpdate(press('share:revoke'));
+    assert.match(lastAnswer().text, /^Отозвать ссылку на план\?/);
+    await bot.handleUpdate(press('share:revoke-confirm'));
+    assert.match(lastAnswer().text, /Ссылка отозвана, напоминания отключены у 1 подписчика/);
+    assert.equal(ctx.repos.reminders.countPending(777), 0);
+
+    await bot.handleUpdate(started(`plan_${token}`));
+    assert.match(lastAnswer().text, /Ссылка на план недействительна/);
+
+    await bot.handleUpdate(press('share:revoke-confirm'));
+    assert.match(lastAnswer().text, /Ссылки на план ещё нет/);
   });
 });
 

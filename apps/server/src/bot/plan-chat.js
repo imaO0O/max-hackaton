@@ -5,10 +5,10 @@ import { EVENTS } from '../services/analytics.js';
 import { AppError } from '../services/errors.js';
 import {
   followerMenuKeyboard, menuKeyboard, planItemKeyboard, planItemsKeyboard, planPreviewKeyboard, reminderKeyboard,
-  shareKeyboard, sharedPlanKeyboard, startKeyboard,
+  revokeConfirmKeyboard, shareKeyboard, sharedPlanKeyboard, startKeyboard,
 } from './keyboards.js';
 import {
-  planItemCard, planItemLabel, planText, reminderText, texts,
+  planItemCard, planItemLabel, planText, plural, reminderText, texts,
 } from './texts.js';
 
 const PLAN_PREVIEW_ITEMS = 5;
@@ -99,7 +99,11 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
 
   function shareView(userId) {
     const share = services.plan.createShareLink(userId);
-    return { intro: texts.shareIntro, text: share.text, keyboard: shareKeyboard(share.text) };
+    const { followersCount } = services.plan.getPlan(userId);
+    const followers = followersCount > 0
+      ? `\n\nПо этой ссылке уже подписались: ${followersCount}. Если ссылка попала не туда — её можно отозвать.`
+      : '';
+    return { intro: `${texts.shareIntro}${followers}`, text: share.text, keyboard: shareKeyboard(share.text) };
   }
 
   function sharedPlanView(shared, token, { intro } = {}) {
@@ -270,6 +274,18 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
   });
 
   bot.action('share:show', (ctx) => sendShare(ctx, { edit: true }));
+
+  bot.action('share:revoke', (ctx) => show(ctx, { text: texts.revokeConfirm, keyboard: revokeConfirmKeyboard() }, { edit: true }));
+
+  bot.action('share:revoke-confirm', async (ctx) => {
+    const userId = userIdOf(ctx);
+    const { revoked, followersRemoved } = services.plan.revokeShareLink(userId);
+    const menu = menuView(userId);
+    const text = revoked
+      ? `Ссылка отозвана${followersRemoved ? `, напоминания отключены у ${followersRemoved} ${plural(followersRemoved, ['подписчика', 'подписчиков', 'подписчиков'])}` : ''}. Чтобы отправить план заново, нажмите «Отправить план подростку» — будет новая ссылка.`
+      : texts.revokeNothing;
+    return show(ctx, { text, keyboard: menu.keyboard }, { edit: true });
+  });
 
   bot.action(/^(follow|unfollow):/, async (ctx) => {
     const userId = userIdOf(ctx);
