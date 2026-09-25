@@ -1,5 +1,6 @@
 import { buildApp } from './api/app.js';
 import { createBot } from './bot/bot.js';
+import { registerWebhookRoute } from './bot/webhook.js';
 import { loadConfig } from './config.js';
 import { createContainer } from './container.js';
 import { createReminderScheduler } from './scheduler/reminder-scheduler.js';
@@ -23,6 +24,11 @@ async function main() {
       logger.warn('Node.js older than 24.5: set NODE_EXTRA_CA_CERTS=apps/server/certs/russian-trusted-root-ca.pem to reach MAX Bot API');
     }
     bot = createBot({ config, repos, services, runtime, logger: logger.child({ module: 'bot' }) });
+    if (config.botMode === 'webhook') {
+      registerWebhookRoute(app, {
+        secret: config.botWebhookSecret, handleUpdate: bot.handleUpdate, logger: logger.child({ module: 'webhook' }),
+      });
+    }
     try {
       await bot.start();
     } catch (error) {
@@ -46,6 +52,8 @@ async function main() {
   }
 
   await app.listen({ host: config.host, port: config.port });
+  // Подписка Webhook — когда сервер уже принимает запросы: иначе первые события MAX некуда доставить
+  if (bot && config.botMode === 'webhook') await bot.connectWebhook();
 
   let shuttingDown = false;
   const shutdown = async (signal) => {

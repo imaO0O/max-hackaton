@@ -127,6 +127,9 @@ curl -H "Authorization: <BOT_TOKEN>" https://platform-api2.max.ru/me
 | `ADMIN_USER_IDS` | нет | — | ID пользователей MAX через запятую, которым доступна команда `/stats`. Свой ID бот пишет в ответ на `/stats` |
 | `BOT_RICH_TEXT` | нет | `true` | оформление сообщений бота: заголовок и подписи разделов жирным (HTML). Если в MAX оформление отображается неверно — `false` и перезапуск, без отката кода |
 | `RATE_LIMIT_PER_MINUTE` | нет | `300` | сколько запросов к API в минуту разрешено с одного IP, сверх — 429 с `Retry-After`. `/api/health` не ограничивается. `0` — без ограничения |
+| `BOT_MODE` | нет | `polling` | как бот получает события MAX: `polling` или `webhook` (MAX рекомендует Webhook для production). Для `webhook` нужен HTTPS-адрес сервера — из `DOMAIN` или `BOT_WEBHOOK_URL`; события приходят на `POST /bot/webhook` с секретом в заголовке `X-Max-Bot-Api-Secret`. Если MAX не принял адрес — бот сам переходит на polling. Какой режим работает — поле `botMode` в `/api/health` |
+| `BOT_WEBHOOK_URL` | нет | `https://<DOMAIN>` | публичный HTTPS-адрес сервера для Webhook |
+| `BOT_WEBHOOK_SECRET` | нет | из `BOT_TOKEN` | секрет подписки Webhook: 5–256 символов, латиница, цифры, «_» и «-» |
 | `BOT_RATE_LIMIT_PER_MINUTE` | нет | `40` | сколько сообщений и нажатий кнопок в минуту бот принимает от одного пользователя; на первое лишнее — «Слишком много сообщений подряд», дальше — тишина до конца минуты. `0` — без ограничения |
 | `AUTH_DEV_BYPASS` | нет | `false` | только для локальной разработки: принимать заголовок `X-Dev-User-Id`. При `NODE_ENV=production` игнорируется |
 | `LOG_LEVEL` | нет | `info` | уровень логов |

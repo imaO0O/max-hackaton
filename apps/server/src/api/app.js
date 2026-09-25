@@ -90,6 +90,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
       bot: runtime.botStatus,
       academicYear: services.plan.currentAcademicYear(),
       version: config.appVersion,
+      botMode: runtime.botMode ?? null,
     };
   });
 

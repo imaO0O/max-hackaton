@@ -221,7 +221,7 @@ describe('API мини-приложения', () => {
     const response = await call('GET', '/api/health');
     assert.equal(response.statusCode, 200);
     assert.deepEqual(response.json(), {
-      status: 'degraded', bot: 'unreachable', academicYear: '2026/2027', version: 'test',
+      status: 'degraded', bot: 'unreachable', academicYear: '2026/2027', version: 'test', botMode: null,
     });
     ctx.runtime.botStatus = previous;
   });

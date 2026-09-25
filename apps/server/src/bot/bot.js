@@ -326,11 +326,27 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     }
   }
 
+  /** Long Polling: SDK сам снимает подписку Webhook, если она была, и переподключается при сбоях сети. */
+  function startPolling() {
+    runtime.botMode = 'polling';
+    runtime.botStatus = 'running';
+    logger.info({ botUsername: runtime.botUsername }, 'bot started (long polling)');
+    bot.start().catch((error) => {
+      runtime.botStatus = 'failed';
+      logger.error({ err: error }, 'bot polling stopped');
+    });
+  }
+
   return {
     api: bot.api,
 
+    /**
+     * Запуск: имя бота и меню команд. В режиме polling сразу начинает получать события,
+     * в режиме webhook события начнут приходить после connectWebhook() — когда сервер уже слушает порт.
+     */
     async start() {
       const info = await bot.api.getMyInfo();
+      bot.botInfo = info;
       runtime.botUsername = config.botUsername ?? info.username;
       await bot.api.setMyCommands([
         { name: 'start', description: 'Начать или вернуться в меню' },
@@ -343,12 +359,26 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },
       ]);
-      runtime.botStatus = 'running';
-      logger.info({ botUsername: runtime.botUsername }, 'bot started (long polling)');
-      bot.start().catch((error) => {
-        runtime.botStatus = 'failed';
-        logger.error({ err: error }, 'bot polling stopped');
-      });
+      if (config.botMode !== 'webhook') startPolling();
+    },
+
+    /**
+     * Подписка на Webhook: MAX будет присылать события на config.botWebhookUrl. Старые подписки снимаются.
+     * Если MAX не принял адрес, бот не молчит — переходит на Long Polling.
+     */
+    async connectWebhook() {
+      const url = config.botWebhookUrl;
+      try {
+        const subscriptions = await bot.api.getSubscriptions() ?? [];
+        await Promise.all(subscriptions.filter((item) => item.url !== url).map((item) => bot.api.unsubscribe(item.url)));
+        await bot.api.subscribe(url, config.botWebhookSecret, []);
+        runtime.botMode = 'webhook';
+        runtime.botStatus = 'running';
+        logger.info({ botUsername: runtime.botUsername, url }, 'bot started (webhook)');
+      } catch (error) {
+        logger.error({ err: error, url }, 'webhook subscription failed, falling back to long polling');
+        startPolling();
+      }
     },
 
     startHealthMonitor(intervalMs = HEALTH_CHECK_INTERVAL_MS) {
@@ -361,6 +391,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     /** Обработка одного обновления — для тестов диалога. */
     handleUpdate: (update) => bot.handleUpdate(update),
 
+    /**
+     * Остановка. Подписку Webhook не снимаем: при перезапуске контейнера MAX повторит доставку,
+     * а новый процесс продолжит принимать события по тому же адресу.
+     */
     stop() {
       clearInterval(healthTimer);
       bot.stopPolling();
