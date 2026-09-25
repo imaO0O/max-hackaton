@@ -144,7 +144,7 @@
 
 <!-- 1. Титул и порядок проверки -->
 <section class="slide">
-  <div class="grid grid-2" style="grid-template-columns: 1.1fr 1fr; gap: 0.5in; height: 100%;">
+  <div class="grid grid-2" style="grid-template-columns: 0.8fr 1.2fr; gap: 0.4in; height: 100%;">
     <div style="display: flex; flex-direction: column; justify-content: center;">
       <div class="kicker">Чат-бот и мини-приложение в MAX</div>
       <h1>После 9-го</h1>
@@ -153,13 +153,14 @@
     </div>
     <div class="card" style="align-self: center; font-size: 13.5pt;">
       <h3>Для проверки</h3>
-      <table style="font-size: 11.5pt; margin-bottom: 0.1in;">
-        <tr><th style="width: 1.45in;">Бот в MAX</th><td>https://max.ru/t567_hakaton_max_bot</td></tr>
-        <tr><th>Мини-приложение</th><td>https://158-160-18-41.sslip.io/ — открывается кнопкой в чате с ботом</td></tr>
+      <table style="font-size: 11pt; margin-bottom: 0.08in;">
+        <tr><th style="width: 1.35in;">Бот в MAX</th><td>https://max.ru/t567_hakaton_max_bot</td></tr>
+        <tr><th>Мини-приложение</th><td>https://158-160-18-41.sslip.io/ — кнопка в чате с ботом</td></tr>
         <tr><th>Репозиторий</th><td>github.com/imaO0O/max-hackaton</td></tr>
         <tr><th>Commit</th><td><span class="todo">хэш коммита на момент сдачи</span></td></tr>
-        <tr><th>API</th><td>https://158-160-18-41.sslip.io/api · описание <code>docs/openapi.yaml</code> · проверки <code>DATA-API.yaml</code></td></tr>
-        <tr><th>Тестовые доступы</th><td>не нужны: справочники API открыты, личные методы подписывает MAX. Тестовые данные — демо-регионы А и Б в опросе</td></tr>
+        <tr><th>API</th><td>https://158-160-18-41.sslip.io/api · <code>docs/openapi.yaml</code> · <code>DATA-API.yaml</code></td></tr>
+        <tr><th>Окружение</th><td><code>BOT_TOKEN</code> — выдан организаторами, <code>DOMAIN=158-160-18-41.sslip.io</code>; остальное — <code>.env.example</code></td></tr>
+        <tr><th>Тестовые доступы</th><td>не нужны: справочники API открыты, личные методы подписывает MAX; тестовые данные — демо-регионы А и Б</td></tr>
       </table>
       <div class="steps" style="font-size: 12pt; gap: 0.1in;">
         <div class="step" style="font-size: 12pt;"><span>Бот → «Начать» → Республика Татарстан, Казань, 9 класс, IT, Колледж</span></div>
@@ -212,7 +213,7 @@
     </div>
     <div class="card">
       <h3>Качество</h3>
-      84 автотеста в GitHub Actions на каждый pull request. Реальные данные не проходят валидатор без источника и даты проверки.
+      109 автотестов в GitHub Actions на каждый pull request. Реальные данные не проходят валидатор без источника и даты проверки.
     </div>
     <div class="card">
       <h3>Готовность</h3>
@@ -402,7 +403,7 @@
   </div>
   <div class="grid grid-3" style="margin-top: 0.22in;">
     <div class="card"><b>Запуск:</b> <code>docker compose up --build</code>, HTTPS — профиль <code>https</code> с Caddy</div>
-    <div class="card"><b>Качество:</b> 84 автотеста ядра, сервера и диалога бота в GitHub Actions, валидатор справочников <code>npm run data:check</code></div>
+    <div class="card"><b>Качество:</b> 109 автотестов ядра, сервера и диалога бота в GitHub Actions, валидатор справочников <code>npm run data:check</code></div>
     <div class="card"><b>Документация:</b> README со сценарием проверки, OpenAPI 3.1 в <code>docs/openapi.yaml</code></div>
   </div>
   <div class="slide__footer"><span>После 9-го</span><span>8</span></div>
@@ -459,7 +460,7 @@
     <div class="card">
       <h3>Каналы и техника</h3>
       <ul class="points">
-        <li>Родительские чаты 9 классов в MAX и школы региона.</li>
+        <li>Ссылки для школ: <code>/link</code> выдаёт ссылку с кодом школы, в <code>/stats</code> — «Ссылки для школ»: сколько семей пришло и собрало план.</li>
         <li>Отправка плана подростку — встроенный канал роста.</li>
         <li>Для нескольких экземпляров сервера — общая база и блокировка задач напоминаний.</li>
       </ul>
