@@ -12,10 +12,14 @@ export const ANY_CITY = '*';
 
 const button = Keyboard.button;
 
-export function openAppKeyboard(botUsername, extraRows = []) {
+/**
+ * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
+ * и показывает в метриках, откуда его открыли (из сообщения бота или из напоминания).
+ */
+export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot') {
   const rows = [...extraRows];
   if (botUsername) {
-    rows.unshift([button.openApp('Открыть план', botUsername)]);
+    rows.unshift([button.openApp('Открыть план', botUsername, undefined, source)]);
   }
   return Keyboard.inlineKeyboard(rows);
 }

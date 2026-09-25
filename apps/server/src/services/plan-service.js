@@ -1,6 +1,8 @@
 import crypto from 'node:crypto';
 
-import { academicYearFor, buildPlan, PATH_VALUES, GRADE_VALUES, reminderSchedule } from '@posle9/core';
+import {
+  academicYearFor, buildPlan, PATH_VALUES, GRADE_VALUES, planYearFor, reminderSchedule,
+} from '@posle9/core';
 
 import { transaction } from '../db/database.js';
 import { isProfileComplete } from '../repositories/users.js';
@@ -44,7 +46,8 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
 
   function buildPlanFor(owner, plan) {
     const region = reference.getRegion(owner.regionId);
-    const academicYear = currentAcademicYear();
+    // Восьмикласснику нужен план его 9 класса, то есть следующего учебного года
+    const academicYear = planYearFor(owner.grade, currentAcademicYear());
     const built = buildPlan({
       keyDates: reference.listKeyDates(academicYear),
       profile: {
@@ -57,7 +60,7 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       now: clock(),
       utcOffsetHours: region.utcOffsetHours,
     });
-    return { region, academicYear, ...built };
+    return { region, academicYear, isAdvance: owner.grade === 8, ...built };
   }
 
   /** Пересобирает напоминания владельца плана и всех, кто на план подписан. */
@@ -78,6 +81,18 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
     });
   }
 
+  /**
+   * Пересобирает напоминания всех семей. Нужна после обновления справочника дат
+   * и при смене учебного года: иначе в очереди остаются напоминания со старыми датами.
+   */
+  function syncAllReminders() {
+    const ownerIds = plans.listOwnerIdsWithCompleteProfile();
+    for (const ownerId of ownerIds) {
+      syncReminders(ownerId);
+    }
+    return { plans: ownerIds.length };
+  }
+
   function profileView(user) {
     return {
       regionId: user.regionId,
@@ -93,6 +108,7 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
   return {
     currentAcademicYear,
     syncReminders,
+    syncAllReminders,
 
     getProfile(userId) {
       return profileView(users.ensure(userId));
@@ -129,6 +145,7 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       const built = buildPlanFor(user, plan);
       return {
         academicYear: built.academicYear,
+        isAdvance: built.isAdvance,
         today: built.today,
         region: built.region,
         profile: profileView(user),
@@ -186,6 +203,7 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       const built = buildPlanFor(owner, plan);
       return {
         academicYear: built.academicYear,
+        isAdvance: built.isAdvance,
         today: built.today,
         region: built.region,
         profile: { ...profileView(owner), remindersEnabled: undefined },
@@ -195,6 +213,20 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
         isFollowing: plans.isFollower(plan.id, viewerId),
         favorites: favorites.listProgramIds(owner.id).map((id) => reference.getProgram(id)).filter(Boolean),
       };
+    },
+
+    /** Отозвать ссылку на план: по старой ссылке план больше не открывается, подписчики отключены. */
+    revokeShareLink(userId) {
+      const plan = plans.getByUser(userId);
+      if (!plan || !plan.shareToken) return { revoked: false, followersRemoved: 0 };
+      const followersRemoved = transaction(db, () => plans.revokeShare(plan.id));
+      return { revoked: true, followersRemoved };
+    },
+
+    /** Удалить все данные пользователя по его запросу. */
+    deleteUserData(userId) {
+      const deleted = transaction(db, () => users.delete(userId));
+      return { deleted };
     },
 
     setFollowing(viewerId, token, follow) {

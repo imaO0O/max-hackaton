@@ -49,8 +49,26 @@ export function createPlanRepository(db) {
       return Boolean(db.prepare('SELECT 1 FROM plan_followers WHERE plan_id = ? AND user_id = ?').get(planId, userId));
     },
 
+    /** Отзывает ссылку: старый токен перестаёт работать, подписчики отключаются вместе с их напоминаниями. */
+    revokeShare(planId) {
+      const followers = db.prepare('SELECT COUNT(*) AS count FROM plan_followers WHERE plan_id = ?').get(planId).count;
+      db.prepare('UPDATE plans SET share_token = NULL, updated_at = ? WHERE id = ?').run(nowIso(), planId);
+      db.prepare(`DELETE FROM reminders WHERE plan_id = ? AND status = 'pending'
+        AND user_id IN (SELECT user_id FROM plan_followers WHERE plan_id = ?)`).run(planId, planId);
+      db.prepare('DELETE FROM plan_followers WHERE plan_id = ?').run(planId);
+      return followers;
+    },
+
     listFollowerIds(planId) {
       return db.prepare('SELECT user_id FROM plan_followers WHERE plan_id = ?').all(planId).map((row) => row.user_id);
+    },
+
+    /** Владельцы планов с заполненным профилем — для массовой пересборки напоминаний. */
+    listOwnerIdsWithCompleteProfile() {
+      return db.prepare(`SELECT p.user_id FROM plans p
+        JOIN users u ON u.max_user_id = p.user_id
+        WHERE u.region_id IS NOT NULL AND u.grade IS NOT NULL AND u.path IS NOT NULL`).all()
+        .map((row) => row.user_id);
     },
 
     countFollowers(planId) {

@@ -29,7 +29,8 @@ FROM node:24-alpine AS runtime
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=8080 \
-    DATABASE_PATH=/app/storage/posle9.sqlite     NODE_EXTRA_CA_CERTS=/app/apps/server/certs/russian-trusted-root-ca.pem
+    DATABASE_PATH=/app/storage/posle9.sqlite \
+    NODE_EXTRA_CA_CERTS=/app/apps/server/certs/russian-trusted-root-ca.pem
 WORKDIR /app
 
 COPY --from=prod-deps /app/node_modules ./node_modules

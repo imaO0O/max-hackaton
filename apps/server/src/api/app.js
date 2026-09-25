@@ -6,7 +6,9 @@ import fastifyStatic from '@fastify/static';
 
 import { AppError } from '../services/errors.js';
 import { validateInitData } from './init-data.js';
+import { createRateLimiter } from './rate-limit.js';
 import { registerCatalogRoutes } from './routes/catalog.js';
+import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerPlanRoutes } from './routes/plan.js';
 
 /**
@@ -22,6 +24,19 @@ export function buildApp({ config, services, runtime, logger = true }) {
 
   app.decorateRequest('maxUser', null);
   app.decorateRequest('startParam', null);
+
+  // Ограничение частоты запросов к API по IP (за прокси Caddy — по X-Forwarded-For). 0 — выключено
+  if (config.rateLimitPerMinute > 0) {
+    const limiter = createRateLimiter({ max: config.rateLimitPerMinute });
+    app.addHook('onRequest', async (request, reply) => {
+      if (!request.url.startsWith('/api/') || request.url === '/api/health') return;
+      const { allowed, retryAfterSeconds } = limiter.hit(request.ip);
+      if (!allowed) {
+        reply.header('Retry-After', String(retryAfterSeconds));
+        throw new AppError(429, 'rate_limited', 'Слишком много запросов. Подождите минуту и попробуйте снова');
+      }
+    });
+  }
 
   app.addHook('onRequest', async (request) => {
     if (!request.routeOptions.config?.auth) return;
@@ -66,11 +81,16 @@ export function buildApp({ config, services, runtime, logger = true }) {
     return reply.status(500).send({ error: { code: 'internal_error', message: 'Что-то пошло не так. Попробуйте ещё раз' } });
   });
 
-  app.get('/api/health', async () => ({
-    status: 'ok',
-    bot: runtime.botStatus,
-    academicYear: services.plan.currentAcademicYear(),
-  }));
+  // HTTP-сервер отвечает 200, пока жив (так ждёт автопроверка из DATA-API.yaml).
+  // Если бот потерял связь с MAX, это видно в теле ответа: status = degraded
+  app.get('/api/health', async () => {
+    const botDown = runtime.botStatus === 'failed' || runtime.botStatus === 'unreachable';
+    return {
+      status: botDown ? 'degraded' : 'ok',
+      bot: runtime.botStatus,
+      academicYear: services.plan.currentAcademicYear(),
+    };
+  });
 
   app.get('/api/meta', async () => ({
     academicYear: services.plan.currentAcademicYear(),
@@ -80,6 +100,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
   app.register(async (api) => {
     registerCatalogRoutes(api, services);
     registerPlanRoutes(api, services);
+    registerCalendarRoutes(api, services);
   }, { prefix: '/api' });
 
   const indexHtml = path.join(config.miniappDistDir, 'index.html');

@@ -1,14 +1,16 @@
 import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
+import { EVENTS, launchSource } from '../../services/analytics.js';
+
 const tokenParam = { type: 'string', pattern: '^[A-Za-z0-9_-]{16,64}$' };
 
-export function registerPlanRoutes(api, { plan }) {
+export function registerPlanRoutes(api, { plan, analytics }) {
   /** Кто открыл мини-приложение и с каким параметром запуска (например, ссылка на чужой план). */
-  api.get('/session', { config: { auth: true } }, async (request) => ({
-    userId: request.maxUser.id,
-    startParam: request.startParam,
-    profile: plan.getProfile(request.maxUser.id),
-  }));
+  api.get('/session', { config: { auth: true } }, async (request) => {
+    const profile = plan.getProfile(request.maxUser.id);
+    analytics.track(EVENTS.MINIAPP_OPENED, request.maxUser.id, { source: launchSource(request.startParam) });
+    return { userId: request.maxUser.id, startParam: request.startParam, profile };
+  });
 
   api.get('/profile', { config: { auth: true } }, async (request) => ({
     profile: plan.getProfile(request.maxUser.id),
@@ -32,6 +34,14 @@ export function registerPlanRoutes(api, { plan }) {
       },
     },
   }, async (request) => ({ profile: plan.saveProfile(request.maxUser.id, request.body) }));
+
+  /** Удаление всех данных пользователя: профиль, план, отметки, избранное, подписки, напоминания. */
+  api.delete('/profile', { config: { auth: true } }, async (request) => {
+    const result = plan.deleteUserData(request.maxUser.id);
+    // Событие без ID пользователя: считаем только количество удалений
+    analytics.track(EVENTS.DATA_DELETED, null);
+    return result;
+  });
 
   api.put('/profile/reminders', {
     config: { auth: true },
@@ -62,14 +72,24 @@ export function registerPlanRoutes(api, { plan }) {
         properties: { done: { type: 'boolean' } },
       },
     },
-  }, async (request) => plan.setItemDone(request.maxUser.id, request.params.itemId, request.body.done));
+  }, async (request) => {
+    const result = plan.setItemDone(request.maxUser.id, request.params.itemId, request.body.done);
+    if (result.done) analytics.track(EVENTS.ITEM_DONE, request.maxUser.id, { itemId: result.id });
+    return result;
+  });
 
   api.post('/plan/share', { config: { auth: true } }, async (request) => plan.createShareLink(request.maxUser.id));
+
+  api.delete('/plan/share', { config: { auth: true } }, async (request) => plan.revokeShareLink(request.maxUser.id));
 
   api.get('/shared-plans/:token', {
     config: { auth: true },
     schema: { params: { type: 'object', required: ['token'], properties: { token: tokenParam } } },
-  }, async (request) => plan.getSharedPlan(request.maxUser.id, request.params.token));
+  }, async (request) => {
+    const shared = plan.getSharedPlan(request.maxUser.id, request.params.token);
+    if (!shared.isOwner) analytics.track(EVENTS.SHARED_PLAN_OPENED, request.maxUser.id);
+    return shared;
+  });
 
   api.put('/shared-plans/:token/follow', {
     config: { auth: true },
@@ -82,5 +102,9 @@ export function registerPlanRoutes(api, { plan }) {
         properties: { follow: { type: 'boolean' } },
       },
     },
-  }, async (request) => plan.setFollowing(request.maxUser.id, request.params.token, request.body.follow));
+  }, async (request) => {
+    const result = plan.setFollowing(request.maxUser.id, request.params.token, request.body.follow);
+    if (result.isFollowing) analytics.track(EVENTS.FOLLOW_STARTED, request.maxUser.id);
+    return result;
+  });
 }

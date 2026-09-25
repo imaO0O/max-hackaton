@@ -12,7 +12,8 @@
     "start": "node --disable-warning=ExperimentalWarning src/index.js",
     "dev": "node --disable-warning=ExperimentalWarning --env-file-if-exists=../../.env --watch src/index.js",
     "test": "node --disable-warning=ExperimentalWarning --test",
-    "data:check": "node --disable-warning=ExperimentalWarning src/db/check-data.js"
+    "data:check": "node --disable-warning=ExperimentalWarning src/db/check-data.js",
+    "stats": "node --disable-warning=ExperimentalWarning --env-file-if-exists=../../.env src/scripts/stats.js"
   },
   "dependencies": {
     "@fastify/static": "10.1.3",

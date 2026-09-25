@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  academicYearFor, buildPlan, daysBetween, localDateString, matchesProfile, reminderSchedule, sendAtUtc,
+  academicYearFor, buildPlan, daysBetween, localDateString, matchesProfile, nextAcademicYear, planYearFor,
+  reminderSchedule, sendAtUtc,
 } from '../src/plan.js';
 
 const base = {
@@ -86,4 +87,10 @@ test('напоминания: в 10:00 по местному времени и �
     'college-admission:end:5',
   ]);
   assert.equal(schedule[1].sendAt, '2027-08-10T07:00:00.000Z');
+});
+
+test('восьмикласснику строится план на следующий учебный год', () => {
+  assert.equal(nextAcademicYear('2026/2027'), '2027/2028');
+  assert.equal(planYearFor(9, '2026/2027'), '2026/2027');
+  assert.equal(planYearFor(8, '2026/2027'), '2027/2028');
 });

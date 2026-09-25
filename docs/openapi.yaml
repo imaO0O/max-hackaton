@@ -163,7 +163,8 @@ components:
       type: object
       required: [academicYear, today, region, profile, items, nextItemId]
       properties:
-        academicYear: { type: string }
+        academicYear: { type: string, description: 'Учебный год плана. Для 8 класса — следующий год (9 класс)' }
+        isAdvance: { type: boolean, description: 'План на следующий учебный год для восьмиклассника' }
         today: { type: string, format: date }
         region: { $ref: '#/components/schemas/Region' }
         profile: { $ref: '#/components/schemas/Profile' }
@@ -206,8 +207,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  status: { type: string, const: ok }
-                  bot: { type: string, enum: [starting, running, stopped, failed, disabled] }
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                    description: 'degraded — бот не на связи с MAX Bot API три проверки подряд или не запустился'
+                  bot: { type: string, enum: [starting, running, stopped, failed, unreachable, disabled] }
                   academicYear: { type: string }
 
   /api/regions:
@@ -383,6 +387,21 @@ paths:
                   profile: { $ref: '#/components/schemas/Profile' }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [profile]
+      summary: Удалить все данные пользователя
+      description: Профиль, план, отметки, избранное, подписки и напоминания удаляются, в журнале событий ID обнуляется. Повторный вызов безопасен.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Данные удалены
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/profile/reminders:
     put:
@@ -461,6 +480,70 @@ paths:
         '409': { $ref: '#/components/responses/ProfileIncomplete' }
         '503':
           description: Бот не подключён, имя бота для ссылки неизвестно
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+    delete:
+      tags: [plan]
+      summary: Отозвать ссылку на план
+      description: Старая ссылка перестаёт открываться, подписчики и их напоминания по плану удаляются. Следующий POST создаст новую ссылку.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Результат отзыва
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked: { type: boolean, description: false — ссылки не было }
+                  followersRemoved: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/plan/calendar-link:
+    post:
+      tags: [plan]
+      summary: Одноразовая ссылка на файл календаря с датами плана
+      description: |
+        Ссылка передаётся в `WebApp.downloadFile(url, fileName)`. Нативный клиент MAX скачивает файл
+        без заголовков авторизации, поэтому доступ подтверждается подписью в самой ссылке. Ссылка действует 10 минут.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Ссылка на файл .ics
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, fileName, expiresInSeconds, eventsCount]
+                properties:
+                  url: { type: string, format: uri, examples: ['https://158-160-18-41.sslip.io/api/calendar/7007.1790000000.abc.ics'] }
+                  fileName: { type: string, examples: [posle9-plan-2026-2027.ics] }
+                  expiresInSeconds: { type: integer, examples: [600] }
+                  eventsCount: { type: integer, description: Сколько дат попадёт в календарь }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/ProfileIncomplete' }
+
+  /api/calendar/{file}:
+    get:
+      tags: [plan]
+      summary: Файл календаря (iCalendar) по одноразовой ссылке
+      description: События на весь день для непрошедших пунктов плана, у каждого — напоминание накануне в 9:00.
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[0-9.A-Za-z_-]{1,120}\.ics$'
+      responses:
+        '200':
+          description: Файл .ics
+          content:
+            text/calendar:
+              schema: { type: string }
+        '410':
+          description: Ссылка устарела или подделана (code = link_expired)
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }

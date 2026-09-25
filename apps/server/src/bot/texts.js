@@ -26,13 +26,24 @@ export const texts = {
   help: [
     'Что я умею:',
     '/start — ответить на вопросы и собрать план',
-    '/plan — открыть план в мини-приложении',
+    '/plan — ближайшие даты плана прямо в чате',
     '/reminders — включить или выключить напоминания',
     '/test_reminder — показать пример напоминания прямо сейчас',
+    '/delete_data — удалить мои данные из сервиса',
     '',
     'Сервис не подаёт заявления и не рассчитывает шансы на поступление. Сроки и условия сверяйте в школе и в правилах приёма колледжа.',
   ].join('\n'),
   needSurvey: 'Сначала ответьте на 5 вопросов — это займёт минуту.',
+  error: 'Что-то пошло не так. Попробуйте ещё раз или начните заново: /start',
+  deleteConfirm: [
+    'Удалить все ваши данные из сервиса?',
+    '',
+    'Мы храним только ваш ID в MAX, ответы на вопросы (регион, город, класс, интересы, путь), отметки плана, избранные программы и расписание напоминаний. Имена и оценки не хранятся — оценки калькулятора остаются только на вашем телефоне.',
+    '',
+    'После удаления план и ссылка на него перестанут работать, напоминания не придут. Отменить удаление нельзя.',
+  ].join('\n'),
+  deleteDone: 'Данные удалены. Если захотите начать заново — /start',
+  deleteCancelled: 'Удаление отменено, данные на месте.',
   remindersOn: 'Напоминания включены. Напишу за несколько дней до важных дат в 10:00 по времени вашего региона.',
   remindersOff: 'Напоминания выключены. Включить снова: /reminders',
 };
@@ -50,6 +61,45 @@ export function summaryText({ region, city, grade, interests, path, remindersEna
     '',
     remindersEnabled ? 'Напоминания о ключевых датах включены.' : 'Напоминания выключены.',
   ].filter((line) => line !== null).join('\n');
+}
+
+function planItemLine(item) {
+  const date = item.dateEnd ? `${formatDate(item.dateStart)} — ${formatDate(item.dateEnd)}` : formatDate(item.dateStart);
+  let status = '';
+  if (item.done) status = ' ✅';
+  else if (item.status === 'current') status = ' (идёт сейчас)';
+  else if (item.daysLeft === 0) status = ' (сегодня)';
+  else if (item.daysLeft > 0) status = ` (через ${item.daysLeft} дн.)`;
+  const approximate = item.isApproximate ? ', ориентировочно' : '';
+  return `• ${date}${approximate} — ${item.title}${status}`;
+}
+
+/**
+ * План текстом для чата: работает и без мини-приложения.
+ * @param {object} plan ответ planService.getPlan
+ * @param {{ limit?: number }} [options] сколько ближайших пунктов показать; без limit — все непрошедшие
+ */
+export function planText(plan, { limit } = {}) {
+  const header = `План на ${plan.academicYear} · ${plan.region.name} · ${PATH_TITLES[plan.profile.path]}`;
+  const upcoming = plan.items.filter((item) => item.status !== 'past');
+
+  if (upcoming.length === 0) {
+    return plan.isAdvance
+      ? `${header}\n\nЭто план на 9 класс. Даты ${plan.academicYear} учебного года ещё не опубликованы — добавим их, как только они появятся, и пришлём напоминания. А пока можно сравнить пути и посчитать средний балл: оценки по предметам, которые заканчиваются в 8 классе, тоже войдут в аттестат.`
+      : `${header}\n\nВсе даты этого учебного года уже прошли.`;
+  }
+
+  const shown = limit ? upcoming.slice(0, limit) : upcoming;
+  const lines = [header, ''];
+  if (plan.isAdvance) {
+    lines.push('Это план на 9 класс — следующий учебный год.', '');
+  }
+  lines.push(limit ? 'Ближайшие даты:' : 'Даты года:', ...shown.map(planItemLine));
+  const rest = upcoming.length - shown.length;
+  if (rest > 0) lines.push(`…и ещё ${rest}`);
+  const done = plan.items.filter((item) => item.done).length;
+  lines.push('', `Выполнено: ${done} из ${plan.items.length}.`);
+  return lines.join('\n');
 }
 
 export function reminderText({ keyDate, anchor, daysBefore }) {

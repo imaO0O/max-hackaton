@@ -167,6 +167,47 @@ describe('API мини-приложения', () => {
     assert.match(application.description, /четыр/, 'для 10 класса нужны четыре ОГЭ');
   });
 
+  test('восьмикласснику показывается план его 9 класса, а не текущих девятиклассников', async () => {
+    const user = 4004;
+    await call('PUT', '/api/profile', { user, body: { regionId: 'demo-standard', grade: 8, path: 'college', interests: [] } });
+    const plan = (await call('GET', '/api/plan', { user })).json();
+    assert.equal(plan.academicYear, '2027/2028');
+    assert.equal(plan.isAdvance, true);
+    assert.ok(plan.items.every((item) => item.academicYear === '2027/2028'), 'даты текущего года не попадают в план');
+    const currentYearReminders = ctx.db.prepare(`SELECT COUNT(*) AS count FROM reminders r
+      JOIN key_dates kd ON kd.id = r.key_date_id WHERE r.user_id = ? AND kd.academic_year = '2026/2027'`).get(user).count;
+    assert.equal(currentYearReminders, 0, 'напоминания о датах текущих девятиклассников не ставятся');
+
+    const ninth = (await call('GET', '/api/plan', { user: PARENT })).json();
+    assert.equal(ninth.academicYear, '2026/2027');
+    assert.equal(ninth.isAdvance, false);
+  });
+
+  test('пересборка напоминаний подхватывает изменённые даты справочника', async () => {
+    const user = 5005;
+    await call('PUT', '/api/profile', { user, body: { regionId: 'demo-standard', grade: 9, path: 'college', interests: [] } });
+    const before = ctx.db.prepare("SELECT send_at FROM reminders WHERE user_id = ? AND key_date_id = '2627-fed-college-admission' AND anchor = 'end'").get(user);
+    assert.ok(before, 'напоминание о конце приёма запланировано');
+
+    // Имитация обновления справочника: срок приёма сдвинулся на 5 дней раньше
+    ctx.db.prepare("UPDATE key_dates SET date_end = '2027-08-10' WHERE id = '2627-fed-college-admission'").run();
+    const result = ctx.services.plan.syncAllReminders();
+    assert.ok(result.plans >= 1);
+
+    const after = ctx.db.prepare("SELECT send_at FROM reminders WHERE user_id = ? AND key_date_id = '2627-fed-college-admission' AND anchor = 'end'").get(user);
+    assert.equal(after.send_at, '2027-08-03T07:00:00.000Z', 'напоминание за 7 дней до нового срока');
+    ctx.db.prepare("UPDATE key_dates SET date_end = '2027-08-15' WHERE id = '2627-fed-college-admission'").run();
+  });
+
+  test('health показывает, что бот потерял связь с MAX, но отвечает 200', async () => {
+    const previous = ctx.runtime.botStatus;
+    ctx.runtime.botStatus = 'unreachable';
+    const response = await call('GET', '/api/health');
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(response.json(), { status: 'degraded', bot: 'unreachable', academicYear: '2026/2027' });
+    ctx.runtime.botStatus = previous;
+  });
+
   test('выключение напоминаний', async () => {
     const response = await call('PUT', '/api/profile/reminders', { user: PARENT, body: { enabled: false } });
     assert.equal(response.json().profile.remindersEnabled, false);

@@ -50,5 +50,14 @@ export function createUserRepository(db) {
       db.prepare('UPDATE users SET survey_state = ?, updated_at = ? WHERE max_user_id = ?')
         .run(state ? JSON.stringify(state) : null, nowIso(), maxUserId);
     },
+
+    /**
+     * Удаляет пользователя и всё, что с ним связано: план, отметки, избранное, подписки, напоминания
+     * (каскадом по внешним ключам). В журнале событий ID обнуляется — остаются только обезличенные счётчики.
+     */
+    delete(maxUserId) {
+      db.prepare('UPDATE events SET user_id = NULL WHERE user_id = ?').run(maxUserId);
+      return db.prepare('DELETE FROM users WHERE max_user_id = ?').run(maxUserId).changes > 0;
+    },
   };
 }

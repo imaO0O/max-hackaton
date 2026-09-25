@@ -2,17 +2,23 @@ import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
+import { EVENTS } from '../services/analytics.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, openAppKeyboard, parseSurveyPayload, pathStep, regionStep, startKeyboard,
 } from './survey.js';
-import { reminderText, summaryText, texts } from './texts.js';
+import { planText, reminderText, summaryText, texts } from './texts.js';
+
+const PLAN_PREVIEW_ITEMS = 5;
+const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const HEALTH_FAILURES_BEFORE_ALERT = 3;
 
 /**
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
-export function createBot({ config, repos, services, runtime, logger }) {
-  const bot = new Bot(config.botToken);
+export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
+  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX
+  const bot = new Bot(config.botToken, clientOptions ? { clientOptions } : undefined);
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
@@ -35,13 +41,34 @@ export function createBot({ config, repos, services, runtime, logger }) {
     });
   }
 
-  async function sendOpenApp(ctx) {
-    const user = users.ensure(userIdOf(ctx));
+  function planKeyboard(extraRows = []) {
+    return openAppKeyboard(runtime.botUsername, [
+      [Keyboard.button.callback('Все даты года', 'plan:all')],
+      ...extraRows,
+    ]);
+  }
+
+  /** План текстом прямо в чате — сценарий проходится и без мини-приложения. */
+  async function sendPlan(ctx) {
+    const userId = userIdOf(ctx);
+    const user = users.ensure(userId);
     if (!isProfileComplete(user)) {
       await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
       return;
     }
-    await ctx.reply('Ваш план — в мини-приложении:', { attachments: [openAppKeyboard(runtime.botUsername)] });
+    const plan = services.plan.getPlan(userId);
+    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'command' });
+    await ctx.reply(planText(plan, { limit: PLAN_PREVIEW_ITEMS }), { attachments: [planKeyboard()] });
+  }
+
+  /** Метрики пилота — только для команды проекта (ADMIN_USER_IDS). */
+  async function sendStats(ctx) {
+    const userId = userIdOf(ctx);
+    if (!config.adminUserIds.includes(userId)) {
+      await ctx.reply(`Команда доступна только команде проекта. Ваш ID в MAX: ${userId}`);
+      return;
+    }
+    await ctx.reply(services.analytics.report());
   }
 
   async function toggleReminders(ctx) {
@@ -75,9 +102,16 @@ export function createBot({ config, repos, services, runtime, logger }) {
 
   bot.on('bot_started', sendStart);
   bot.command('start', sendStart);
-  bot.command('plan', sendOpenApp);
+  bot.command('plan', sendPlan);
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', sendTestReminder);
+  bot.command('stats', sendStats);
+  bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
+    attachments: [Keyboard.inlineKeyboard([[
+      Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
+      Keyboard.button.callback('Отмена', 'data:delete-cancel'),
+    ]])],
+  }));
   bot.command('help', (ctx) => ctx.reply(texts.help));
 
   bot.action(/^survey:/, async (ctx) => {
@@ -94,6 +128,7 @@ export function createBot({ config, repos, services, runtime, logger }) {
     switch (action) {
       case 'start': {
         save({});
+        services.analytics.track(EVENTS.SURVEY_STARTED, userId);
         return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
       }
       case 'region': {
@@ -135,10 +170,14 @@ export function createBot({ config, repos, services, runtime, logger }) {
         if (!draft.grade || !PATH_VALUES.includes(value)) return restart();
         const profile = services.plan.saveProfile(userId, { ...draft, path: value });
         users.setSurveyState(userId, null);
+        services.analytics.track(EVENTS.SURVEY_COMPLETED, userId, {
+          regionId: profile.regionId, path: profile.path, grade: profile.grade,
+        });
         const region = reference.getRegion(profile.regionId);
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
-        const text = summaryText({ ...profile, region, interests: interestTitles });
-        const keyboard = openAppKeyboard(runtime.botUsername, [
+        const preview = planText(services.plan.getPlan(userId), { limit: 3 });
+        const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
+        const keyboard = planKeyboard([
           [Keyboard.button.callback(profile.remindersEnabled ? 'Выключить напоминания' : 'Включить напоминания', 'reminders:toggle')],
           [Keyboard.button.callback('Изменить ответы', 'survey:start')],
         ]);
@@ -147,6 +186,29 @@ export function createBot({ config, repos, services, runtime, logger }) {
       default:
         return restart();
     }
+  });
+
+  bot.action('plan:all', async (ctx) => {
+    const userId = userIdOf(ctx);
+    if (!isProfileComplete(users.ensure(userId))) {
+      await ctx.answerOnCallback({ message: { text: texts.needSurvey, attachments: [startKeyboard({ hasProfile: false })] } });
+      return;
+    }
+    const plan = services.plan.getPlan(userId);
+    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'all_dates' });
+    await ctx.answerOnCallback({
+      message: { text: planText(plan), attachments: [openAppKeyboard(runtime.botUsername)] },
+    });
+  });
+
+  bot.action('data:delete-confirm', async (ctx) => {
+    services.plan.deleteUserData(userIdOf(ctx));
+    services.analytics.track(EVENTS.DATA_DELETED, null);
+    await ctx.answerOnCallback({ message: { text: texts.deleteDone } });
+  });
+
+  bot.action('data:delete-cancel', async (ctx) => {
+    await ctx.answerOnCallback({ message: { text: texts.deleteCancelled } });
   });
 
   bot.action('reminders:toggle', async (ctx) => {
@@ -170,9 +232,36 @@ export function createBot({ config, repos, services, runtime, logger }) {
     });
   });
 
-  bot.catch((error, ctx) => {
+  bot.catch(async (error, ctx) => {
     logger.error({ err: error, updateType: ctx?.updateType }, 'bot update failed');
+    // Пользователь не должен остаться без ответа
+    try {
+      if (ctx?.chatId) await ctx.reply(texts.error);
+    } catch (replyError) {
+      logger.warn({ err: replyError }, 'failed to send error reply');
+    }
   });
+
+  let healthTimer = null;
+  let consecutiveFailures = 0;
+
+  /** Проверка связи с Bot API: если MAX недоступен несколько раз подряд, это видно в /api/health и в логах. */
+  async function checkHealth() {
+    try {
+      await bot.api.getMyInfo();
+      if (runtime.botStatus === 'unreachable') logger.info('MAX Bot API is reachable again');
+      consecutiveFailures = 0;
+      runtime.botStatus = 'running';
+    } catch (error) {
+      consecutiveFailures += 1;
+      if (consecutiveFailures >= HEALTH_FAILURES_BEFORE_ALERT) {
+        runtime.botStatus = 'unreachable';
+        logger.error({ err: error, consecutiveFailures }, 'MAX Bot API is unreachable');
+      } else {
+        logger.warn({ err: error, consecutiveFailures }, 'MAX Bot API health check failed');
+      }
+    }
+  }
 
   return {
     api: bot.api,
@@ -194,7 +283,18 @@ export function createBot({ config, repos, services, runtime, logger }) {
       });
     },
 
+    startHealthMonitor(intervalMs = HEALTH_CHECK_INTERVAL_MS) {
+      healthTimer = setInterval(() => { checkHealth(); }, intervalMs);
+      healthTimer.unref?.();
+    },
+
+    checkHealth,
+
+    /** Обработка одного обновления — для тестов диалога. */
+    handleUpdate: (update) => bot.handleUpdate(update),
+
     stop() {
+      clearInterval(healthTimer);
       bot.stopPolling();
       runtime.botStatus = 'stopped';
     },
