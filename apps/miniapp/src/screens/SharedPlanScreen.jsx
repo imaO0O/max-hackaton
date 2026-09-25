@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button, CellList, CellSimple, Typography } from '@maxhub/max-ui';
-import { PATH_TITLES, STUDY_FORMS } from '@posle9/core';
+import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
@@ -54,7 +54,7 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
     <div className="page">
       <ScreenHeader
         title={data.isOwner ? 'Это ваш план' : 'План после 9 класса'}
-        subtitle={`${data.academicYear} · ${data.region.name} · ${PATH_TITLES[data.profile.path]}`}
+        subtitle={`${planPeriodLabel(data)} · ${data.region.name} · ${PATH_TITLES[data.profile.path]}`}
         after={data.region.isDemo ? <DemoTag /> : null}
       />
 
@@ -83,9 +83,9 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
       {data.isAdvance && (
         <Card className="notice">
           <Typography.Body variant="small">
-            {data.items.length === 0
-              ? `Это план на 9 класс. Даты ${data.academicYear} учебного года ещё не опубликованы — полный план откроется в следующем учебном году, напоминания придут, как только даты появятся.`
-              : `Это план на 9 класс: даты ${data.academicYear} учебного года.`}
+            {data.items.some((item) => item.grade !== 8)
+              ? `План на 8–9 класс: шаги 8 класса и даты ${data.academicYear} учебного года.`
+              : `План на 8–9 класс. Сейчас в нём шаги 8 класса, даты 9 класса (${data.academicYear}) появятся, когда их опубликуют — напоминания придут автоматически.`}
           </Typography.Body>
         </Card>
       )}

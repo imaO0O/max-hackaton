@@ -322,7 +322,13 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
           action={<Button size="medium" variant="secondary" onClick={() => setFilter({ withinMyScore: false })}>Показать все программы</Button>}
         />
       )}
-      {colleges.data && list.length === 0 && !(scoreFilterOn && colleges.data.length > 0) && (
+      {reference.data && cities.length === 0 && (
+        <EmptyState
+          title="Колледжей этого региона в справочнике пока нет"
+          text="Сейчас собраны колледжи Республики Татарстан. Для своего региона смотрите сайт регионального министерства образования и сайты колледжей. Даты плана, напоминания и сравнение путей работают для любого региона"
+        />
+      )}
+      {colleges.data && list.length === 0 && cities.length > 0 && !(scoreFilterOn && colleges.data.length > 0) && (
         <EmptyState
           title="По этим фильтрам ничего не нашлось"
           text="Попробуйте выбрать другой город или убрать часть фильтров"

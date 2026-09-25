@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  academicYearFor, buildPlan, daysBetween, localDateString, matchesProfile, nextAcademicYear, planYearFor,
-  reminderSchedule, sendAtUtc,
+  academicYearFor, buildPlan, daysBetween, localDateString, matchesProfile, nextAcademicYear, planPeriodLabel,
+  planYearFor, previousAcademicYear, reminderSchedule, sendAtUtc,
 } from '../src/plan.js';
 
 const base = {
@@ -27,6 +27,20 @@ const keyDates = [
 ];
 
 const profile = { academicYear: '2026/2027', regionId: 'demo-1', path: 'college', twoOgeExperiment: false };
+
+test('шаги 8 класса: только восьмикласснику, из года перед планом 9 класса', () => {
+  const prep = { ...base, id: 'grade8-step', grade: 8, dateStart: '2027-03-01' };
+  const nextYearDate = { ...base, id: 'next-year', academicYear: '2027/2028', dateStart: '2028-03-01' };
+  const eighthGrader = { ...profile, academicYear: '2027/2028', grade: 8 };
+  assert.ok(matchesProfile(prep, eighthGrader));
+  assert.ok(matchesProfile(nextYearDate, eighthGrader), 'даты его 9 класса');
+  assert.ok(!matchesProfile(keyDates[0], eighthGrader), 'даты 9 класса текущего года — не его');
+  assert.ok(!matchesProfile(prep, { ...profile, grade: 9 }), 'девятикласснику шаги 8 класса не нужны');
+  assert.ok(!matchesProfile(prep, profile), 'без класса — как раньше, план 9 класса');
+  assert.equal(previousAcademicYear('2027/2028'), '2026/2027');
+  assert.equal(planPeriodLabel({ academicYear: '2027/2028', isAdvance: true }), '8–9 класс, 2026–2028');
+  assert.equal(planPeriodLabel({ academicYear: '2026/2027', isAdvance: false }), '2026/2027');
+});
 
 test('учебный год переключается в августе', () => {
   assert.equal(academicYearFor(new Date('2026-07-31T12:00:00Z')), '2025/2026');

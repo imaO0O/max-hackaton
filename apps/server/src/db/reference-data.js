@@ -117,6 +117,8 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(isDateOrNull(keyDate.dateEnd), `${label}: dateEnd — YYYY-MM-DD или null`);
     check(!keyDate.dateEnd || keyDate.dateEnd >= keyDate.dateStart, `${label}: dateEnd раньше dateStart`);
     check(isDateOrNull(keyDate.checkedAt), `${label}: checkedAt — YYYY-MM-DD или null`);
+    check(keyDate.grade === undefined || keyDate.grade === null || [8, 9].includes(keyDate.grade),
+      `${label}: grade — 8 (шаг 8 класса), 9 или пусто`);
     if (keyDate.scope === 'regional') {
       check(regionIds.has(keyDate.regionId), `${label}: для региональной даты нужен существующий regionId`);
     } else {
@@ -141,17 +143,18 @@ const bool = (value) => (value ? 1 : 0);
  */
 export function applyReferenceData(db, data) {
   transaction(db, () => {
+    // Порядок регионов в опросе — порядок в файле
     const upsertRegion = db.prepare(`
-      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET name = excluded.name, utc_offset_hours = excluded.utc_offset_hours,
         two_oge_experiment = excluded.two_oge_experiment, is_demo = excluded.is_demo,
         profile_class_rules = excluded.profile_class_rules, profile_class_rules_url = excluded.profile_class_rules_url,
-        checked_at = excluded.checked_at`);
-    for (const region of data.regions) {
+        checked_at = excluded.checked_at, sort_order = excluded.sort_order`);
+    data.regions.forEach((region, index) => {
       upsertRegion.run(region.id, region.name, region.utcOffsetHours, bool(region.twoOgeExperiment), bool(region.isDemo),
-        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null);
-    }
+        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null, index);
+    });
 
     const upsertInterest = db.prepare(`
       INSERT INTO interests (id, title, emoji, sort_order) VALUES (?, ?, ?, ?)
@@ -193,18 +196,19 @@ export function applyReferenceData(db, data) {
 
     const upsertKeyDate = db.prepare(`
       INSERT INTO key_dates (id, academic_year, scope, region_id, kind, path, experiment, date_start, date_end,
-        is_approximate, title, description, reminders, source_title, source_url, checked_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_approximate, title, description, reminders, source_title, source_url, checked_at, grade)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET academic_year = excluded.academic_year, scope = excluded.scope,
         region_id = excluded.region_id, kind = excluded.kind, path = excluded.path, experiment = excluded.experiment,
         date_start = excluded.date_start, date_end = excluded.date_end, is_approximate = excluded.is_approximate,
         title = excluded.title, description = excluded.description, reminders = excluded.reminders,
-        source_title = excluded.source_title, source_url = excluded.source_url, checked_at = excluded.checked_at`);
+        source_title = excluded.source_title, source_url = excluded.source_url, checked_at = excluded.checked_at,
+        grade = excluded.grade`);
     for (const keyDate of data.keyDates) {
       upsertKeyDate.run(keyDate.id, keyDate.academicYear, keyDate.scope, keyDate.regionId ?? null, keyDate.kind,
         keyDate.path, keyDate.experiment, keyDate.dateStart, keyDate.dateEnd ?? null, bool(keyDate.isApproximate),
         keyDate.title, keyDate.description, JSON.stringify(keyDate.reminders ?? []), keyDate.sourceTitle ?? null,
-        keyDate.sourceUrl ?? null, keyDate.checkedAt ?? null);
+        keyDate.sourceUrl ?? null, keyDate.checkedAt ?? null, keyDate.grade ?? null);
     }
 
     deleteMissing(db, 'key_dates', 'id', data.keyDates.map((item) => item.id));

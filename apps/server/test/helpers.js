@@ -28,6 +28,7 @@ export function testConfig(overrides = {}) {
     authDevBypass: false,
     adminUserIds: [],
     rateLimitPerMinute: 0,
+    botRichText: false,
     ...overrides,
   };
 }

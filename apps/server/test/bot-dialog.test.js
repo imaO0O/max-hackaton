@@ -10,6 +10,7 @@ import { createTestApp } from './helpers.js';
  */
 
 const USER = { user_id: 555, first_name: 'Родитель', name: 'Родитель', username: null, is_bot: false, last_activity_time: 0 };
+const TEEN = { ...USER, user_id: 777, first_name: 'Подросток', name: 'Подросток' };
 const silentLogger = { info() {}, warn() {}, error() {}, child() { return silentLogger; } };
 
 let ctx;
@@ -33,31 +34,40 @@ function fakeFetch(url, init) {
 
 const timestamp = () => Date.now();
 
-function command(text) {
+function command(text, user = USER) {
   return {
     update_type: 'message_created',
     timestamp: timestamp(),
     message: {
-      sender: USER,
-      recipient: { chat_id: 555, chat_type: 'dialog', user_id: 555 },
+      sender: user,
+      recipient: { chat_id: user.user_id, chat_type: 'dialog', user_id: user.user_id },
       timestamp: timestamp(),
       body: { mid: `in-${Math.random()}`, seq: 1, text },
     },
   };
 }
 
-function press(payload) {
+function press(payload, user = USER, text = '') {
   return {
     update_type: 'message_callback',
     timestamp: timestamp(),
-    callback: { callback_id: `cb-${Math.random()}`, payload, user: USER, timestamp: timestamp() },
+    callback: { callback_id: `cb-${Math.random()}`, payload, user, timestamp: timestamp() },
     message: {
       sender: { ...USER, user_id: 1, is_bot: true },
-      recipient: { chat_id: 555, chat_type: 'dialog' },
+      recipient: { chat_id: user.user_id, chat_type: 'dialog' },
       timestamp: timestamp(),
-      body: { mid: 'bot-message', seq: 1, text: '' },
+      body: { mid: 'bot-message', seq: 1, text },
     },
   };
+}
+
+function started(payload, user = TEEN) {
+  return { update_type: 'bot_started', timestamp: timestamp(), chat_id: user.user_id, user, payload };
+}
+
+/** Все кнопки сообщения как есть — чтобы проверить ссылки. */
+function allButtons(message) {
+  return (message.attachments ?? []).flatMap((attachment) => attachment.payload?.buttons ?? []).flat();
 }
 
 /** Последний ответ бота: текст и payload всех кнопок. */
@@ -100,7 +110,15 @@ describe('опрос в боте', () => {
   test('от /start до готового плана с датами в чате', async () => {
     await bot.handleUpdate(command('/start'));
     assert.match(lastAnswer().text, /помогу семье девятиклассника/);
-    assert.deepEqual(lastAnswer().buttons, ['survey:start']);
+    assert.deepEqual(lastAnswer().buttons, ['survey:start', 'paths:show']);
+
+    await bot.handleUpdate(press('paths:show'));
+    assert.match(lastAnswer().text, /^10–11 класс или колледж: чем отличаются пути/);
+    assert.match(lastAnswer().text, /🎓 10–11 класс — остаться в школе/);
+    assert.match(lastAnswer().text, /🛠 Колледж — получить профессию/);
+    assert.match(lastAnswer().text, /Минусы:/);
+    assert.ok(lastAnswer().text.length < 4000, 'помещается в одно сообщение');
+    assert.ok(lastAnswer().buttons.includes('survey:start'), 'до опроса — предложение собрать план');
 
     await bot.handleUpdate(press('survey:start'));
     assert.match(lastAnswer().text, /Шаг 1 из 5/);
@@ -109,6 +127,7 @@ describe('опрос в боте', () => {
 
     await bot.handleUpdate(press('survey:region:demo-standard'));
     assert.match(lastAnswer().text, /Шаг 2 из 5/);
+    assert.match(lastAnswer().text, /Если вашего города нет, выберите «Любой город региона»/);
     await bot.handleUpdate(press('survey:city:0'));
     assert.match(lastAnswer().text, /Шаг 3 из 5/);
     await bot.handleUpdate(press('survey:grade:9'));
@@ -126,8 +145,9 @@ describe('опрос в боте', () => {
     assert.ok(summary.buttons.includes('open_app'), 'кнопка «Открыть план»');
     assert.equal(summary.openApp.web_app, 'posle9_test_bot');
     assert.equal(summary.openApp.payload, 'from_bot', 'источник открытия для метрик');
-    assert.ok(summary.buttons.includes('plan:all'));
-    assert.ok(summary.buttons.includes('reminders:toggle'));
+    for (const payload of ['plan:all', 'colleges:show', 'share:show', 'reminder:example', 'menu:show']) {
+      assert.ok(summary.buttons.includes(payload), payload);
+    }
 
     const profile = ctx.services.plan.getProfile(555);
     assert.deepEqual(
@@ -136,14 +156,303 @@ describe('опрос в боте', () => {
     );
   });
 
-  test('устаревшая кнопка опроса предлагает начать заново', async () => {
+  test('устаревшая кнопка опроса: с готовым планом — меню, без плана — начать заново', async () => {
     await bot.handleUpdate(press('survey:grade:9'));
+    assert.match(lastAnswer().text, /Ответы уже сохранены/);
+    assert.ok(lastAnswer().buttons.includes('plan:show'));
+
+    await bot.handleUpdate(press('survey:grade:9', { ...USER, user_id: 559 }));
     assert.match(lastAnswer().text, /Этот вопрос устарел/);
   });
 
   test('неизвестный регион в кнопке не ломает опрос', async () => {
-    await bot.handleUpdate(press('survey:region:nowhere'));
+    await bot.handleUpdate(press('survey:region:nowhere', { ...USER, user_id: 559 }));
     assert.match(lastAnswer().text, /Этот вопрос устарел/);
+  });
+});
+
+describe('опрос: регионы', () => {
+  test('пилотный регион первым, затем «Другой регион», демо — в конце', async () => {
+    await bot.handleUpdate(press('survey:start', { ...USER, user_id: 560 }));
+    const regions = lastAnswer().buttons.filter((payload) => payload.startsWith('survey:region:'));
+    assert.deepEqual(regions.slice(0, 2), ['survey:region:tatarstan', 'survey:region:other']);
+    assert.ok(regions.indexOf('survey:region:demo-standard') > 1);
+  });
+
+  test('«Другой регион»: без вопроса о городе, федеральные сроки, колледжей нет', async () => {
+    const other = { ...USER, user_id: 560 };
+    await bot.handleUpdate(press('survey:region:other', other));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/, 'городов в справочнике нет — вопрос о городе пропущен');
+    assert.ok(lastAnswer().buttons.includes('survey:back:region'));
+    await bot.handleUpdate(press('survey:grade:9', other));
+    await bot.handleUpdate(press('survey:back:grade', other));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/);
+    await bot.handleUpdate(press('survey:grade:9', other));
+    await bot.handleUpdate(press('survey:interests-done', other));
+    await bot.handleUpdate(press('survey:path:college', other));
+    assert.match(lastAnswer().text, /Регион: Другой регион/);
+    assert.match(lastAnswer().text, /федеральные сроки/);
+
+    const plan = ctx.services.plan.getPlan(560);
+    assert.ok(plan.items.some((item) => item.scope === 'federal'));
+    assert.ok(plan.items.some((item) => item.id === '2627-reg-other-check-rules'));
+    assert.ok(!plan.items.some((item) => item.scope === 'regional' && item.regionId !== 'other'));
+
+    await bot.handleUpdate(command('/colleges', other));
+    assert.match(lastAnswer().text, /Колледжей этого региона в справочнике пока нет/);
+    assert.match(lastAnswer().text, /Сейчас собраны колледжи: Республика Татарстан/);
+  });
+});
+
+describe('опрос: кнопка «Назад»', () => {
+  test('возвращает на предыдущий шаг и сохраняет ответы', async () => {
+    const other = { ...USER, user_id: 556 };
+    await bot.handleUpdate(press('survey:start', other));
+    await bot.handleUpdate(press('survey:region:demo-standard', other));
+    assert.ok(lastAnswer().buttons.includes('survey:back:region'));
+    await bot.handleUpdate(press('survey:back:region', other));
+    assert.match(lastAnswer().text, /Шаг 1 из 5/);
+
+    await bot.handleUpdate(press('survey:region:demo-standard', other));
+    await bot.handleUpdate(press('survey:city:0', other));
+    await bot.handleUpdate(press('survey:grade:9', other));
+    await bot.handleUpdate(press('survey:interest:medicine', other));
+    await bot.handleUpdate(press('survey:back:grade', other));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/);
+    await bot.handleUpdate(press('survey:grade:9', other));
+    assert.match(JSON.stringify(requests.at(-1).body), /✅ Медицина/, 'интересы не сбросились');
+    await bot.handleUpdate(press('survey:interests-done', other));
+    await bot.handleUpdate(press('survey:back:interests', other));
+    assert.match(lastAnswer().text, /Шаг 4 из 5/);
+  });
+});
+
+describe('меню, план в чате и отправка подростку', () => {
+  let token;
+
+  test('/start для вернувшегося родителя — меню со всем сценарием', async () => {
+    await bot.handleUpdate(command('/start'));
+    assert.match(lastAnswer().text, /С возвращением/);
+    const { buttons } = lastAnswer();
+    for (const payload of ['open_app', 'plan:show', 'paths:show', 'colleges:show', 'share:show', 'reminders:toggle', 'survey:start']) {
+      assert.ok(buttons.includes(payload), payload);
+    }
+  });
+
+  test('пункт плана открывается и отмечается прямо в чате', async () => {
+    await bot.handleUpdate(press('plan:show'));
+    assert.match(lastAnswer().text, /Ближайшие даты:/);
+    assert.ok(lastAnswer().buttons.includes('plan:all'));
+
+    await bot.handleUpdate(press('plan:all'));
+    assert.match(lastAnswer().text, /Нажмите на дату/);
+    const itemPayload = lastAnswer().buttons.find((payload) => payload.startsWith('item:'));
+    assert.ok(itemPayload, 'у ближайших дат есть кнопки');
+    const itemId = itemPayload.slice('item:'.length);
+
+    await bot.handleUpdate(press(itemPayload));
+    assert.match(lastAnswer().text, /^📌 /);
+    assert.ok(lastAnswer().buttons.includes(`item-done:${itemId}`));
+
+    await bot.handleUpdate(press(`item-done:${itemId}`));
+    assert.match(lastAnswer().text, /✅ Выполнено/);
+    assert.ok(lastAnswer().buttons.includes(`item-undo:${itemId}`));
+    const plan = ctx.services.plan.getPlan(555);
+    assert.equal(plan.items.find((item) => item.id === itemId).done, true, 'отметка видна и в мини-приложении');
+
+    await bot.handleUpdate(press(`item-undo:${itemId}`));
+    assert.doesNotMatch(lastAnswer().text, /✅ Выполнено/);
+  });
+
+  test('несуществующий пункт — понятное сообщение', async () => {
+    await bot.handleUpdate(press('item:no-such-item'));
+    assert.match(lastAnswer().text, /Этого пункта больше нет в плане/);
+  });
+
+  test('«Отправить план подростку»: кнопка «Отправить в MAX» и сообщение для пересылки', async () => {
+    await bot.handleUpdate(press('share:show'));
+    const intro = requests.find((item) => item.path === '/answers').body.message;
+    assert.match(intro.text, /Отправить в MAX/);
+    const shareButton = allButtons(intro).find((button) => button.type === 'link');
+    assert.match(shareButton.url, /^https:\/\/max\.ru\/:share\?text=/);
+
+    const forward = requests.filter((item) => item.path === '/messages').at(-1).body;
+    const match = /startapp=plan_([A-Za-z0-9_-]+)/.exec(forward.text);
+    assert.ok(match, 'ссылка на мини-приложение');
+    assert.match(forward.text, /https:\/\/max\.ru\/posle9_test_bot\?start=plan_/, 'запасная ссылка на план в чате');
+    assert.match(forward.text, /напоминания:\nhttps:\/\/max\.ru\//, 'ссылка на отдельной строке');
+    assert.ok(allButtons(intro).some((button) => button.payload === 'share:revoke'));
+    token = match[1];
+  });
+
+  test('подросток открывает план по ссылке в чате и подписывается на напоминания', async () => {
+    await bot.handleUpdate(started(`plan_${token}`));
+    assert.match(lastAnswer().text, /С вами поделились планом/);
+    assert.match(lastAnswer().text, /План на 2026\/2027/);
+    assert.ok(lastAnswer().buttons.includes(`follow:${token}`));
+    assert.equal(lastAnswer().openApp.payload, `plan_${token}`, 'кнопка открывает этот план в мини-приложении');
+
+    await bot.handleUpdate(press(`follow:${token}`, TEEN));
+    assert.match(lastAnswer().text, /Готово! Напоминания по этому плану/);
+    assert.ok(lastAnswer().buttons.includes(`unfollow:${token}`));
+    assert.ok(ctx.repos.reminders.countPending(777) > 0);
+
+    // Пункт из напоминания подросток может открыть, но отмечать — только владелец плана
+    const itemId = ctx.services.plan.getPlan(555).nextItemId;
+    await bot.handleUpdate(press(`item:${itemId}`, TEEN));
+    assert.match(lastAnswer().text, /^📌 /);
+    assert.match(lastAnswer().text, /Через /, 'статус по плану семьи');
+    assert.ok(!lastAnswer().buttons.some((payload) => payload.startsWith('item-done')));
+    assert.ok(lastAnswer().buttons.includes('plan:all'), '«← Все даты» ведёт к датам плана семьи');
+  });
+
+  test('у подписчика без своего плана план семьи в меню и по /plan', async () => {
+    await bot.handleUpdate(command('/start', TEEN));
+    assert.match(lastAnswer().text, /Вы получаете напоминания по плану, которым с вами поделились/);
+    assert.ok(lastAnswer().buttons.includes('plan:show'));
+    assert.equal(lastAnswer().openApp.payload, `plan_${token}`, 'мини-приложение открывается на плане семьи');
+
+    await bot.handleUpdate(command('/plan', TEEN));
+    assert.match(lastAnswer().text, /^План семьи/);
+    assert.match(lastAnswer().text, /Ближайшие даты:/);
+
+    await bot.handleUpdate(press('plan:all', TEEN));
+    assert.match(lastAnswer().text, /Даты года:/);
+    assert.match(lastAnswer().text, /Нажмите на дату — откроются подробности\./);
+    assert.ok(lastAnswer().buttons.some((payload) => payload.startsWith('item:')));
+
+    await bot.handleUpdate(press(`shared-all:${token}`, { ...TEEN, user_id: 778 }));
+    assert.match(lastAnswer().text, /Даты года:/, 'все даты по ссылке — и без подписки');
+
+    await bot.handleUpdate(command('/test_reminder', TEEN));
+    assert.match(lastAnswer().text, /^⏰ /);
+    assert.ok(!lastAnswer().buttons.some((payload) => payload.startsWith('rdone:')), 'без «Сделано» в чужом плане');
+  });
+
+  test('подписчик отписывается — план семьи пропадает из меню', async () => {
+    await bot.handleUpdate(press(`unfollow:${token}`, TEEN));
+    assert.match(lastAnswer().text, /выключены/);
+    assert.equal(ctx.repos.reminders.countPending(777), 0);
+
+    await bot.handleUpdate(command('/plan', TEEN));
+    assert.match(lastAnswer().text, /Сначала ответьте на 5 вопросов/);
+  });
+
+  test('ссылка работает и командой /start с параметром; чужая и своя ссылки различаются', async () => {
+    await bot.handleUpdate(command(`/start plan_${token}`, TEEN));
+    assert.match(lastAnswer().text, /С вами поделились планом/);
+
+    await bot.handleUpdate(command(`/start plan_${token}`));
+    assert.match(lastAnswer().text, /Это ваш план/);
+
+    await bot.handleUpdate(started('plan_AAAAAAAAAAAAAAAAAAAAAA'));
+    assert.match(lastAnswer().text, /Ссылка на план недействительна/);
+  });
+
+  test('колледжи в чате: список по интересам, карточка, избранное', async () => {
+    await bot.handleUpdate(command('/colleges'));
+    const list = lastAnswer();
+    assert.match(list.text, /^Колледжи: Демо-регион А, Демоград/);
+    assert.match(list.text, /\n🏫 .+\n1\. /, 'программы пронумерованы и сгруппированы по колледжам');
+    assert.match(list.text, /🏫 Демо-колледж информационных технологий\n(\d\. .+\n)*\d\. Информационные системы и программирование — очная/);
+    const programPayload = list.buttons.find((payload) => payload.startsWith('p:'));
+    const labels = allButtons(requests.at(-1).body).filter((button) => button.payload?.startsWith('p:')).map((button) => button.text);
+    assert.match(labels[0], /^1\. /);
+    assert.ok(labels.every((label) => label.length <= 40), 'подписи кнопок короткие');
+    assert.ok(programPayload);
+    assert.ok(programPayload.length <= 64, 'payload кнопки укладывается в ограничение длины');
+    const programId = programPayload.slice(2);
+
+    await bot.handleUpdate(press(programPayload));
+    assert.match(lastAnswer().text, /^🏫 /);
+    assert.match(lastAnswer().text, /ориентир по прошлому году/);
+    assert.ok(lastAnswer().buttons.includes(`pf:${programId}`));
+
+    await bot.handleUpdate(press(`pf:${programId}`));
+    assert.match(lastAnswer().text, /★ В избранном/);
+    assert.ok(ctx.services.catalog.listFavorites(555).some((program) => program.id === programId), 'избранное видно в мини-приложении');
+
+    await bot.handleUpdate(press('colleges:show'));
+    assert.ok(lastAnswer().buttons.some((payload) => payload === programPayload));
+    assert.match(JSON.stringify(requests.at(-1).body), /★ /, 'избранная программа помечена в списке');
+
+    await bot.handleUpdate(press(`pu:${programId}`));
+    assert.doesNotMatch(lastAnswer().text, /★ В избранном/);
+    assert.ok(!ctx.services.catalog.listFavorites(555).some((program) => program.id === programId));
+  });
+
+  test('колледжи в чате: если в городе нет программ по интересам — показываем регион', async () => {
+    ctx.services.plan.saveProfile(558, { regionId: 'demo-standard', city: 'Приречный', grade: 9, path: 'college', interests: ['creative'] });
+    await bot.handleUpdate(command('/colleges', { ...USER, user_id: 558 }));
+    assert.match(lastAnswer().text, /В городе Приречный таких программ нет — показываю весь регион/);
+    assert.match(lastAnswer().text, /Дизайн/);
+
+    await bot.handleUpdate(press('p:no-such-program', { ...USER, user_id: 558 }));
+    assert.match(lastAnswer().text, /Этой программы больше нет/);
+  });
+
+  test('/share работает и командой', async () => {
+    await bot.handleUpdate(command('/share'));
+    assert.match(requests.find((item) => item.path === '/messages').body.text, /Отправить в MAX/);
+  });
+
+  test('ссылку можно отозвать: старая перестаёт работать, подписчики отключаются', async () => {
+    await bot.handleUpdate(started(`plan_${token}`));
+    await bot.handleUpdate(press(`follow:${token}`, TEEN));
+    requests = [];
+    await bot.handleUpdate(command('/share'));
+    assert.match(requests.find((item) => item.path === '/messages').body.text, /уже подписались: 1/);
+
+    await bot.handleUpdate(press('share:revoke'));
+    assert.match(lastAnswer().text, /^Отозвать ссылку на план\?/);
+    await bot.handleUpdate(press('share:revoke-confirm'));
+    assert.match(lastAnswer().text, /Ссылка отозвана, напоминания отключены у 1 подписчика/);
+    assert.equal(ctx.repos.reminders.countPending(777), 0);
+
+    await bot.handleUpdate(started(`plan_${token}`));
+    assert.match(lastAnswer().text, /Ссылка на план недействительна/);
+
+    await bot.handleUpdate(press('share:revoke-confirm'));
+    assert.match(lastAnswer().text, /Ссылки на план ещё нет/);
+  });
+});
+
+describe('напоминание остаётся в чате', () => {
+  test('пример напоминания: «Сделано» меняет только кнопку, «Подробнее» — новым сообщением', async () => {
+    await bot.handleUpdate(press('reminder:example'));
+    const example = requests.filter((item) => item.path === '/messages').at(-1).body;
+    assert.match(example.text, /^⏰ /);
+    assert.match(example.text, /Это пример/);
+    const payloads = allButtons(example).map((button) => button.payload);
+    const donePayload = payloads.find((payload) => payload?.startsWith('rdone:'));
+    assert.ok(donePayload, 'кнопка «Сделано», как в настоящем напоминании');
+    const itemId = donePayload.slice('rdone:'.length);
+    assert.ok(payloads.includes(`ritem:${itemId}`));
+
+    requests = [];
+    await bot.handleUpdate(press(donePayload, USER, example.text));
+    const answer = requests.find((item) => item.path === '/answers').body;
+    assert.equal(answer.message.text, example.text, 'текст напоминания не меняется');
+    assert.ok(allButtons(answer.message).some((button) => button.payload === `rundo:${itemId}`));
+    assert.match(answer.notification, /Отмечено в плане/);
+    assert.equal(ctx.services.plan.getPlan(555).items.find((item) => item.id === itemId).done, true);
+
+    requests = [];
+    await bot.handleUpdate(press(`ritem:${itemId}`, USER, example.text));
+    assert.ok(!requests.some((item) => item.path === '/answers' && item.body.message), 'напоминание не редактируется');
+    assert.match(requests.find((item) => item.path === '/messages').body.text, /^📌 /);
+
+    await bot.handleUpdate(press(`rundo:${itemId}`, USER, example.text));
+    assert.equal(ctx.services.plan.getPlan(555).items.find((item) => item.id === itemId).done, false);
+  });
+
+  test('/reminders: при включении — кнопка примера', async () => {
+    await bot.handleUpdate(command('/reminders'));
+    assert.match(lastAnswer().text, /Напоминания выключены/);
+    assert.ok(!lastAnswer().buttons.includes('reminder:example'));
+    await bot.handleUpdate(command('/reminders'));
+    assert.match(lastAnswer().text, /Напоминания включены/);
+    assert.ok(lastAnswer().buttons.includes('reminder:example'));
   });
 });
 
@@ -166,13 +475,14 @@ describe('команды', () => {
 
   test('/test_reminder показывает пример напоминания', async () => {
     await bot.handleUpdate(command('/test_reminder'));
-    assert.match(lastAnswer().text, /Так будет выглядеть напоминание:\n\n⏰/);
+    assert.match(lastAnswer().text, /^⏰ /);
+    assert.match(lastAnswer().text, /Это пример/);
   });
 
   test('/stats доступна только команде проекта', async () => {
     await bot.handleUpdate(command('/stats'));
     assert.match(lastAnswer().text, /За всё время/);
-    assert.match(lastAnswer().text, /Прошли опрос: 1/);
+    assert.match(lastAnswer().text, /Прошли опрос: 2/);
 
     ctx.config.adminUserIds = [];
     await bot.handleUpdate(command('/stats'));
@@ -180,9 +490,29 @@ describe('команды', () => {
     ctx.config.adminUserIds = [555];
   });
 
-  test('обычный текст — справка', async () => {
-    await bot.handleUpdate(command('привет'));
-    assert.match(lastAnswer().text, /Что я умею/);
+  test('свободный текст ведёт в нужный раздел, непонятное — короткая подсказка', async () => {
+    const answerTo = async (text) => {
+      await bot.handleUpdate(command(text));
+      return lastAnswer();
+    };
+    assert.match((await answerTo('Когда подавать заявление на ОГЭ?')).text, /^План на 2026\/2027/);
+    assert.match((await answerTo('какие колледжи есть?')).text, /^Колледжи: Демо-регион А/);
+    assert.match((await answerTo('Что лучше: 10 класс или колледж?')).text, /^10–11 класс или колледж/);
+    const grades = await answerTo('как посчитать средний балл аттестата');
+    assert.match(grades.text, /калькулятор в мини-приложении/);
+    assert.equal(grades.openApp.text, 'Посчитать средний балл');
+    assert.match((await answerTo('напоминания')).text, /^Напоминания (включены|сейчас выключены)/);
+    assert.match((await answerTo('привет')).text, /С возвращением/);
+    assert.match((await answerTo('Спасибо!')).text, /^Пожалуйста/);
+    assert.match((await answerTo('/unknown')).text, /Что я умею/);
+
+    const unknown = await answerTo('абракадабра');
+    assert.match(unknown.text, /^Я понимаю кнопки и несколько тем/);
+    assert.ok(unknown.buttons.includes('plan:show'), 'меню под подсказкой');
+    assert.doesNotMatch(unknown.text, /Что я умею/, 'не вся справка');
+
+    const report = ctx.services.analytics.report();
+    assert.match(report, /Писали боту текстом: 1, из них бот хотя бы раз не понял: 1/);
   });
 
   test('при ошибке бот отвечает пользователю, а не молчит', async () => {

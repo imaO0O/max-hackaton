@@ -16,6 +16,9 @@ export const PATH_TITLES = Object.freeze({
 /** Классы, для которых строится план. 8 класс — планирование заранее. */
 export const GRADE_VALUES = Object.freeze([8, 9]);
 
+/** Регион «Другой регион»: только федеральные сроки, колледжей в справочнике нет, время — московское. */
+export const OTHER_REGION_ID = 'other';
+
 /** Формы обучения в колледже. */
 export const STUDY_FORMS = Object.freeze({
   full_time: 'Очная',

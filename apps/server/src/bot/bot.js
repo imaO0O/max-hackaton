@@ -1,14 +1,22 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
-import { daysBetween, GRADE_VALUES, PATH_VALUES } from '@posle9/core';
+import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import {
-  ANY_CITY, cityStep, gradeStep, interestsStep, openAppKeyboard, parseSurveyPayload, pathStep, regionStep, startKeyboard,
+  backToMenuRow, menuKeyboard, openAppKeyboard, remindersKeyboard, remindersStatusKeyboard, startKeyboard, summaryKeyboard,
+} from './keyboards.js';
+import { registerCollegesChat } from './colleges-chat.js';
+import { registerPathsChat } from './paths-chat.js';
+import { detectTopic } from './free-text.js';
+import { richTextFetch } from './rich-text.js';
+import { registerPlanChat } from './plan-chat.js';
+import {
+  ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
 } from './survey.js';
-import { planText, reminderText, summaryText, texts } from './texts.js';
+import { planText, summaryText, texts } from './texts.js';
 
-const PLAN_PREVIEW_ITEMS = 5;
+const SHARED_PLAN_PREFIX = 'plan_';
 const HEALTH_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const HEALTH_FAILURES_BEFORE_ALERT = 3;
 
@@ -17,11 +25,17 @@ const HEALTH_FAILURES_BEFORE_ALERT = 3;
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
 export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
-  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX
-  const bot = new Bot(config.botToken, clientOptions ? { clientOptions } : undefined);
+  // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX.
+  // Поверх него — оформление сообщений (жирные заголовки), если BOT_RICH_TEXT не выключен
+  const baseFetch = clientOptions?.fetch ?? globalThis.fetch;
+  const fetch = config.botRichText ? richTextFetch(baseFetch) : baseFetch;
+  const bot = new Bot(config.botToken, { clientOptions: { ...clientOptions, fetch } });
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
+  const planChat = registerPlanChat({ bot, users, reference, services, runtime });
+  const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
+  const pathsChat = registerPathsChat({ bot, users, services, runtime });
 
   async function showStep(ctx, step, { edit }) {
     const body = { text: step.text, attachments: [step.keyboard] };
@@ -32,33 +46,18 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     }
   }
 
-  async function sendStart(ctx) {
-    const userId = userIdOf(ctx);
-    const user = users.ensure(userId);
-    const hasProfile = isProfileComplete(user);
-    await ctx.reply(hasProfile ? texts.welcomeBack : texts.welcome, {
-      attachments: [startKeyboard({ hasProfile, botUsername: runtime.botUsername })],
-    });
-  }
-
-  function planKeyboard(extraRows = []) {
-    return openAppKeyboard(runtime.botUsername, [
-      [Keyboard.button.callback('Все даты года', 'plan:all')],
-      ...extraRows,
-    ]);
-  }
-
-  /** План текстом прямо в чате — сценарий проходится и без мини-приложения. */
-  async function sendPlan(ctx) {
-    const userId = userIdOf(ctx);
-    const user = users.ensure(userId);
-    if (!isProfileComplete(user)) {
-      await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
-      return;
+  async function sendStart(ctx, payload) {
+    // Ссылка https://max.ru/<бот>?start=plan_<токен> открывает чужой план прямо в чате
+    if (payload?.startsWith(SHARED_PLAN_PREFIX)) {
+      return planChat.openSharedPlan(ctx, payload.slice(SHARED_PLAN_PREFIX.length));
     }
-    const plan = services.plan.getPlan(userId);
-    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'command' });
-    await ctx.reply(planText(plan, { limit: PLAN_PREVIEW_ITEMS }), { attachments: [planKeyboard()] });
+    const view = planChat.menuView(userIdOf(ctx), { greeting: true });
+    return ctx.reply(view.text, { attachments: [view.keyboard] });
+  }
+
+  /** Справка с клавиатурой меню — своей у родителя, подписчика и нового пользователя. */
+  function sendHelp(ctx) {
+    return ctx.reply(texts.help, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] });
   }
 
   /** Метрики пилота — только для команды проекта (ADMIN_USER_IDS). */
@@ -75,44 +74,64 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const userId = userIdOf(ctx);
     const user = users.ensure(userId);
     const profile = services.plan.setRemindersEnabled(userId, !user.remindersEnabled);
-    await ctx.reply(profile.remindersEnabled ? texts.remindersOn : texts.remindersOff);
-  }
-
-  /** Пример напоминания по ближайшему пункту плана — чтобы проверить формат, не дожидаясь даты. */
-  async function sendTestReminder(ctx) {
-    const userId = userIdOf(ctx);
-    if (!isProfileComplete(users.ensure(userId))) {
-      await ctx.reply(texts.needSurvey, { attachments: [startKeyboard({ hasProfile: false })] });
-      return;
-    }
-    const plan = services.plan.getPlan(userId);
-    const item = plan.items.find((row) => row.id === plan.nextItemId) ?? plan.items.at(-1);
-    if (!item) {
-      await ctx.reply('В плане пока нет дат на этот учебный год.');
-      return;
-    }
-    const inProgress = item.status === 'current' && item.dateEnd;
-    const example = reminderText({
-      keyDate: item,
-      anchor: inProgress ? 'end' : 'start',
-      daysBefore: Math.max(0, inProgress ? daysBetween(plan.today, item.dateEnd) : (item.daysLeft ?? 0)),
+    await ctx.reply(profile.remindersEnabled ? texts.remindersOn : texts.remindersOff, {
+      attachments: [remindersKeyboard(profile.remindersEnabled)],
     });
-    await ctx.reply(`Так будет выглядеть напоминание:\n\n${example}`, { attachments: [openAppKeyboard(runtime.botUsername)] });
   }
 
-  bot.on('bot_started', sendStart);
-  bot.command('start', sendStart);
-  bot.command('plan', sendPlan);
+  function sendDeleteConfirm(ctx) {
+    return ctx.reply(texts.deleteConfirm, {
+      attachments: [Keyboard.inlineKeyboard([[
+        Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
+        Keyboard.button.callback('Отмена', 'data:delete-cancel'),
+      ]])],
+    });
+  }
+
+  function sendRemindersStatus(ctx) {
+    const { remindersEnabled } = users.ensure(userIdOf(ctx));
+    return ctx.reply(remindersEnabled ? texts.remindersStatusOn : texts.remindersStatusOff, {
+      attachments: [remindersStatusKeyboard(remindersEnabled)],
+    });
+  }
+
+  function sendGradesHint(ctx) {
+    return ctx.reply(texts.gradesInApp, {
+      attachments: [openAppKeyboard(runtime.botUsername, [backToMenuRow()], 'from_bot', 'Посчитать средний балл')],
+    });
+  }
+
+  /** Что делать с узнанной темой свободного текста. */
+  const freeTextHandlers = {
+    help: sendHelp,
+    delete: sendDeleteConfirm,
+    reminders: sendRemindersStatus,
+    share: (ctx) => planChat.sendShare(ctx),
+    plan: planChat.sendPlanPreview,
+    paths: (ctx) => pathsChat.sendPaths(ctx),
+    colleges: (ctx) => collegesChat.sendColleges(ctx),
+    grades: sendGradesHint,
+    thanks: (ctx) => ctx.reply(texts.thanks, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] }),
+    greeting: (ctx) => sendStart(ctx),
+  };
+
+  bot.on('bot_started', (ctx) => sendStart(ctx, ctx.startPayload));
+  // «/start» и «/start plan_…» — так приходит параметр ссылки, если диалог с ботом уже открыт
+  bot.command(/^start(?:\s+(\S+))?$/, (ctx) => sendStart(ctx, ctx.match?.[1]));
+  bot.command('plan', planChat.sendPlanPreview);
+  bot.command('share', (ctx) => planChat.sendShare(ctx));
+  bot.command('menu', planChat.sendMenu);
+  bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
+  bot.command('paths', (ctx) => pathsChat.sendPaths(ctx));
   bot.command('reminders', toggleReminders);
-  bot.command('test_reminder', sendTestReminder);
+  bot.command('test_reminder', planChat.sendReminderExample);
+  bot.action('reminder:example', async (ctx) => {
+    await ctx.answerOnCallback({ notification: 'Пример напоминания — ниже' });
+    return planChat.sendReminderExample(ctx);
+  });
   bot.command('stats', sendStats);
-  bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
-    attachments: [Keyboard.inlineKeyboard([[
-      Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
-      Keyboard.button.callback('Отмена', 'data:delete-cancel'),
-    ]])],
-  }));
-  bot.command('help', (ctx) => ctx.reply(texts.help));
+  bot.command('delete_data', sendDeleteConfirm);
+  bot.command('help', sendHelp);
 
   bot.action(/^survey:/, async (ctx) => {
     const userId = userIdOf(ctx);
@@ -120,7 +139,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const user = users.ensure(userId);
     const draft = user.surveyState?.draft ?? {};
     const save = (nextDraft) => users.setSurveyState(userId, { draft: nextDraft });
-    const restart = () => showStep(ctx, { text: texts.surveyExpired, keyboard: startKeyboard({ hasProfile: false }) }, { edit: true });
+    // Старая кнопка опроса: с готовым планом — меню, иначе — начать заново
+    const restart = () => showStep(ctx, isProfileComplete(user)
+      ? { text: texts.surveyDone, keyboard: menuKeyboard({ botUsername: runtime.botUsername, remindersEnabled: user.remindersEnabled }) }
+      : { text: texts.surveyExpired, keyboard: startKeyboard({ hasProfile: false }) }, { edit: true });
 
     if (!parsed) return restart();
     const { action, value } = parsed;
@@ -134,9 +156,14 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       case 'region': {
         const region = reference.getRegion(value);
         if (!region) return restart();
-        const nextDraft = { regionId: region.id };
-        save(nextDraft);
-        return showStep(ctx, cityStep(reference.listCities(region.id)), { edit: true });
+        const cities = reference.listCities(region.id);
+        // Колледжей региона в справочнике нет — спрашивать город незачем
+        if (cities.length === 0) {
+          save({ ...draft, regionId: region.id, city: null });
+          return showStep(ctx, gradeStep('region'), { edit: true });
+        }
+        save({ ...draft, regionId: region.id });
+        return showStep(ctx, cityStep(cities), { edit: true });
       }
       case 'city': {
         if (!draft.regionId) return restart();
@@ -149,8 +176,10 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       case 'grade': {
         const grade = Number(value);
         if (!draft.regionId || !GRADE_VALUES.includes(grade)) return restart();
-        save({ ...draft, grade, interests: [] });
-        return showStep(ctx, interestsStep(reference.listInterests(), []), { edit: true });
+        // Интересы сохраняются, если к классу вернулись кнопкой «Назад»
+        const interests = draft.interests ?? [];
+        save({ ...draft, grade, interests });
+        return showStep(ctx, interestsStep(reference.listInterests(), interests), { edit: true });
       }
       case 'interest': {
         if (!draft.grade) return restart();
@@ -177,28 +206,25 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
         const preview = planText(services.plan.getPlan(userId), { limit: 3 });
         const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
-        const keyboard = planKeyboard([
-          [Keyboard.button.callback(profile.remindersEnabled ? 'Выключить напоминания' : 'Включить напоминания', 'reminders:toggle')],
-          [Keyboard.button.callback('Изменить ответы', 'survey:start')],
-        ]);
-        return showStep(ctx, { text, keyboard }, { edit: true });
+        return showStep(ctx, { text, keyboard: summaryKeyboard(runtime.botUsername) }, { edit: true });
+      }
+      case 'back': {
+        // Возврат на шаг назад с сохранением уже выбранных ответов
+        if (value === 'region') return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
+        if (!draft.regionId) return restart();
+        const cities = reference.listCities(draft.regionId);
+        if (value === 'city') {
+          return showStep(ctx, cities.length ? cityStep(cities) : regionStep(reference.listRegions()), { edit: true });
+        }
+        if (value === 'grade') return showStep(ctx, gradeStep(cities.length ? 'city' : 'region'), { edit: true });
+        if (value === 'interests' && draft.grade) {
+          return showStep(ctx, interestsStep(reference.listInterests(), draft.interests ?? []), { edit: true });
+        }
+        return restart();
       }
       default:
         return restart();
     }
-  });
-
-  bot.action('plan:all', async (ctx) => {
-    const userId = userIdOf(ctx);
-    if (!isProfileComplete(users.ensure(userId))) {
-      await ctx.answerOnCallback({ message: { text: texts.needSurvey, attachments: [startKeyboard({ hasProfile: false })] } });
-      return;
-    }
-    const plan = services.plan.getPlan(userId);
-    services.analytics.track(EVENTS.PLAN_VIEWED_IN_CHAT, userId, { from: 'all_dates' });
-    await ctx.answerOnCallback({
-      message: { text: planText(plan), attachments: [openAppKeyboard(runtime.botUsername)] },
-    });
   });
 
   bot.action('data:delete-confirm', async (ctx) => {
@@ -215,21 +241,22 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     const userId = userIdOf(ctx);
     const user = users.ensure(userId);
     const profile = services.plan.setRemindersEnabled(userId, !user.remindersEnabled);
+    const menu = planChat.menuView(userId, { withReminderExample: profile.remindersEnabled });
     await ctx.answerOnCallback({
-      message: {
-        text: profile.remindersEnabled ? texts.remindersOn : texts.remindersOff,
-        attachments: [openAppKeyboard(runtime.botUsername, [
-          [Keyboard.button.callback(profile.remindersEnabled ? 'Выключить напоминания' : 'Включить напоминания', 'reminders:toggle')],
-        ])],
-      },
+      message: { text: profile.remindersEnabled ? texts.remindersOn : texts.remindersOff, attachments: [menu.keyboard] },
     });
   });
 
   bot.on('message_created', async (ctx) => {
     if (ctx.message?.recipient?.chat_type !== 'dialog') return;
-    await ctx.reply(texts.help, {
-      attachments: [startKeyboard({ hasProfile: isProfileComplete(users.ensure(userIdOf(ctx))), botUsername: runtime.botUsername })],
-    });
+    // Текст без команды: узнаём частую тему и ведём в нужный раздел, иначе — короткая подсказка и меню
+    const topic = detectTopic(ctx.message?.body?.text);
+    services.analytics.track(EVENTS.FREE_TEXT, userIdOf(ctx), { topic: topic ?? 'unknown' });
+    if (topic) {
+      await freeTextHandlers[topic](ctx);
+      return;
+    }
+    await ctx.reply(texts.notUnderstood, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] });
   });
 
   bot.catch(async (error, ctx) => {
@@ -270,9 +297,14 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       const info = await bot.api.getMyInfo();
       runtime.botUsername = config.botUsername ?? info.username;
       await bot.api.setMyCommands([
-        { name: 'start', description: 'Собрать план' },
-        { name: 'plan', description: 'Открыть план' },
+        { name: 'start', description: 'Начать или вернуться в меню' },
+        { name: 'plan', description: 'Ближайшие даты плана' },
+        { name: 'share', description: 'Отправить план подростку' },
+        { name: 'colleges', description: 'Колледжи по интересам' },
+        { name: 'paths', description: '10 класс или колледж: сравнить' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
+        { name: 'test_reminder', description: 'Пример напоминания' },
+        { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },
       ]);
       runtime.botStatus = 'running';

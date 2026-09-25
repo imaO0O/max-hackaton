@@ -15,6 +15,11 @@ export function planShareLink(botUsername, token) {
   return `https://max.ru/${botUsername}?startapp=${SHARE_PREFIX}${token}`;
 }
 
+/** Ссылка, открывающая тот же план в чате с ботом, — если мини-приложение не откроется. */
+export function planChatLink(botUsername, token) {
+  return `https://max.ru/${botUsername}?start=${SHARE_PREFIX}${token}`;
+}
+
 export function parseShareStartParam(startParam) {
   if (typeof startParam !== 'string' || !startParam.startsWith(SHARE_PREFIX)) return null;
   const token = startParam.slice(SHARE_PREFIX.length);
@@ -48,10 +53,15 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
     const region = reference.getRegion(owner.regionId);
     // Восьмикласснику нужен план его 9 класса, то есть следующего учебного года
     const academicYear = planYearFor(owner.grade, currentAcademicYear());
+    // У восьмиклассника в плане и шаги 8 класса текущего года
+    const keyDates = owner.grade === 8
+      ? [...reference.listKeyDates(currentAcademicYear()), ...reference.listKeyDates(academicYear)]
+      : reference.listKeyDates(academicYear);
     const built = buildPlan({
-      keyDates: reference.listKeyDates(academicYear),
+      keyDates,
       profile: {
         academicYear,
+        grade: owner.grade,
         regionId: owner.regionId,
         path: owner.path,
         twoOgeExperiment: region.twoOgeExperiment,
@@ -187,10 +197,18 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
         plans.setShareToken(plan.id, token);
       }
       const link = planShareLink(runtime.botUsername, token);
+      const chatLink = planChatLink(runtime.botUsername, token);
       return {
         token,
         link,
-        text: `Я составил(а) план выбора пути после 9 класса. Посмотри и включи напоминания: ${link}`,
+        chatLink,
+        text: [
+          'Я составил(а) план выбора пути после 9 класса — посмотри и включи напоминания:',
+          link,
+          '',
+          'Если ссылка не откроется, план есть в чате с ботом:',
+          chatLink,
+        ].join('\n'),
       };
     },
 
@@ -227,6 +245,12 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
     deleteUserData(userId) {
       const deleted = transaction(db, () => users.delete(userId));
       return { deleted };
+    },
+
+    /** Токен плана семьи, на который подписан пользователь, или null — чтобы показать этот план в чате. */
+    getFollowedShareToken(userId) {
+      const plan = plans.listFollowedByUser(userId).find((row) => isProfileComplete(users.get(row.userId)));
+      return plan?.shareToken ?? null;
     },
 
     setFollowing(viewerId, token, follow) {

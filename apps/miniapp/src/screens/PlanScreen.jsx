@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
-import { PATH_TITLES, STUDY_FORMS } from '@posle9/core';
+import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { ErrorState, LoadingState } from '../components/states.jsx';
@@ -49,6 +49,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
   const { items, region, profile, academicYear, isAdvance } = plan.data;
   const doneCount = items.filter((item) => item.done).length;
   const upcomingCount = items.filter((item) => item.status !== 'past').length;
+  const grade9Count = items.filter((item) => item.grade !== 8).length;
   const pastCount = items.filter((item) => item.status === 'past' && item.id !== plan.data.nextItemId).length;
 
   const toggleDone = async (item) => {
@@ -157,17 +158,17 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
     <div className="page">
       <ScreenHeader
         title="Мой план"
-        subtitle={`${academicYear} · ${region.name} · ${PATH_TITLES[profile.path]}`}
+        subtitle={`${planPeriodLabel(plan.data)} · ${region.name} · ${PATH_TITLES[profile.path]}`}
         after={<button type="button" className="link-button" onClick={onEditProfile}>Изменить</button>}
       />
 
       {isAdvance && (
         <Card className="notice">
-          <Typography.Body variant="medium-strong">Это план на 9 класс</Typography.Body>
+          <Typography.Body variant="medium-strong">План на 8–9 класс</Typography.Body>
           <Typography.Body variant="small">
-            {items.length === 0
-              ? `Полный план откроется в следующем учебном году: даты ${academicYear} ещё не опубликованы. Добавим их, как только они появятся, и пришлём напоминания в чат с ботом.`
-              : `Даты ${academicYear} учебного года — когда подросток будет в 9 классе. Напоминания придут заранее.`}
+            {grade9Count === 0
+              ? `Сейчас в плане шаги 8 класса. Полный план 9 класса откроется в следующем учебном году: даты ${academicYear} ещё не опубликованы. Добавим их, как только они появятся, и пришлём напоминания в чат с ботом.`
+              : `В плане шаги 8 класса и даты ${academicYear} учебного года, когда подросток будет в 9 классе. Напоминания придут заранее.`}
           </Typography.Body>
           <Typography.Body variant="small">
             А пока можно сравнить два пути и посчитать средний балл: оценки по предметам, которые заканчиваются в 8 классе, тоже войдут в аттестат.
@@ -222,7 +223,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
             <Typography.Body variant="small" className="muted">
               {!profile.remindersEnabled && 'Выключены — важные даты придётся отслеживать самостоятельно'}
               {profile.remindersEnabled && (isAdvance && plan.data.pendingReminders === 0
-                ? 'Включены — начнут приходить, когда появятся даты 9 класса'
+                ? 'Включены — придут, когда появятся новые даты плана'
                 : `Запланировано: ${plan.data.pendingReminders}. Приходят в 10:00 по времени региона`)}
             </Typography.Body>
           </span>
