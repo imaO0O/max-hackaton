@@ -5,7 +5,7 @@
 ## 29 сентября: заморозка
 
 - [ ] Все PR слиты в `main`, в GitHub Actions последняя проверка `main` зелёная (тесты, Docker-сборка не дольше 5 минут, запуск контейнера).
-- [ ] Сервер обновлён до `main`: `git pull && docker compose --profile https up --build -d`.
+- [ ] Сервер обновлён до `main`: `./scripts/deploy.sh` (при сбое сам откатится), версия отмечена тегом по `docs/releases.md`.
 - [ ] `https://158-160-18-41.sslip.io/api/health` → `{"status":"ok","bot":"running",…}`.
 - [ ] Основной сценарий пройден в мобильном и веб-MAX по `docs/max-check.md` на обновлённом сервере.
 - [ ] `/plan`, `/test_reminder`, `/stats` отвечают; ежедневная копия базы в cron.

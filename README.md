@@ -256,6 +256,19 @@ python validate_data_api.py /path/to/DATA-API.yaml --schema /path/to/DATA-API.sc
 - Ограничение частоты запросов хранится в памяти процесса и сбрасывается при перезапуске.
 - Модуль `node:sqlite` в Node.js 24 помечен как экспериментальный.
 
+## Обновление сервера и откат
+
+На сервере обновление делается скриптом [scripts/deploy.sh](scripts/deploy.sh): копия базы, сборка версии, запуск и проверка `/api/health`. Если новая версия не поднялась за 90 секунд, скрипт сам возвращает прежнюю.
+
+```bash
+./scripts/deploy.sh                    # обновить до последнего main
+./scripts/deploy.sh --rollback         # вернуть предыдущую рабочую версию
+./scripts/deploy.sh --rollback v0.1.0  # вернуть версию по тегу
+./scripts/deploy.sh --status           # что работает сейчас и история
+```
+
+Версии и что в них вошло — [CHANGELOG.md](CHANGELOG.md), правила выпуска и отката — [docs/releases.md](docs/releases.md).
+
 ## Остановка и повторный запуск
 
 ```bash

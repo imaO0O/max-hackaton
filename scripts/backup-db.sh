@@ -25,5 +25,5 @@ backup(db, '$tmp')
 docker compose cp "app:$tmp" "backups/posle9-$stamp.sqlite"
 docker compose exec -T app rm -f "$tmp"
 
-ls -1t backups/posle9-*.sqlite | tail -n +15 | xargs -r rm -f
+ls -1t backups/posle9-*.sqlite 2>/dev/null | tail -n +15 | xargs -r rm -f
 echo "backup saved: backups/posle9-$stamp.sqlite"

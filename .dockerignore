@@ -14,3 +14,4 @@ docs
 .idea
 backups/
 submission/
+.deploy/
