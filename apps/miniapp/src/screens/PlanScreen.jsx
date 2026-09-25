@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
 import { PATH_TITLES, STUDY_FORMS } from '@posle9/core';
 
@@ -9,20 +9,34 @@ import {
 } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { daysText, formatDateRange, formatScore } from '../lib/format.js';
-import { haptic, shareToMax } from '../lib/max-bridge.js';
+import { downloadFile, haptic, shareToMax } from '../lib/max-bridge.js';
+import { clearLocal } from '../lib/storage.js';
 import { useAsync } from '../lib/use-async.js';
 
-export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
+export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDeleted }) {
   const plan = useAsync(() => api.plan(), []);
   const favorites = useAsync(() => api.favorites(), []);
   // Ссылка на план постоянная, поэтому готовим её заранее: MAX Bridge открывает экран шеринга
   // только сразу после нажатия, а ожидание ответа сервера в обработчике может это нарушить
   const preparedShare = useAsync(() => api.sharePlan(), []);
+  // Файл календаря MAX Bridge тоже скачивает только сразу после нажатия — ссылку готовим заранее.
+  // Она действует 10 минут, поэтому, пока экран открыт, обновляем её за минуту до конца
+  const calendarLink = useAsync(() => api.calendarLink().then((link) => ({ ...link, receivedAt: Date.now() })), []);
   const [pendingIds, setPendingIds] = useState(new Set());
   const [sharing, setSharing] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
   const [showPast, setShowPast] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [toast, showToast] = useToast();
+
+  useEffect(() => {
+    if (!calendarLink.data) return undefined;
+    const timer = setTimeout(calendarLink.reload, Math.max(30, calendarLink.data.expiresInSeconds - 60) * 1000);
+    return () => clearTimeout(timer);
+  }, [calendarLink.data, calendarLink.reload]);
 
   const nextItem = useMemo(
     () => plan.data?.items.find((item) => item.id === plan.data.nextItemId) ?? null,
@@ -32,8 +46,9 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
   if (!plan.data && plan.status === 'loading') return <LoadingState text="Собираем план…" />;
   if (!plan.data) return <ErrorState error={plan.error} onRetry={plan.reload} />;
 
-  const { items, region, profile, academicYear } = plan.data;
+  const { items, region, profile, academicYear, isAdvance } = plan.data;
   const doneCount = items.filter((item) => item.done).length;
+  const upcomingCount = items.filter((item) => item.status !== 'past').length;
   const pastCount = items.filter((item) => item.status === 'past' && item.id !== plan.data.nextItemId).length;
 
   const toggleDone = async (item) => {
@@ -71,6 +86,59 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
     }
   };
 
+  const addToCalendar = async () => {
+    const prepared = calendarLink.data;
+    const fresh = prepared && Date.now() - prepared.receivedAt < (prepared.expiresInSeconds - 30) * 1000;
+    setDownloading(true);
+    try {
+      let link = prepared;
+      if (!fresh) {
+        link = await api.calendarLink();
+        calendarLink.setData({ ...link, receivedAt: Date.now() });
+      }
+      const result = await downloadFile(link.url, link.fileName);
+      showToast(result === 'downloaded'
+        ? 'Файл скачан — откройте его, и даты появятся в календаре телефона'
+        : 'Файл календаря открыт в браузере — сохраните его и откройте в календаре');
+    } catch (error) {
+      showToast(error.message, 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const revokeShare = async () => {
+    setRevoking(true);
+    try {
+      const result = await api.revokeShare();
+      haptic('success');
+      showToast(result.followersRemoved > 0
+        ? `Ссылка отозвана, напоминания по ней отключены: ${result.followersRemoved}`
+        : 'Ссылка отозвана — старая больше не откроется');
+      preparedShare.reload();
+      plan.reload();
+    } catch (error) {
+      haptic('error');
+      showToast(error.message, 'error');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const deleteData = async () => {
+    setDeleting(true);
+    try {
+      await api.deleteMyData();
+      clearLocal();
+      haptic('success');
+      onDataDeleted();
+    } catch (error) {
+      haptic('error');
+      showToast(error.message, 'error');
+      setDeleting(false);
+    }
+  };
+
   const toggleReminders = async () => {
     setSavingReminders(true);
     try {
@@ -92,6 +160,24 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
         subtitle={`${academicYear} · ${region.name} · ${PATH_TITLES[profile.path]}`}
         after={<button type="button" className="link-button" onClick={onEditProfile}>Изменить</button>}
       />
+
+      {isAdvance && (
+        <Card className="notice">
+          <Typography.Body variant="medium-strong">Это план на 9 класс</Typography.Body>
+          <Typography.Body variant="small">
+            {items.length === 0
+              ? `Полный план откроется в следующем учебном году: даты ${academicYear} ещё не опубликованы. Добавим их, как только они появятся, и пришлём напоминания в чат с ботом.`
+              : `Даты ${academicYear} учебного года — когда подросток будет в 9 классе. Напоминания придут заранее.`}
+          </Typography.Body>
+          <Typography.Body variant="small">
+            А пока можно сравнить два пути и посчитать средний балл: оценки по предметам, которые заканчиваются в 8 классе, тоже войдут в аттестат.
+          </Typography.Body>
+          <div className="button-row">
+            <Button size="medium" variant="secondary" onClick={() => onOpenTab('paths')}>Два пути</Button>
+            <Button size="medium" variant="secondary" onClick={() => onOpenTab('grades')}>Посчитать балл</Button>
+          </div>
+        </Card>
+      )}
 
       {region.isDemo && (
         <Card className="notice">
@@ -117,6 +203,11 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
         <Button size="large" stretched loading={sharing} onClick={sharePlan}>
           Отправить план подростку
         </Button>
+        {upcomingCount > 0 && (
+          <Button size="large" variant="secondary" stretched loading={downloading} onClick={addToCalendar}>
+            Добавить даты в календарь
+          </Button>
+        )}
       </div>
       {plan.data.followersCount > 0 && (
         <Typography.Body variant="small" className="muted hint">
@@ -129,33 +220,38 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
           <span>
             <Typography.Body variant="medium-strong">Напоминания в чате с ботом</Typography.Body>
             <Typography.Body variant="small" className="muted">
-              {profile.remindersEnabled
-                ? `Запланировано: ${plan.data.pendingReminders}. Приходят в 10:00 по времени региона`
-                : 'Выключены — важные даты придётся отслеживать самостоятельно'}
+              {!profile.remindersEnabled && 'Выключены — важные даты придётся отслеживать самостоятельно'}
+              {profile.remindersEnabled && (isAdvance && plan.data.pendingReminders === 0
+                ? 'Включены — начнут приходить, когда появятся даты 9 класса'
+                : `Запланировано: ${plan.data.pendingReminders}. Приходят в 10:00 по времени региона`)}
             </Typography.Body>
           </span>
           <Switch checked={profile.remindersEnabled} disabled={savingReminders} onChange={toggleReminders} />
         </label>
       </Card>
 
-      <SectionTitle
-        after={pastCount > 0 ? (
-          <button type="button" className="link-button" onClick={() => setShowPast(!showPast)}>
-            {showPast ? 'Скрыть прошедшие' : `Показать прошедшие (${pastCount})`}
-          </button>
-        ) : <Tag>{`выполнено ${doneCount} из ${items.length}`}</Tag>}
-      >
-        Даты года
-      </SectionTitle>
+      {items.length > 0 && (
+        <>
+          <SectionTitle
+            after={pastCount > 0 ? (
+              <button type="button" className="link-button" onClick={() => setShowPast(!showPast)}>
+                {showPast ? 'Скрыть прошедшие' : `Показать прошедшие (${pastCount})`}
+              </button>
+            ) : <Tag>{`выполнено ${doneCount} из ${items.length}`}</Tag>}
+          >
+            Даты года
+          </SectionTitle>
 
-      <PlanTimeline
-        items={items}
-        nextItemId={plan.data.nextItemId}
-        onToggleDone={toggleDone}
-        pendingIds={pendingIds}
-        regionIsDemo={region.isDemo}
-        hidePast={!showPast}
-      />
+          <PlanTimeline
+            items={items}
+            nextItemId={plan.data.nextItemId}
+            onToggleDone={toggleDone}
+            pendingIds={pendingIds}
+            regionIsDemo={region.isDemo}
+            hidePast={!showPast}
+          />
+        </>
+      )}
 
       <SectionTitle
         after={favorites.data?.length >= 2
@@ -182,6 +278,31 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab }) {
           ))}
         </CellList>
       )}
+
+      <SectionTitle>Ваши данные</SectionTitle>
+      <Card>
+        <Typography.Body variant="small">
+          Храним только ваш ID в MAX, ответы на вопросы (регион, город, класс, интересы, путь), отметки плана, избранные программы и расписание напоминаний. Имена не храним, оценки из калькулятора остаются только на этом устройстве.
+        </Typography.Body>
+        <Button size="medium" variant="secondary" loading={revoking} onClick={revokeShare}>Отозвать ссылку на план</Button>
+        <Typography.Body variant="small" className="muted">
+          Старая ссылка перестанет открываться, а те, кто открыл план по ней, перестанут получать напоминания. Новую ссылку можно отправить в любой момент.
+        </Typography.Body>
+        {confirmingDelete ? (
+          <div className="stack stack--tight">
+            <Typography.Body variant="medium-strong">Удалить все данные?</Typography.Body>
+            <Typography.Body variant="small">
+              План, отметки, избранное и ссылка на план перестанут работать, напоминания не придут. Оценки на этом устройстве тоже удалятся. Отменить удаление нельзя.
+            </Typography.Body>
+            <div className="button-row">
+              <Button size="medium" variant="destructive" loading={deleting} onClick={deleteData}>Да, удалить</Button>
+              <Button size="medium" variant="secondary" disabled={deleting} onClick={() => setConfirmingDelete(false)}>Отмена</Button>
+            </div>
+          </div>
+        ) : (
+          <Button size="medium" variant="ghost" onClick={() => setConfirmingDelete(true)}>Удалить мои данные</Button>
+        )}
+      </Card>
 
       {toast}
     </div>

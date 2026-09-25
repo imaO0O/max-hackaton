@@ -145,6 +145,12 @@ button {
   gap: 8px;
 }
 
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Теги, чипы, переключатели */
 
 .tag {

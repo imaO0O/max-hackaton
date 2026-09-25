@@ -23,7 +23,7 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
         <EmptyState
           icon="🔗"
           title="Ссылка на план недействительна"
-          text="Попросите прислать ссылку ещё раз или составьте свой план"
+          text="Возможно, её отозвали или данные плана удалили. Попросите прислать новую ссылку или составьте свой план"
           action={<Button size="medium" onClick={onOpenOwnPlan}>Составить свой план</Button>}
         />
       </div>
@@ -80,8 +80,22 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
         </Card>
       )}
 
-      <SectionTitle>Даты года</SectionTitle>
-      <PlanTimeline items={data.items} nextItemId={data.nextItemId} regionIsDemo={data.region.isDemo} hidePast />
+      {data.isAdvance && (
+        <Card className="notice">
+          <Typography.Body variant="small">
+            {data.items.length === 0
+              ? `Это план на 9 класс. Даты ${data.academicYear} учебного года ещё не опубликованы — полный план откроется в следующем учебном году, напоминания придут, как только даты появятся.`
+              : `Это план на 9 класс: даты ${data.academicYear} учебного года.`}
+          </Typography.Body>
+        </Card>
+      )}
+
+      {data.items.length > 0 && (
+        <>
+          <SectionTitle>Даты года</SectionTitle>
+          <PlanTimeline items={data.items} nextItemId={data.nextItemId} regionIsDemo={data.region.isDemo} hidePast />
+        </>
+      )}
 
       {data.favorites.length > 0 && (
         <>

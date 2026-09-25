@@ -27,6 +27,7 @@ export function App() {
   const [tab, setTab] = useState(() => (loadLocal('visited', false) ? 'plan' : 'paths'));
   const [regionsById, setRegionsById] = useState({});
   const [compareOnOpen, setCompareOnOpen] = useState(false);
+  const [dataDeleted, setDataDeleted] = useState(false);
 
   useEffect(() => {
     if (!session.data) return;
@@ -62,11 +63,13 @@ export function App() {
     return (
       <OnboardingScreen
         initialProfile={profile}
+        notice={dataDeleted ? 'Данные удалены. Чтобы снова собрать план, ответьте на вопросы.' : null}
         onCancel={profile?.isComplete ? () => setEditingProfile(false) : undefined}
         onSaved={(saved) => {
           const firstTime = !profile?.isComplete;
           setProfile(saved);
           setEditingProfile(false);
+          setDataDeleted(false);
           changeTab(firstTime ? 'paths' : 'plan');
         }}
       />
@@ -86,6 +89,12 @@ export function App() {
             onEditProfile={() => setEditingProfile(true)}
             onProfileChange={setProfile}
             onOpenTab={changeTab}
+            onDataDeleted={() => {
+              setProfile(null);
+              setDataDeleted(true);
+              setTab('paths');
+              window.scrollTo({ top: 0 });
+            }}
           />
         )}
         {tab === 'next' && <NextScreen />}
