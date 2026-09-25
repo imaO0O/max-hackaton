@@ -81,6 +81,9 @@ export const api = {
   plan: () => request('GET', '/plan'),
   setItemDone: (itemId, done) => request('PUT', `/plan/items/${encodeURIComponent(itemId)}`, { done }),
   sharePlan: () => request('POST', '/plan/share'),
+  revokeShare: () => request('DELETE', '/plan/share'),
+  calendarLink: () => request('POST', '/plan/calendar-link'),
+  deleteMyData: () => request('DELETE', '/profile'),
   sharedPlan: (token) => request('GET', `/shared-plans/${encodeURIComponent(token)}`),
   followSharedPlan: (token, follow) => request('PUT', `/shared-plans/${encodeURIComponent(token)}/follow`, { follow }),
 };

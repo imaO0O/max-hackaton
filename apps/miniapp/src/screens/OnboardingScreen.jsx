@@ -3,7 +3,9 @@ import { Button, CellList, CellSimple, Radio, Typography } from '@maxhub/max-ui'
 import { PATH_TITLES, PATH_VALUES } from '@posle9/core';
 
 import { ErrorState, LoadingState } from '../components/states.jsx';
-import { Chip, DemoTag, ScreenHeader, SectionTitle, Segmented, Tag } from '../components/ui.jsx';
+import {
+  Card, Chip, DemoTag, ScreenHeader, SectionTitle, Segmented, Tag,
+} from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { haptic, showBackButton } from '../lib/max-bridge.js';
 import { useAsync } from '../lib/use-async.js';
@@ -14,7 +16,7 @@ const PATH_HINTS = {
   undecided: 'Покажем оба пути, чтобы сравнить',
 };
 
-export function OnboardingScreen({ initialProfile, onSaved, onCancel }) {
+export function OnboardingScreen({ initialProfile, onSaved, onCancel, notice = null }) {
   const reference = useAsync(() => Promise.all([api.regions(), api.interests()]), []);
   const [form, setForm] = useState(() => ({
     regionId: initialProfile?.regionId ?? null,
@@ -74,6 +76,12 @@ export function OnboardingScreen({ initialProfile, onSaved, onCancel }) {
           ? 'План и напоминания пересоберутся под новые ответы'
           : 'Ответьте на 5 вопросов — соберём план 9 класса, сравнение путей и подборку колледжей'}
       />
+
+      {notice && (
+        <Card className="notice">
+          <Typography.Body variant="small">{notice}</Typography.Body>
+        </Card>
+      )}
 
       <SectionTitle>1. Регион</SectionTitle>
       <CellList mode="island" filled>

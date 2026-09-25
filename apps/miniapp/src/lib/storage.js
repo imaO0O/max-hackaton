@@ -30,3 +30,17 @@ export function removeLocal(key) {
     // нечего удалять
   }
 }
+
+/** Удаляет всё, что сервис сохранил на устройстве: оценки, средний балл, отметку о первом входе. */
+export function clearLocal() {
+  try {
+    const keys = [];
+    for (let index = 0; index < window.localStorage.length; index += 1) {
+      const key = window.localStorage.key(index);
+      if (key?.startsWith(PREFIX)) keys.push(key);
+    }
+    for (const key of keys) window.localStorage.removeItem(key);
+  } catch {
+    // хранилище недоступно — удалять нечего
+  }
+}

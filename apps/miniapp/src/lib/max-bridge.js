@@ -72,6 +72,28 @@ export async function shareToMax({ text, link }) {
   }
 }
 
+/**
+ * Скачивает файл, например календарь .ics. MAX Bridge пропускает вызов только сразу после нажатия
+ * и только в мессенджере, поэтому ссылку нужно получить заранее. Вне MAX открываем ссылку в браузере.
+ * @returns {Promise<'downloaded' | 'opened'>}
+ */
+export async function downloadFile(url, fileName) {
+  const webApp = getWebApp();
+  if (getInitData() && webApp?.downloadFile) {
+    try {
+      await Promise.race([
+        Promise.resolve(webApp.downloadFile(url, fileName)),
+        new Promise((resolve) => { setTimeout(resolve, 2000); }),
+      ]);
+      return 'downloaded';
+    } catch {
+      // откроем ссылку
+    }
+  }
+  openExternalLink(url);
+  return 'opened';
+}
+
 export function haptic(type = 'success') {
   try {
     getWebApp()?.HapticFeedback?.notificationOccurred?.(type);
