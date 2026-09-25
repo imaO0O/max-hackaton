@@ -1,6 +1,7 @@
 import { Bot, Keyboard } from '@maxhub/max-bot-api';
 import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
+import { createRateLimiter } from '../api/rate-limit.js';
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import {
@@ -33,6 +34,23 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const { users, reference } = repos;
 
   const userIdOf = (ctx) => ctx.user?.user_id;
+
+  // Защита от флуда: не больше BOT_RATE_LIMIT_PER_MINUTE событий в минуту от одного пользователя.
+  // На первое лишнее — одно предупреждение, дальше — тишина до конца минуты. Регистрируется до всех обработчиков.
+  if (config.botRateLimitPerMinute > 0) {
+    const limiter = createRateLimiter({ max: config.botRateLimitPerMinute });
+    bot.use(async (ctx, next) => {
+      const userId = userIdOf(ctx);
+      if (!userId) return next();
+      const { allowed, firstRejected } = limiter.hit(userId);
+      if (allowed) return next();
+      if (!firstRejected) return undefined;
+      logger.warn({ userId, updateType: ctx.updateType }, 'bot rate limit exceeded');
+      if (ctx.callback) return ctx.answerOnCallback({ notification: texts.tooFast });
+      return ctx.chatId ? ctx.reply(texts.tooFast) : undefined;
+    });
+  }
+
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
   const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });

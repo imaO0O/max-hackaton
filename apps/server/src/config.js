@@ -54,6 +54,7 @@ export function loadConfig(env = process.env) {
     botRichText: parseBoolean(env.BOT_RICH_TEXT, true),
     rateLimitPerMinute: parseInteger('RATE_LIMIT_PER_MINUTE', env.RATE_LIMIT_PER_MINUTE, 300, { min: 0 }),
     appVersion: env.APP_VERSION || 'local',
+    botRateLimitPerMinute: parseInteger('BOT_RATE_LIMIT_PER_MINUTE', env.BOT_RATE_LIMIT_PER_MINUTE, 40, { min: 0 }),
   };
 
   if (config.botEnabled && !config.botToken) {

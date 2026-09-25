@@ -30,6 +30,7 @@ export function testConfig(overrides = {}) {
     rateLimitPerMinute: 0,
     botRichText: false,
     appVersion: 'test',
+    botRateLimitPerMinute: 0,
     ...overrides,
   };
 }

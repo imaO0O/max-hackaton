@@ -1,5 +1,5 @@
 /**
- * Ограничение частоты запросов к API: фиксированное окно в минуту на IP-адрес.
+ * Ограничение частоты: фиксированное окно в минуту на ключ — IP-адрес для API, ID пользователя для бота.
  * Хранится в памяти процесса — этого достаточно для одного экземпляра сервера.
  */
 export function createRateLimiter({ max, windowMs = 60_000, clock = () => Date.now(), maxKeys = 10_000 }) {
@@ -12,7 +12,8 @@ export function createRateLimiter({ max, windowMs = 60_000, clock = () => Date.n
   }
 
   return {
-    /** @returns {{ allowed: boolean, retryAfterSeconds: number }} */
+    /** firstRejected — первый отказ в окне: на него стоит ответить один раз, дальше — молча. */
+    /** @returns {{ allowed: boolean, firstRejected: boolean, retryAfterSeconds: number }} */
     hit(key) {
       const now = clock();
       let window = windows.get(key);
@@ -24,6 +25,7 @@ export function createRateLimiter({ max, windowMs = 60_000, clock = () => Date.n
       window.count += 1;
       return {
         allowed: window.count <= max,
+        firstRejected: window.count === max + 1,
         retryAfterSeconds: Math.max(1, Math.ceil((window.resetAt - now) / 1000)),
       };
     },
