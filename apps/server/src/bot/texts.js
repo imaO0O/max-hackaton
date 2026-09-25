@@ -8,6 +8,20 @@ export function formatDate(date) {
   return `${day} ${MONTHS[month - 1]}`;
 }
 
+const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+/** 2027-03-01 → «1 мар» */
+export function formatShortDate(date) {
+  const [, month, day] = date.split('-').map(Number);
+  return `${day} ${MONTHS_SHORT[month - 1]}`;
+}
+
+/** 2026-09-16 → «16.09.2026» */
+function formatCheckedAt(date) {
+  const [year, month, day] = date.split('-');
+  return `${day}.${month}.${year}`;
+}
+
 export const TOTAL_STEPS = 5;
 
 export const texts = {
@@ -27,6 +41,7 @@ export const texts = {
     'Что я умею:',
     '/start — ответить на вопросы и собрать план',
     '/plan — ближайшие даты плана прямо в чате',
+    '/share — отправить план подростку',
     '/reminders — включить или выключить напоминания',
     '/test_reminder — показать пример напоминания прямо сейчас',
     '/delete_data — удалить мои данные из сервиса',
@@ -43,6 +58,15 @@ export const texts = {
     'После удаления план и ссылка на него перестанут работать, напоминания не придут. Отменить удаление нельзя.',
   ].join('\n'),
   deleteDone: 'Данные удалены. Если захотите начать заново — /start',
+  menu: 'Что сделать? Всё доступно прямо здесь, в чате, а подробнее — в мини-приложении.',
+  planItemsHint: 'Нажмите на дату — откроются подробности и кнопка «Отметить выполненным».',
+  itemNotFound: 'Этого пункта больше нет в плане — возможно, даты обновились. Откройте план заново: /plan',
+  shareIntro: 'Отправьте план подростку или второму родителю: нажмите «Отправить в MAX» и выберите чат — или просто перешлите следующее сообщение.',
+  sharedIntro: 'С вами поделились планом выбора пути после 9 класса. Включите напоминания — бот напишет перед важными датами.',
+  sharedOwn: 'Это ваш план — так его увидит тот, кому вы отправили ссылку.',
+  sharedInvalid: 'Ссылка на план недействительна: её отозвали или в ней ошибка. Попросите прислать новую или соберите свой план: /start',
+  followOn: 'Готово! Напоминания по этому плану будут приходить сюда, в чат с ботом.',
+  followOff: 'Напоминания по этому плану выключены.',
   deleteCancelled: 'Удаление отменено, данные на месте.',
   remindersOn: 'Напоминания включены. Напишу за несколько дней до важных дат в 10:00 по времени вашего региона.',
   remindersOff: 'Напоминания выключены. Включить снова: /reminders',
@@ -100,6 +124,40 @@ export function planText(plan, { limit } = {}) {
   const done = plan.items.filter((item) => item.done).length;
   lines.push('', `Выполнено: ${done} из ${plan.items.length}.`);
   return lines.join('\n');
+}
+
+/** Подпись кнопки пункта плана: «10 фев — Итоговое собеседование…» */
+export function planItemLabel(item, maxLength = 48) {
+  const label = `${item.done ? '✅ ' : ''}${formatShortDate(item.dateStart)} — ${item.title}`;
+  return label.length > maxLength ? `${label.slice(0, maxLength - 1)}…` : label;
+}
+
+function itemStatusText(item) {
+  if (item.done) return '✅ Выполнено';
+  if (item.status === 'past') return 'Срок прошёл';
+  if (item.status === 'current') return 'Идёт сейчас';
+  if (item.daysLeft === 0) return 'Сегодня';
+  if (item.daysLeft > 0) return `Через ${item.daysLeft} дн.`;
+  return null;
+}
+
+/** Карточка пункта плана: дата, статус, что сделать и откуда это известно. */
+export function planItemCard(item) {
+  const date = item.dateEnd ? `${formatDate(item.dateStart)} — ${formatDate(item.dateEnd)}` : formatDate(item.dateStart);
+  const status = itemStatusText(item);
+  let source;
+  if (item.scope === 'recommendation') source = 'Совет сервиса.';
+  else if (item.sourceTitle || item.sourceUrl) {
+    source = `Источник: ${item.sourceTitle ?? 'по ссылке ниже'}${item.checkedAt ? `, проверено ${formatCheckedAt(item.checkedAt)}` : ', дата не проверена'}.`;
+  } else source = 'Источник не указан.';
+  return [
+    `📌 ${item.title}`,
+    `${date}${item.isApproximate ? ' (ориентировочно)' : ''}${status ? ` · ${status}` : ''}`,
+    '',
+    item.description,
+    '',
+    source,
+  ].join('\n');
 }
 
 export function reminderText({ keyDate, anchor, daysBefore }) {

@@ -12,24 +12,11 @@ export const ANY_CITY = '*';
 
 const button = Keyboard.button;
 
-/**
- * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
- * и показывает в метриках, откуда его открыли (из сообщения бота или из напоминания).
- */
-export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot') {
-  const rows = [...extraRows];
-  if (botUsername) {
-    rows.unshift([button.openApp('Открыть план', botUsername, undefined, source)]);
-  }
-  return Keyboard.inlineKeyboard(rows);
-}
+// Общие клавиатуры бота — в keyboards.js; реэкспорт для прежних импортов
+export { openAppKeyboard, startKeyboard } from './keyboards.js';
 
-export function startKeyboard({ hasProfile, botUsername }) {
-  if (hasProfile) {
-    return openAppKeyboard(botUsername, [[button.callback('Изменить ответы', 'survey:start')]]);
-  }
-  return Keyboard.inlineKeyboard([[button.callback('Начать', 'survey:start')]]);
-}
+/** Кнопка «Назад» возвращает к предыдущему шагу, не сбрасывая ответы. */
+const backRow = (step) => [button.callback('← Назад', `survey:back:${step}`)];
 
 function chunk(items, size) {
   const rows = [];
@@ -52,6 +39,7 @@ export function cityStep(cities) {
     keyboard: Keyboard.inlineKeyboard([
       ...cities.map((city, index) => [button.callback(city, `survey:city:${index}`)]),
       [button.callback('Любой город региона', `survey:city:${ANY_CITY}`)],
+      backRow('region'),
     ]),
   };
 }
@@ -61,6 +49,7 @@ export function gradeStep() {
     text: texts.askGrade,
     keyboard: Keyboard.inlineKeyboard([
       GRADE_VALUES.slice().reverse().map((grade) => button.callback(`${grade} класс`, `survey:grade:${grade}`)),
+      backRow('city'),
     ]),
   };
 }
@@ -76,6 +65,7 @@ export function interestsStep(interests, selected) {
     keyboard: Keyboard.inlineKeyboard([
       ...chunk(buttons, 2),
       [button.callback(chosen.size ? `Готово (${chosen.size})` : 'Пока не знаем', 'survey:interests-done')],
+      backRow('grade'),
     ]),
   };
 }
@@ -83,7 +73,10 @@ export function interestsStep(interests, selected) {
 export function pathStep() {
   return {
     text: texts.askPath,
-    keyboard: Keyboard.inlineKeyboard(PATH_VALUES.map((path) => [button.callback(PATH_TITLES[path], `survey:path:${path}`)])),
+    keyboard: Keyboard.inlineKeyboard([
+      ...PATH_VALUES.map((path) => [button.callback(PATH_TITLES[path], `survey:path:${path}`)]),
+      backRow('interests'),
+    ]),
   };
 }
 
