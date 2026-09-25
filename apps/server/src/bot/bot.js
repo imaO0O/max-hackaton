@@ -4,10 +4,11 @@ import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import {
-  menuKeyboard, remindersKeyboard, startKeyboard, summaryKeyboard,
+  backToMenuRow, menuKeyboard, openAppKeyboard, remindersKeyboard, remindersStatusKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
 import { registerPathsChat } from './paths-chat.js';
+import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
 import {
@@ -78,6 +79,42 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     });
   }
 
+  function sendDeleteConfirm(ctx) {
+    return ctx.reply(texts.deleteConfirm, {
+      attachments: [Keyboard.inlineKeyboard([[
+        Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
+        Keyboard.button.callback('Отмена', 'data:delete-cancel'),
+      ]])],
+    });
+  }
+
+  function sendRemindersStatus(ctx) {
+    const { remindersEnabled } = users.ensure(userIdOf(ctx));
+    return ctx.reply(remindersEnabled ? texts.remindersStatusOn : texts.remindersStatusOff, {
+      attachments: [remindersStatusKeyboard(remindersEnabled)],
+    });
+  }
+
+  function sendGradesHint(ctx) {
+    return ctx.reply(texts.gradesInApp, {
+      attachments: [openAppKeyboard(runtime.botUsername, [backToMenuRow()], 'from_bot', 'Посчитать средний балл')],
+    });
+  }
+
+  /** Что делать с узнанной темой свободного текста. */
+  const freeTextHandlers = {
+    help: sendHelp,
+    delete: sendDeleteConfirm,
+    reminders: sendRemindersStatus,
+    share: (ctx) => planChat.sendShare(ctx),
+    plan: planChat.sendPlanPreview,
+    paths: (ctx) => pathsChat.sendPaths(ctx),
+    colleges: (ctx) => collegesChat.sendColleges(ctx),
+    grades: sendGradesHint,
+    thanks: (ctx) => ctx.reply(texts.thanks, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] }),
+    greeting: (ctx) => sendStart(ctx),
+  };
+
   bot.on('bot_started', (ctx) => sendStart(ctx, ctx.startPayload));
   // «/start» и «/start plan_…» — так приходит параметр ссылки, если диалог с ботом уже открыт
   bot.command(/^start(?:\s+(\S+))?$/, (ctx) => sendStart(ctx, ctx.match?.[1]));
@@ -93,12 +130,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     return planChat.sendReminderExample(ctx);
   });
   bot.command('stats', sendStats);
-  bot.command('delete_data', (ctx) => ctx.reply(texts.deleteConfirm, {
-    attachments: [Keyboard.inlineKeyboard([[
-      Keyboard.button.callback('Да, удалить', 'data:delete-confirm'),
-      Keyboard.button.callback('Отмена', 'data:delete-cancel'),
-    ]])],
-  }));
+  bot.command('delete_data', sendDeleteConfirm);
   bot.command('help', sendHelp);
 
   bot.action(/^survey:/, async (ctx) => {
@@ -209,7 +241,14 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
 
   bot.on('message_created', async (ctx) => {
     if (ctx.message?.recipient?.chat_type !== 'dialog') return;
-    await sendHelp(ctx);
+    // Текст без команды: узнаём частую тему и ведём в нужный раздел, иначе — короткая подсказка и меню
+    const topic = detectTopic(ctx.message?.body?.text);
+    services.analytics.track(EVENTS.FREE_TEXT, userIdOf(ctx), { topic: topic ?? 'unknown' });
+    if (topic) {
+      await freeTextHandlers[topic](ctx);
+      return;
+    }
+    await ctx.reply(texts.notUnderstood, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] });
   });
 
   bot.catch(async (error, ctx) => {

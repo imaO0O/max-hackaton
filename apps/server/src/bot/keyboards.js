@@ -16,6 +16,8 @@ const REMINDER_EXAMPLE = [button.callback('⏰ Пример напоминани
  * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
  * и показывает в метриках, откуда его открыли (из сообщения бота или из напоминания).
  */
+export const backToMenuRow = () => BACK_TO_MENU;
+
 export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot', title = 'Открыть план') {
   const rows = [...extraRows];
   if (botUsername) {
@@ -58,6 +60,15 @@ export function summaryKeyboard(botUsername) {
     [button.callback('📨 Отправить план подростку', 'share:show')],
     REMINDER_EXAMPLE,
     [button.callback('☰ Меню', 'menu:show')],
+  ]);
+}
+
+/** Ответ на вопрос о напоминаниях текстом: переключатель, пример и меню. */
+export function remindersStatusKeyboard(enabled) {
+  return Keyboard.inlineKeyboard([
+    [button.callback(enabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
+    ...(enabled ? [REMINDER_EXAMPLE] : []),
+    BACK_TO_MENU,
   ]);
 }
 

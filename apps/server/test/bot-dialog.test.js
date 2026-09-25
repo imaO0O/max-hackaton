@@ -452,9 +452,29 @@ describe('команды', () => {
     ctx.config.adminUserIds = [555];
   });
 
-  test('обычный текст — справка', async () => {
-    await bot.handleUpdate(command('привет'));
-    assert.match(lastAnswer().text, /Что я умею/);
+  test('свободный текст ведёт в нужный раздел, непонятное — короткая подсказка', async () => {
+    const answerTo = async (text) => {
+      await bot.handleUpdate(command(text));
+      return lastAnswer();
+    };
+    assert.match((await answerTo('Когда подавать заявление на ОГЭ?')).text, /^План на 2026\/2027/);
+    assert.match((await answerTo('какие колледжи есть?')).text, /^Колледжи: Демо-регион А/);
+    assert.match((await answerTo('Что лучше: 10 класс или колледж?')).text, /^10–11 класс или колледж/);
+    const grades = await answerTo('как посчитать средний балл аттестата');
+    assert.match(grades.text, /калькулятор в мини-приложении/);
+    assert.equal(grades.openApp.text, 'Посчитать средний балл');
+    assert.match((await answerTo('напоминания')).text, /^Напоминания (включены|сейчас выключены)/);
+    assert.match((await answerTo('привет')).text, /С возвращением/);
+    assert.match((await answerTo('Спасибо!')).text, /^Пожалуйста/);
+    assert.match((await answerTo('/unknown')).text, /Что я умею/);
+
+    const unknown = await answerTo('абракадабра');
+    assert.match(unknown.text, /^Я понимаю кнопки и несколько тем/);
+    assert.ok(unknown.buttons.includes('plan:show'), 'меню под подсказкой');
+    assert.doesNotMatch(unknown.text, /Что я умею/, 'не вся справка');
+
+    const report = ctx.services.analytics.report();
+    assert.match(report, /Писали боту текстом: 1, из них бот хотя бы раз не понял: 1/);
   });
 
   test('при ошибке бот отвечает пользователю, а не молчит', async () => {
