@@ -22,6 +22,27 @@ export function formatCheckedAt(date) {
   return `${day}.${month}.${year}`;
 }
 
+/** plural(3, ['день', 'дня', 'дней']) → «дня» */
+export function plural(count, [one, few, many]) {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return one;
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+  return many;
+}
+
+/** 5 → «5 дней» */
+export const daysText = (count) => `${count} ${plural(count, ['день', 'дня', 'дней'])}`;
+
+/** Сколько осталось до даты: до полутора месяцев — в днях, дальше — в месяцах, так проще прочитать. */
+export function untilText(days) {
+  if (days <= 45) return `через ${daysText(days)}`;
+  const months = Math.round(days / 30.44);
+  return `через ${months} ${plural(months, ['месяц', 'месяца', 'месяцев'])}`;
+}
+
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
 export const TOTAL_STEPS = 5;
 
 export const texts = {
@@ -95,7 +116,7 @@ function planItemLine(item) {
   if (item.done) status = ' ✅';
   else if (item.status === 'current') status = ' (идёт сейчас)';
   else if (item.daysLeft === 0) status = ' (сегодня)';
-  else if (item.daysLeft > 0) status = ` (через ${item.daysLeft} дн.)`;
+  else if (item.daysLeft > 0) status = ` (${untilText(item.daysLeft)})`;
   const approximate = item.isApproximate ? ', ориентировочно' : '';
   return `• ${date}${approximate} — ${item.title}${status}`;
 }
@@ -139,7 +160,7 @@ function itemStatusText(item) {
   if (item.status === 'past') return 'Срок прошёл';
   if (item.status === 'current') return 'Идёт сейчас';
   if (item.daysLeft === 0) return 'Сегодня';
-  if (item.daysLeft > 0) return `Через ${item.daysLeft} дн.`;
+  if (item.daysLeft > 0) return capitalize(untilText(item.daysLeft));
   return null;
 }
 
@@ -166,13 +187,13 @@ export function reminderText({ keyDate, anchor, daysBefore }) {
   const date = anchor === 'end' ? (keyDate.dateEnd ?? keyDate.dateStart) : keyDate.dateStart;
   let when;
   if (anchor === 'end') {
-    when = daysBefore === 0 ? `Сегодня последний день (${formatDate(date)})` : `До окончания — ${daysBefore} дн. (до ${formatDate(date)})`;
+    when = daysBefore === 0 ? `Сегодня последний день (${formatDate(date)})` : `До окончания — ${daysText(daysBefore)} (до ${formatDate(date)})`;
   } else if (daysBefore === 0) {
     when = keyDate.kind === 'period' ? `Начинается сегодня (${formatDate(date)})` : `Сегодня, ${formatDate(date)}`;
   } else if (daysBefore === 1) {
     when = `Завтра, ${formatDate(date)}`;
   } else {
-    when = `Через ${daysBefore} дн. — ${formatDate(date)}`;
+    when = `Через ${daysText(daysBefore)} — ${formatDate(date)}`;
   }
   const approximate = keyDate.isApproximate ? ' (дата ориентировочная)' : '';
   return `⏰ ${keyDate.title}\n${when}${approximate}\n\n${keyDate.description}`;

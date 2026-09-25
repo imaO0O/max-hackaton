@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { planText } from '../src/bot/texts.js';
+import { planText, plural, untilText } from '../src/bot/texts.js';
 
 const region = { name: 'Республика Татарстан' };
 const profile = { path: 'college' };
@@ -29,7 +29,7 @@ test('план в чате: ближайшие даты, остаток и вы�
   assert.match(text, /Выполнено: 1 из 4\./);
 
   const full = planText(plan);
-  assert.match(full, /• 1 марта, ориентировочно — Пункт d \(через 10 дн\.\)/);
+  assert.match(full, /• 1 марта, ориентировочно — Пункт d \(через 10 дней\)/);
   assert.doesNotMatch(full, /…и ещё/);
 });
 
@@ -37,4 +37,16 @@ test('план для 8 класса без опубликованных дат 
   const text = planText({ academicYear: '2027/2028', isAdvance: true, region, profile, items: [] });
   assert.match(text, /Это план на 9 класс/);
   assert.match(text, /2027\/2028 учебного года ещё не опубликованы/);
+});
+
+test('сроки по-русски: дни с правильным окончанием, дальние даты — в месяцах', () => {
+  assert.equal(plural(1, ['день', 'дня', 'дней']), 'день');
+  assert.equal(plural(3, ['день', 'дня', 'дней']), 'дня');
+  assert.equal(plural(11, ['день', 'дня', 'дней']), 'дней');
+  assert.equal(plural(22, ['день', 'дня', 'дней']), 'дня');
+  assert.equal(untilText(1), 'через 1 день');
+  assert.equal(untilText(27), 'через 27 дней');
+  assert.equal(untilText(45), 'через 45 дней');
+  assert.equal(untilText(81), 'через 3 месяца');
+  assert.equal(untilText(258), 'через 8 месяцев');
 });
