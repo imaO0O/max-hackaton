@@ -270,6 +270,44 @@ describe('меню, план в чате и отправка подростку'
     assert.match(lastAnswer().text, /Ссылка на план недействительна/);
   });
 
+  test('колледжи в чате: список по интересам, карточка, избранное', async () => {
+    await bot.handleUpdate(command('/colleges'));
+    const list = lastAnswer();
+    assert.match(list.text, /^Колледжи: Демо-регион А, Демоград/);
+    assert.match(list.text, /• Информационные системы и программирование — Демо-колледж информационных технологий/);
+    const programPayload = list.buttons.find((payload) => payload.startsWith('p:'));
+    assert.ok(programPayload);
+    assert.ok(programPayload.length <= 64, 'payload кнопки укладывается в ограничение длины');
+    const programId = programPayload.slice(2);
+
+    await bot.handleUpdate(press(programPayload));
+    assert.match(lastAnswer().text, /^🏫 /);
+    assert.match(lastAnswer().text, /ориентир по прошлому году/);
+    assert.ok(lastAnswer().buttons.includes(`pf:${programId}`));
+
+    await bot.handleUpdate(press(`pf:${programId}`));
+    assert.match(lastAnswer().text, /★ В избранном/);
+    assert.ok(ctx.services.catalog.listFavorites(555).some((program) => program.id === programId), 'избранное видно в мини-приложении');
+
+    await bot.handleUpdate(press('colleges:show'));
+    assert.ok(lastAnswer().buttons.some((payload) => payload === programPayload));
+    assert.match(JSON.stringify(requests.at(-1).body), /★ /, 'избранная программа помечена в списке');
+
+    await bot.handleUpdate(press(`pu:${programId}`));
+    assert.doesNotMatch(lastAnswer().text, /★ В избранном/);
+    assert.ok(!ctx.services.catalog.listFavorites(555).some((program) => program.id === programId));
+  });
+
+  test('колледжи в чате: если в городе нет программ по интересам — показываем регион', async () => {
+    ctx.services.plan.saveProfile(558, { regionId: 'demo-standard', city: 'Приречный', grade: 9, path: 'college', interests: ['creative'] });
+    await bot.handleUpdate(command('/colleges', { ...USER, user_id: 558 }));
+    assert.match(lastAnswer().text, /В городе Приречный таких программ нет — показываю весь регион/);
+    assert.match(lastAnswer().text, /Дизайн/);
+
+    await bot.handleUpdate(press('p:no-such-program', { ...USER, user_id: 558 }));
+    assert.match(lastAnswer().text, /Этой программы больше нет/);
+  });
+
   test('/share работает и командой', async () => {
     await bot.handleUpdate(command('/share'));
     assert.match(requests.find((item) => item.path === '/messages').body.text, /Отправить в MAX/);

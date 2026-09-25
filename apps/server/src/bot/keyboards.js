@@ -25,6 +25,7 @@ export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot'
 export function menuKeyboard({ botUsername, remindersEnabled }) {
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Даты плана', 'plan:show')],
+    [button.callback('🏫 Колледжи по интересам', 'colleges:show')],
     [button.callback('📨 Отправить план подростку', 'share:show')],
     [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
     [button.callback('✏️ Изменить ответы', 'survey:start')],
