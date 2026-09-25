@@ -3,7 +3,7 @@ import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
 import { createRateLimiter } from '../api/rate-limit.js';
 import { isProfileComplete } from '../repositories/users.js';
-import { EVENTS } from '../services/analytics.js';
+import { CAMPAIGN_CODE_RE, campaignOf, EVENTS } from '../services/analytics.js';
 import {
   backToMenuRow, menuKeyboard, openAppKeyboard, remindersKeyboard, remindersStatusKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
@@ -65,6 +65,9 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   }
 
   async function sendStart(ctx, payload) {
+    // Запуск бота, а по ссылке для школы — ещё и код школы: в /stats видно, сколько семей она привела
+    const campaign = campaignOf(payload);
+    services.analytics.track(EVENTS.BOT_STARTED, userIdOf(ctx), campaign ? { campaign } : {});
     // Ссылка https://max.ru/<бот>?start=plan_<токен> открывает чужой план прямо в чате
     if (payload?.startsWith(SHARED_PLAN_PREFIX)) {
       return planChat.openSharedPlan(ctx, payload.slice(SHARED_PLAN_PREFIX.length));
@@ -86,6 +89,20 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
       return;
     }
     await ctx.reply(services.analytics.report());
+  }
+
+  /** Ссылка для школы или класса (только команде проекта): переходы и собранные планы по ней — в /stats. */
+  async function sendCampaignLink(ctx, code) {
+    const userId = userIdOf(ctx);
+    if (!config.adminUserIds.includes(userId)) {
+      await ctx.reply(`Команда доступна только команде проекта. Ваш ID в MAX: ${userId}`);
+      return;
+    }
+    if (!code || !CAMPAIGN_CODE_RE.test(code)) {
+      await ctx.reply(texts.linkUsage);
+      return;
+    }
+    await ctx.reply(texts.campaignLinks(runtime.botUsername, code));
   }
 
   async function toggleReminders(ctx) {
@@ -148,6 +165,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     return planChat.sendReminderExample(ctx);
   });
   bot.command('stats', sendStats);
+  bot.command(/^link(?:\s+(.+))?$/, (ctx) => sendCampaignLink(ctx, ctx.match?.[1]?.trim()));
   bot.command('delete_data', sendDeleteConfirm);
   bot.command('help', sendHelp);
 

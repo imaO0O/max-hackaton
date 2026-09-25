@@ -206,6 +206,15 @@ describe('API мини-приложения', () => {
     ctx.db.prepare("UPDATE key_dates SET date_end = '2027-08-15' WHERE id = '2627-fed-college-admission'").run();
   });
 
+  test('мини-приложение по ссылке для школы: открытие засчитывается коду школы', async () => {
+    const user = 6006;
+    const response = await call('GET', '/api/session', { headers: authHeaders(user, { startParam: 'src_kazan_school7' }) });
+    assert.equal(response.statusCode, 200);
+    const campaigns = ctx.services.analytics.funnel().campaigns;
+    assert.deepEqual(campaigns.find((row) => row.campaign === 'kazan_school7'), { campaign: 'kazan_school7', users: 1, completed: 0 });
+    assert.ok(ctx.services.analytics.funnel().opensBySource.some((row) => row.value === 'campaign'));
+  });
+
   test('health показывает, что бот потерял связь с MAX, но отвечает 200', async () => {
     const previous = ctx.runtime.botStatus;
     ctx.runtime.botStatus = 'unreachable';

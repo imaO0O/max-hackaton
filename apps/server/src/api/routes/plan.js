@@ -1,6 +1,6 @@
 import { GRADE_VALUES, PATH_VALUES } from '@posle9/core';
 
-import { EVENTS, launchSource } from '../../services/analytics.js';
+import { campaignOf, EVENTS, launchSource } from '../../services/analytics.js';
 
 const tokenParam = { type: 'string', pattern: '^[A-Za-z0-9_-]{16,64}$' };
 
@@ -8,7 +8,10 @@ export function registerPlanRoutes(api, { plan, analytics }) {
   /** Кто открыл мини-приложение и с каким параметром запуска (например, ссылка на чужой план). */
   api.get('/session', { config: { auth: true } }, async (request) => {
     const profile = plan.getProfile(request.maxUser.id);
-    analytics.track(EVENTS.MINIAPP_OPENED, request.maxUser.id, { source: launchSource(request.startParam) });
+    const campaign = campaignOf(request.startParam);
+    analytics.track(EVENTS.MINIAPP_OPENED, request.maxUser.id, {
+      source: launchSource(request.startParam), ...(campaign ? { campaign } : {}),
+    });
     return { userId: request.maxUser.id, startParam: request.startParam, profile };
   });
 
