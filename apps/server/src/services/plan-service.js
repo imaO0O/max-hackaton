@@ -15,6 +15,11 @@ export function planShareLink(botUsername, token) {
   return `https://max.ru/${botUsername}?startapp=${SHARE_PREFIX}${token}`;
 }
 
+/** Ссылка, открывающая тот же план в чате с ботом, — если мини-приложение не откроется. */
+export function planChatLink(botUsername, token) {
+  return `https://max.ru/${botUsername}?start=${SHARE_PREFIX}${token}`;
+}
+
 export function parseShareStartParam(startParam) {
   if (typeof startParam !== 'string' || !startParam.startsWith(SHARE_PREFIX)) return null;
   const token = startParam.slice(SHARE_PREFIX.length);
@@ -187,10 +192,12 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
         plans.setShareToken(plan.id, token);
       }
       const link = planShareLink(runtime.botUsername, token);
+      const chatLink = planChatLink(runtime.botUsername, token);
       return {
         token,
         link,
-        text: `Я составил(а) план выбора пути после 9 класса. Посмотри и включи напоминания: ${link}`,
+        chatLink,
+        text: `Я составил(а) план выбора пути после 9 класса. Посмотри и включи напоминания: ${link}\nЕсли не откроется — план в чате с ботом: ${chatLink}`,
       };
     },
 

@@ -1,4 +1,4 @@
-import { openAppKeyboard } from '../bot/survey.js';
+import { reminderKeyboard } from '../bot/keyboards.js';
 import { reminderText } from '../bot/texts.js';
 import { EVENTS } from '../services/analytics.js';
 
@@ -38,7 +38,11 @@ export function createReminderScheduler({
         }
         try {
           await sendMessage(reminder.recipientId, reminderText(reminder), {
-            attachments: [openAppKeyboard(runtime.botUsername, [], 'from_reminder')],
+            // «Сделано» — только владельцу плана: подросток по чужому плану отмечать пункты не может
+            attachments: [reminderKeyboard(runtime.botUsername, {
+              keyDateId: reminder.keyDate.id,
+              canMarkDone: reminder.recipientId === reminder.ownerId,
+            })],
           });
           repos.reminders.markSent(reminder.id);
           analytics?.track(EVENTS.REMINDER_SENT, reminder.recipientId, { keyDateId: reminder.keyDate.id });
