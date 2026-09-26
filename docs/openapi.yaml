@@ -63,6 +63,7 @@ components:
         profileClassRules: { type: [string, 'null'] }
         profileClassRulesUrl: { type: [string, 'null'] }
         checkedAt: { type: [string, 'null'], format: date }
+        hasColleges: { type: boolean, description: Есть ли колледжи региона в справочнике. Если нет — план по федеральным срокам, город не нужен }
     Interest:
       type: object
       required: [id, title]

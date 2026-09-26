@@ -37,6 +37,9 @@ describe('API мини-приложения', () => {
     const regions = (await call('GET', '/api/regions')).json().regions;
     assert.ok(regions.length >= 2);
     assert.ok(regions.some((region) => region.twoOgeExperiment));
+    const byId = Object.fromEntries(regions.map((region) => [region.id, region]));
+    assert.equal(byId.tatarstan.hasColleges, true);
+    assert.equal(byId.other.hasColleges, false, '«Другой регион» — без колледжей в справочнике');
 
     const cities = (await call('GET', '/api/regions/demo-standard/cities')).json().cities;
     assert.deepEqual(cities, ['Демоград', 'Приречный']);
@@ -288,6 +291,40 @@ describe('раздача мини-приложения', () => {
     const api = await ctx.app.inject({ method: 'GET', url: '/api/nope' });
     assert.equal(api.statusCode, 404);
     assert.equal(api.json().error.code, 'not_found');
+
+    await ctx.app.close();
+    ctx.db.close();
+    fs.rmSync(dist, { recursive: true, force: true });
+  });
+
+  test('сжатые копии из сборки и кэширование: assets — надолго, index.html — с проверкой', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const zlib = await import('node:zlib');
+    const dist = fs.mkdtempSync(path.join(os.tmpdir(), 'posle9-dist-'));
+    fs.writeFileSync(path.join(dist, 'index.html'), '<!doctype html><div id="root"></div>');
+    fs.mkdirSync(path.join(dist, 'assets'));
+    const script = 'console.log("мини-приложение");'.repeat(100);
+    fs.writeFileSync(path.join(dist, 'assets', 'app.js'), script);
+    fs.writeFileSync(path.join(dist, 'assets', 'app.js.br'), zlib.brotliCompressSync(script));
+
+    const ctx = createTestApp({ config: { miniappDistDir: dist } });
+    const compressed = await ctx.app.inject({ method: 'GET', url: '/assets/app.js', headers: { 'accept-encoding': 'br, gzip' } });
+    assert.equal(compressed.statusCode, 200);
+    assert.equal(compressed.headers['content-encoding'], 'br');
+    assert.match(compressed.headers['content-type'], /javascript/);
+    assert.equal(compressed.headers['cache-control'], 'public, max-age=31536000, immutable');
+    assert.equal(zlib.brotliDecompressSync(compressed.rawPayload).toString(), script);
+
+    const plain = await ctx.app.inject({ method: 'GET', url: '/assets/app.js' });
+    assert.equal(plain.headers['content-encoding'], undefined, 'без Accept-Encoding — исходный файл');
+    assert.equal(plain.body, script);
+
+    const page = await ctx.app.inject({ method: 'GET', url: '/' });
+    assert.equal(page.headers['cache-control'], 'no-cache');
+    const spa = await ctx.app.inject({ method: 'GET', url: '/plan' });
+    assert.equal(spa.headers['cache-control'], 'no-cache');
 
     await ctx.app.close();
     ctx.db.close();

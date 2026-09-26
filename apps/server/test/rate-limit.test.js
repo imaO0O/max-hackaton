@@ -31,3 +31,24 @@ test('API отвечает 429 с Retry-After, health не ограничива�
   await ctx.app.close();
   ctx.db.close();
 });
+
+test('X-Forwarded-For учитывается только от прокси: из интернета IP не подменить', async () => {
+  const ctx = createTestApp({ config: { rateLimitPerMinute: 2 } });
+  const get = (remoteAddress, forwardedFor) => ctx.app.inject({
+    method: 'GET', url: '/api/regions', remoteAddress, headers: { 'x-forwarded-for': forwardedFor },
+  });
+
+  // Запрос напрямую с публичного адреса: подставной X-Forwarded-For не создаёт новый счётчик
+  assert.equal((await get('203.0.113.7', '198.51.100.1')).statusCode, 200);
+  assert.equal((await get('203.0.113.7', '198.51.100.2')).statusCode, 200);
+  assert.equal((await get('203.0.113.7', '198.51.100.3')).statusCode, 429);
+
+  // Через Caddy в сети Docker: у каждого клиента свой счётчик по X-Forwarded-For
+  assert.equal((await get('172.18.0.3', '198.51.100.10')).statusCode, 200);
+  assert.equal((await get('172.18.0.3', '198.51.100.11')).statusCode, 200);
+  assert.equal((await get('172.18.0.3', '198.51.100.11')).statusCode, 200);
+  assert.equal((await get('172.18.0.3', '198.51.100.11')).statusCode, 429);
+
+  await ctx.app.close();
+  ctx.db.close();
+});
