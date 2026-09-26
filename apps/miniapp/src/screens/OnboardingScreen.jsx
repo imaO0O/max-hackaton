@@ -16,6 +16,13 @@ const PATH_HINTS = {
   undecided: 'Покажем оба пути, чтобы сравнить',
 };
 
+/** Подпись региона в списке: эксперимент с двумя ОГЭ или план только по федеральным срокам. */
+function regionHint(region) {
+  if (region.twoOgeExperiment) return 'Эксперимент: для колледжа можно сдать два ОГЭ вместо четырёх';
+  if (region.hasColleges === false) return 'План по федеральным срокам, колледжей региона в справочнике пока нет';
+  return undefined;
+}
+
 export function OnboardingScreen({ initialProfile, onSaved, onCancel, notice = null }) {
   const reference = useAsync(() => Promise.all([api.regions(), api.interests()]), []);
   const [form, setForm] = useState(() => ({
@@ -90,7 +97,7 @@ export function OnboardingScreen({ initialProfile, onSaved, onCancel, notice = n
             key={region.id}
             as="label"
             title={region.name}
-            subtitle={region.twoOgeExperiment ? 'Эксперимент: для колледжа можно сдать два ОГЭ вместо четырёх' : undefined}
+            subtitle={regionHint(region)}
             after={region.isDemo ? <DemoTag /> : undefined}
             before={(
               <Radio
@@ -111,7 +118,12 @@ export function OnboardingScreen({ initialProfile, onSaved, onCancel, notice = n
         <>
           {cities.status === 'loading' && !cities.data && <LoadingState text="Загружаем города…" />}
           {cities.status === 'error' && <ErrorState error={cities.error} onRetry={cities.reload} />}
-          {cities.data && (
+          {cities.data && cities.data.length === 0 && (
+            <Typography.Body variant="small" className="muted hint">
+              Колледжей этого региона в справочнике пока нет, поэтому город не нужен. План соберём по федеральным срокам.
+            </Typography.Body>
+          )}
+          {cities.data?.length > 0 && (
             <div className="chips">
               <Chip selected={!form.city} onClick={() => update({ city: null })}>Любой город</Chip>
               {cities.data.map((city) => (

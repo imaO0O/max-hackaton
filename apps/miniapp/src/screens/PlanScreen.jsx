@@ -8,7 +8,9 @@ import {
   Card, DemoTag, ScreenHeader, SectionTitle, Tag, useToast,
 } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
-import { daysText, formatDateRange, formatScore } from '../lib/format.js';
+import {
+  daysText, formatDateRange, formatScore, reminderTimeText,
+} from '../lib/format.js';
 import { downloadFile, haptic, shareToMax } from '../lib/max-bridge.js';
 import { clearLocal } from '../lib/storage.js';
 import { useAsync } from '../lib/use-async.js';
@@ -224,7 +226,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
               {!profile.remindersEnabled && 'Выключены — важные даты придётся отслеживать самостоятельно'}
               {profile.remindersEnabled && (isAdvance && plan.data.pendingReminders === 0
                 ? 'Включены — придут, когда появятся новые даты плана'
-                : `Запланировано: ${plan.data.pendingReminders}. Приходят в 10:00 по времени региона`)}
+                : `Запланировано: ${plan.data.pendingReminders}. Приходят в ${reminderTimeText(region.utcOffsetHours)}`)}
             </Typography.Body>
           </span>
           <Switch checked={profile.remindersEnabled} disabled={savingReminders} onChange={toggleReminders} />

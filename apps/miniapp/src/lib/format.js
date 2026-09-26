@@ -41,3 +41,10 @@ export const daysText = (count) => `${count} ${plural(count, ['день', 'дн�
 export function formatScore(value) {
   return value === null || value === undefined ? '—' : value.toFixed(2).replace('.', ',');
 }
+
+/** Когда приходят напоминания: у Москвы и Татарстана — «по московскому времени», иначе — местное с поясом. */
+export function reminderTimeText(utcOffsetHours) {
+  if (utcOffsetHours === 3) return '10:00 по московскому времени';
+  const sign = utcOffsetHours >= 0 ? '+' : '−';
+  return `10:00 по местному времени (UTC${sign}${Math.abs(utcOffsetHours)})`;
+}
