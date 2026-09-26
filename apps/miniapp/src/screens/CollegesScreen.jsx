@@ -207,6 +207,7 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
 
   const [cities, interests] = reference.data ?? [[], []];
   const hasFilters = filters.city || filters.interests.length || filters.form || filters.budgetOnly || filters.withinMyScore;
+  const noColleges = Boolean(reference.data) && cities.length === 0;
 
   return (
     <div className="page">
@@ -238,124 +239,127 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
         </>
       )}
 
-      <SectionTitle after={hasFilters ? <button type="button" className="link-button" onClick={resetFilters}>Сбросить</button> : null}>
-        Фильтры
-      </SectionTitle>
-
-      {reference.status === 'error' && <ErrorState error={reference.error} onRetry={reference.reload} />}
-      {reference.data && (
-        <div className="filters">
-          <div className="chips" aria-label="Город">
-            <Chip selected={!filters.city} onClick={() => setFilter({ city: null })}>Все города</Chip>
-            {cities.map((city) => (
-              <Chip key={city} selected={filters.city === city} onClick={() => setFilter({ city })}>{city}</Chip>
-            ))}
-          </div>
-          <div className="chips" aria-label="Сферы">
-            {interests.map((interest) => (
-              <Chip
-                key={interest.id}
-                selected={filters.interests.includes(interest.id)}
-                onClick={() => setFilter({
-                  interests: filters.interests.includes(interest.id)
-                    ? filters.interests.filter((id) => id !== interest.id)
-                    : [...filters.interests, interest.id],
-                })}
-              >
-                {interest.emoji} {interest.title}
-              </Chip>
-            ))}
-          </div>
-          <div className="chips" aria-label="Форма обучения">
-            <Chip selected={!filters.form} onClick={() => setFilter({ form: null })}>Любая форма</Chip>
-            {Object.entries(STUDY_FORMS).map(([form, title]) => (
-              <Chip key={form} selected={filters.form === form} onClick={() => setFilter({ form })}>{title}</Chip>
-            ))}
-          </div>
-          <label className="switch-row">
-            <span>Только с бюджетными местами</span>
-            <Switch checked={filters.budgetOnly} onChange={() => setFilter({ budgetOnly: !filters.budgetOnly })} />
-          </label>
-          <label className="switch-row">
-            <span>
-              <span>Где в прошлом году проходили с моим баллом</span>
-              <Typography.Body variant="small" className="muted">
-                {myAverage !== null
-                  ? `Ваш расчёт — ${formatScore(myAverage)}. Это ориентир, а не прогноз: проходной балл меняется каждый год`
-                  : 'Сначала посчитайте средний балл на вкладке «Балл»'}
-              </Typography.Body>
-            </span>
-            <Switch
-              checked={scoreFilterOn}
-              disabled={myAverage === null}
-              onChange={() => setFilter({ withinMyScore: !filters.withinMyScore })}
-            />
-          </label>
-          {myAverage === null && onOpenTab && (
-            <button type="button" className="link-button" onClick={() => onOpenTab('grades')}>Посчитать средний балл</button>
-          )}
-        </div>
-      )}
-
-      {scoreFilterOn && (
-        <Typography.Body variant="small" className="muted hint">
-          Показаны программы, где прошлогодний проходной балл не выше вашего расчёта. Программы, по которым колледж не опубликовал балл, скрыты — их можно посмотреть без этого фильтра.
-        </Typography.Body>
-      )}
-
-      {list.some((college) => college.isDemo) && (
-        <Typography.Body variant="small" className="muted hint">
-          <DemoTag /> Колледжи и баллы вымышленные — для демонстрации. Реальные данные региона добавляются в справочник.
-        </Typography.Body>
-      )}
-
-      <SectionTitle after={colleges.status === 'loading' && colleges.data ? <Tag>обновляем…</Tag> : null}>
-        {colleges.data ? `Найдено: ${list.length}` : 'Колледжи'}
-      </SectionTitle>
-
-      {!colleges.data && colleges.status === 'loading' && <LoadingState text="Ищем колледжи…" />}
-      {colleges.status === 'error' && <ErrorState error={colleges.error} onRetry={colleges.reload} />}
-      {colleges.data && list.length === 0 && scoreFilterOn && (colleges.data.length > 0) && (
-        <EmptyState
-          title="С вашим баллом совпадений нет"
-          text="В прошлом году проходные баллы по этой подборке были выше вашего расчёта или колледжи их не опубликовали. Баллы меняются каждый год — посмотрите все программы и подтяните оценки, пока это возможно"
-          action={<Button size="medium" variant="secondary" onClick={() => setFilter({ withinMyScore: false })}>Показать все программы</Button>}
-        />
-      )}
-      {reference.data && cities.length === 0 && (
+      {noColleges ? (
         <EmptyState
           title="Колледжей этого региона в справочнике пока нет"
           text="Сейчас собраны колледжи Республики Татарстан. Для своего региона смотрите сайт регионального министерства образования и сайты колледжей. Даты плана, напоминания и сравнение путей работают для любого региона"
         />
-      )}
-      {colleges.data && list.length === 0 && cities.length > 0 && !(scoreFilterOn && colleges.data.length > 0) && (
-        <EmptyState
-          title="По этим фильтрам ничего не нашлось"
-          text="Попробуйте выбрать другой город или убрать часть фильтров"
-          action={<Button size="medium" variant="secondary" onClick={resetFilters}>Сбросить фильтры</Button>}
-        />
-      )}
-      {list.length > 0 && (
-        <CellList mode="island" filled>
-          {list.map((college) => {
-            const score = minScore(college.programs);
-            const favoriteCount = college.programs.filter((program) => favoriteIds.has(program.id)).length;
-            return (
-              <CellSimple
-                key={college.id}
-                showChevron
-                onClick={() => setOpenCollegeId(college.id)}
-                title={college.name}
-                subtitle={[
-                  college.city,
-                  `${college.programs.length} ${plural(college.programs.length, ['программа', 'программы', 'программ'])}`,
-                  score !== null ? `балл от ${formatScore(score)}` : 'баллы не указаны',
-                ].join(' · ')}
-                after={favoriteCount > 0 ? <Tag tone="accent">{`★ ${favoriteCount}`}</Tag> : null}
-              />
-            );
-          })}
-        </CellList>
+      ) : (
+        <>
+          <SectionTitle after={hasFilters ? <button type="button" className="link-button" onClick={resetFilters}>Сбросить</button> : null}>
+            Фильтры
+          </SectionTitle>
+
+          {reference.status === 'error' && <ErrorState error={reference.error} onRetry={reference.reload} />}
+          {reference.data && (
+            <div className="filters">
+              <div className="chips" aria-label="Город">
+                <Chip selected={!filters.city} onClick={() => setFilter({ city: null })}>Все города</Chip>
+                {cities.map((city) => (
+                  <Chip key={city} selected={filters.city === city} onClick={() => setFilter({ city })}>{city}</Chip>
+                ))}
+              </div>
+              <div className="chips" aria-label="Сферы">
+                {interests.map((interest) => (
+                  <Chip
+                    key={interest.id}
+                    selected={filters.interests.includes(interest.id)}
+                    onClick={() => setFilter({
+                      interests: filters.interests.includes(interest.id)
+                        ? filters.interests.filter((id) => id !== interest.id)
+                        : [...filters.interests, interest.id],
+                    })}
+                  >
+                    {interest.emoji} {interest.title}
+                  </Chip>
+                ))}
+              </div>
+              <div className="chips" aria-label="Форма обучения">
+                <Chip selected={!filters.form} onClick={() => setFilter({ form: null })}>Любая форма</Chip>
+                {Object.entries(STUDY_FORMS).map(([form, title]) => (
+                  <Chip key={form} selected={filters.form === form} onClick={() => setFilter({ form })}>{title}</Chip>
+                ))}
+              </div>
+              <label className="switch-row">
+                <span>Только с бюджетными местами</span>
+                <Switch checked={filters.budgetOnly} onChange={() => setFilter({ budgetOnly: !filters.budgetOnly })} />
+              </label>
+              <label className="switch-row">
+                <span>
+                  <span>Где в прошлом году проходили с моим баллом</span>
+                  <Typography.Body variant="small" className="muted">
+                    {myAverage !== null
+                      ? `Ваш расчёт — ${formatScore(myAverage)}. Это ориентир, а не прогноз: проходной балл меняется каждый год`
+                      : 'Сначала посчитайте средний балл на вкладке «Балл»'}
+                  </Typography.Body>
+                </span>
+                <Switch
+                  checked={scoreFilterOn}
+                  disabled={myAverage === null}
+                  onChange={() => setFilter({ withinMyScore: !filters.withinMyScore })}
+                />
+              </label>
+              {myAverage === null && onOpenTab && (
+                <button type="button" className="link-button" onClick={() => onOpenTab('grades')}>Посчитать средний балл</button>
+              )}
+            </div>
+          )}
+
+          {scoreFilterOn && (
+            <Typography.Body variant="small" className="muted hint">
+              Показаны программы, где прошлогодний проходной балл не выше вашего расчёта. Программы, по которым колледж не опубликовал балл, скрыты — их можно посмотреть без этого фильтра.
+            </Typography.Body>
+          )}
+
+          {list.some((college) => college.isDemo) && (
+            <Typography.Body variant="small" className="muted hint">
+              <DemoTag /> Колледжи и баллы вымышленные — для демонстрации. Реальные данные региона добавляются в справочник.
+            </Typography.Body>
+          )}
+
+          <SectionTitle after={colleges.status === 'loading' && colleges.data ? <Tag>обновляем…</Tag> : null}>
+            {colleges.data ? `Найдено: ${list.length}` : 'Колледжи'}
+          </SectionTitle>
+
+          {!colleges.data && colleges.status === 'loading' && <LoadingState text="Ищем колледжи…" />}
+          {colleges.status === 'error' && <ErrorState error={colleges.error} onRetry={colleges.reload} />}
+          {colleges.data && list.length === 0 && scoreFilterOn && (colleges.data.length > 0) && (
+            <EmptyState
+              title="С вашим баллом совпадений нет"
+              text="В прошлом году проходные баллы по этой подборке были выше вашего расчёта или колледжи их не опубликовали. Баллы меняются каждый год — посмотрите все программы и подтяните оценки, пока это возможно"
+              action={<Button size="medium" variant="secondary" onClick={() => setFilter({ withinMyScore: false })}>Показать все программы</Button>}
+            />
+          )}
+          {colleges.data && list.length === 0 && cities.length > 0 && !(scoreFilterOn && colleges.data.length > 0) && (
+            <EmptyState
+              title="По этим фильтрам ничего не нашлось"
+              text="Попробуйте выбрать другой город или убрать часть фильтров"
+              action={<Button size="medium" variant="secondary" onClick={resetFilters}>Сбросить фильтры</Button>}
+            />
+          )}
+          {list.length > 0 && (
+            <CellList mode="island" filled>
+              {list.map((college) => {
+                const score = minScore(college.programs);
+                const favoriteCount = college.programs.filter((program) => favoriteIds.has(program.id)).length;
+                return (
+                  <CellSimple
+                    key={college.id}
+                    showChevron
+                    onClick={() => setOpenCollegeId(college.id)}
+                    title={college.name}
+                    subtitle={[
+                      college.city,
+                      `${college.programs.length} ${plural(college.programs.length, ['программа', 'программы', 'программ'])}`,
+                      score !== null ? `балл от ${formatScore(score)}` : 'баллы не указаны',
+                    ].join(' · ')}
+                    after={favoriteCount > 0 ? <Tag tone="accent">{`★ ${favoriteCount}`}</Tag> : null}
+                  />
+                );
+              })}
+            </CellList>
+          )}
+        </>
       )}
 
       {toast}

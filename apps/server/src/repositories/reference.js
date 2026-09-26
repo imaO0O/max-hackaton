@@ -10,8 +10,12 @@ function mapRegion(row) {
     profileClassRules: row.profile_class_rules,
     profileClassRulesUrl: row.profile_class_rules_url,
     checkedAt: row.checked_at,
+    // Есть ли колледжи региона в справочнике: если нет, мини-приложение не спрашивает город и не показывает фильтры
+    hasColleges: toBool(row.has_colleges),
   };
 }
+
+const REGION_COLUMNS = 'r.*, EXISTS (SELECT 1 FROM colleges c WHERE c.region_id = r.id) AS has_colleges';
 
 function mapProgram(row) {
   return {
@@ -88,11 +92,11 @@ function groupColleges(rows) {
 export function createReferenceRepository(db) {
   return {
     listRegions() {
-      return db.prepare('SELECT * FROM regions ORDER BY is_demo, sort_order, name').all().map(mapRegion);
+      return db.prepare(`SELECT ${REGION_COLUMNS} FROM regions r ORDER BY r.is_demo, r.sort_order, r.name`).all().map(mapRegion);
     },
 
     getRegion(id) {
-      return mapRegion(db.prepare('SELECT * FROM regions WHERE id = ?').get(id)) ?? null;
+      return mapRegion(db.prepare(`SELECT ${REGION_COLUMNS} FROM regions r WHERE r.id = ?`).get(id)) ?? null;
     },
 
     listInterests() {

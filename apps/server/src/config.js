@@ -57,13 +57,19 @@ export function loadConfig(env = process.env) {
     rateLimitPerMinute: parseInteger('RATE_LIMIT_PER_MINUTE', env.RATE_LIMIT_PER_MINUTE, 300, { min: 0 }),
     appVersion: env.APP_VERSION || 'local',
     botRateLimitPerMinute: parseInteger('BOT_RATE_LIMIT_PER_MINUTE', env.BOT_RATE_LIMIT_PER_MINUTE, 40, { min: 0 }),
+    // Чьим заголовкам X-Forwarded-For верить: по умолчанию — локальным адресам и сети Docker, где работает Caddy.
+    // Запрос напрямую из интернета не может подменить свой IP и обойти ограничение частоты запросов
+    trustProxy: env.TRUST_PROXY || 'loopback,uniquelocal',
   };
 
-  if (config.botEnabled && !config.botToken) {
-    throw new Error('BOT_TOKEN не задан. Укажите токен или выключите бота: BOT_ENABLED=false');
-  }
-
   config.warnings = [];
+
+  // Без токена сервер не падает, а работает без бота: так проект запускается одной командой
+  // и без выданного токена (справочники, мини-приложение, /api/health). /api/health покажет "bot":"disabled"
+  if (config.botEnabled && !config.botToken) {
+    config.botEnabled = false;
+    config.warnings.push('BOT_TOKEN не задан: бот и напоминания выключены. Укажите токен в .env и перезапустите сервис');
+  }
 
   // Как бот получает события: polling (по умолчанию) или webhook — рекомендованный MAX для production.
   // Адрес Webhook — BOT_WEBHOOK_URL или домен из DOMAIN (тот же, что у HTTPS-прокси).

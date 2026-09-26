@@ -3,6 +3,13 @@
 # С HTTPS-прокси (нужен домен, направленный на сервер, и открытые порты 80/443):
 #   docker compose --profile https up --build -d
 
+# Логи контейнеров: не больше 3 файлов по 10 МБ, чтобы за время проверки не занять диск сервера
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   app:
     build:
@@ -19,9 +26,12 @@ services:
       PORT: 8080
       DATABASE_PATH: /app/storage/posle9.sqlite
     ports:
-      - "${APP_PORT:-8080}:8080"
+      # По умолчанию порт доступен только с этой машины: снаружи сервис открывается через HTTPS-прокси Caddy.
+      # Открыть порт в сеть без прокси — APP_BIND=0.0.0.0 в .env
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8080}:8080"
     volumes:
       - storage:/app/storage
+    logging: *logging
     restart: unless-stopped
 
   caddy:
@@ -35,6 +45,7 @@ services:
     command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to app:8080
     volumes:
       - caddy_data:/data
+    logging: *logging
     restart: unless-stopped
 
 volumes:

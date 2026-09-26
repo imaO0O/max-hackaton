@@ -18,7 +18,7 @@ import { registerPlanRoutes } from './routes/plan.js';
 export function buildApp({ config, services, runtime, logger = true }) {
   const app = Fastify({
     logger: logger === true ? { level: config.logLevel } : logger,
-    trustProxy: true,
+    trustProxy: config.trustProxy ?? 'loopback,uniquelocal',
     bodyLimit: 64 * 1024,
   });
 
@@ -108,7 +108,18 @@ export function buildApp({ config, services, runtime, logger = true }) {
   const indexHtml = path.join(config.miniappDistDir, 'index.html');
   const hasMiniapp = fs.existsSync(indexHtml);
   if (hasMiniapp) {
-    app.register(fastifyStatic, { root: config.miniappDistDir, index: ['index.html'] });
+    app.register(fastifyStatic, {
+      root: config.miniappDistDir,
+      index: ['index.html'],
+      // Сборка кладёт рядом сжатые копии .br и .gz — отдаём их, если клиент их принимает
+      preCompressed: true,
+      cacheControl: false,
+      setHeaders(reply, filePath) {
+        // Файлы из assets/ с хэшем в имени не меняются — кэшируем надолго; index.html проверяется при каждом открытии
+        const cacheable = filePath.split(path.sep).includes('assets');
+        reply.header('Cache-Control', cacheable ? 'public, max-age=31536000, immutable' : 'no-cache');
+      },
+    });
   }
 
   app.setNotFoundHandler((request, reply) => {
