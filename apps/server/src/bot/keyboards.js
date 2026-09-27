@@ -6,6 +6,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
  *   share:show, share:revoke, share:revoke-confirm, follow:<токен>, unfollow:<токен>, reminders:toggle, reminder:example, paths:show, survey:…, data:…
  * План по ссылке: shared-all:<токен>, family:show (план семьи у того, кто на него подписан).
  * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
+ * Шаг чек-листа в карточке пункта: st:<id пункта>:<id шага> — переключает отметку.
  */
 
 const button = Keyboard.button;
@@ -104,6 +105,13 @@ export function planItemsKeyboard(items, labelOf) {
 /** Под карточкой пункта: отметка, источник, назад к датам (или в меню, если пункта нет в плане). */
 export function planItemKeyboard({ item, canMarkDone, back = 'plan:all' }) {
   const rows = [];
+  // Шаги чек-листа: номер и короткая подпись — полный текст шага в сообщении
+  if (canMarkDone && item.steps?.length) {
+    item.steps.forEach((step, index) => {
+      const title = step.title.length > 34 ? `${step.title.slice(0, 33)}…` : step.title;
+      rows.push([button.callback(`${step.done ? '✅' : '▫️'} ${index + 1}. ${title}`, `st:${item.id}:${step.id}`)]);
+    });
+  }
   if (canMarkDone) {
     rows.push([item.done
       ? button.callback('↩️ Снять отметку', `item-undo:${item.id}`)

@@ -36,6 +36,18 @@ export function createPlanRepository(db) {
         .run(planId, keyDateId, done ? 1 : 0, nowIso());
     },
 
+    /** Отмеченные шаги чек-листов плана: множество «пункт/шаг». */
+    listDoneSteps(planId) {
+      return new Set(db.prepare('SELECT key_date_id, step_id FROM plan_step_states WHERE plan_id = ? AND done = 1').all(planId)
+        .map((row) => `${row.key_date_id}/${row.step_id}`));
+    },
+
+    setStepDone(planId, keyDateId, stepId, done) {
+      db.prepare(`INSERT INTO plan_step_states (plan_id, key_date_id, step_id, done, updated_at) VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT(plan_id, key_date_id, step_id) DO UPDATE SET done = excluded.done, updated_at = excluded.updated_at`)
+        .run(planId, keyDateId, stepId, done ? 1 : 0, nowIso());
+    },
+
     addFollower(planId, userId) {
       db.prepare(`INSERT INTO plan_followers (plan_id, user_id, created_at) VALUES (?, ?, ?)
         ON CONFLICT(plan_id, user_id) DO NOTHING`).run(planId, userId, nowIso());

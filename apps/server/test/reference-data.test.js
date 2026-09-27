@@ -37,6 +37,16 @@ test('реальные данные без источника и даты про
   assert.equal(errors.length, 2, errors.join('\n'));
 });
 
+test('шаги чек-листа: только у чек-листа, с уникальными id и подписью', () => {
+  const data = loadReferenceData(testConfig().dataDir);
+  const broken = structuredClone(data);
+  const checklist = broken.keyDates.find((item) => item.steps);
+  checklist.steps.push({ id: checklist.steps[0].id, title: '' });
+  broken.keyDates.find((item) => item.kind === 'deadline').steps = [{ id: 'x', title: 'Шаг' }];
+  const errors = validateReferenceData(broken);
+  assert.equal(errors.length, 3, errors.join('\n'));
+});
+
 test('повторная загрузка справочников сохраняет избранное и удаляет исчезнувшие записи', () => {
   const db = openDatabase(':memory:');
   const data = loadReferenceData(testConfig().dataDir);

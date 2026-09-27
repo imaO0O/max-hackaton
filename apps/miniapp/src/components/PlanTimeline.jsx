@@ -18,9 +18,43 @@ function statusText(item) {
   return `через ${daysText(item.daysLeft)}`;
 }
 
-function PlanItem({ item, highlighted, onToggleDone, pending, regionIsDemo }) {
+/** Шаги чек-листа: с отметками у владельца плана, только чтение — у подростка по ссылке. */
+function ChecklistSteps({ item, onToggleStep, pendingSteps }) {
+  return (
+    <ul className="steps" aria-label={`Шаги: ${item.title}`}>
+      {item.steps.map((step) => {
+        const key = `${item.id}/${step.id}`;
+        return (
+          <li key={step.id} className={`steps__item ${step.done ? 'steps__item--done' : ''}`}>
+            {onToggleStep ? (
+              <button
+                type="button"
+                className={`checkbox checkbox--small ${step.done ? 'checkbox--checked' : ''}`}
+                aria-pressed={step.done}
+                aria-label={step.done ? `Снять отметку: ${step.title}` : `Отметить: ${step.title}`}
+                disabled={pendingSteps.has(key)}
+                onClick={() => onToggleStep(item, step)}
+              >
+                {step.done ? '✓' : ''}
+              </button>
+            ) : (
+              <span className="steps__mark" aria-hidden="true">{step.done ? '✓' : '•'}</span>
+            )}
+            <Typography.Body variant="small">{step.title}</Typography.Body>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function PlanItem({
+  item, highlighted, onToggleDone, pending, regionIsDemo, onToggleStep, pendingSteps,
+}) {
   const [expanded, setExpanded] = useState(highlighted);
   const scope = SCOPE_TAGS[item.scope];
+  const steps = item.steps ?? [];
+  const stepsDone = steps.filter((step) => step.done).length;
 
   return (
     <li className={`plan-item plan-item--${item.status} ${item.done ? 'plan-item--done' : ''} ${highlighted ? 'plan-item--next' : ''}`}>
@@ -49,12 +83,14 @@ function PlanItem({ item, highlighted, onToggleDone, pending, regionIsDemo }) {
           <span className="plan-item__meta">
             <Tag tone={item.status === 'current' || highlighted ? 'accent' : 'neutral'}>{statusText(item)}</Tag>
             <Tag tone={scope.tone}>{scope.text}</Tag>
+            {steps.length > 0 && <Tag tone={stepsDone === steps.length ? 'soft' : 'neutral'}>{`шаги ${stepsDone} из ${steps.length}`}</Tag>}
           </span>
         </button>
 
         {expanded && (
           <div className="plan-item__details">
             <Typography.Body variant="small" className="preline">{item.description}</Typography.Body>
+            {steps.length > 0 && <ChecklistSteps item={item} onToggleStep={onToggleStep} pendingSteps={pendingSteps} />}
             {item.scope !== 'recommendation' && (
               <SourceNote
                 title={item.sourceTitle}
@@ -71,7 +107,9 @@ function PlanItem({ item, highlighted, onToggleDone, pending, regionIsDemo }) {
 }
 
 /** Пункты плана, сгруппированные по месяцам. Без onToggleDone — режим только для чтения. */
-export function PlanTimeline({ items, nextItemId, onToggleDone, pendingIds = new Set(), regionIsDemo, hidePast }) {
+export function PlanTimeline({
+  items, nextItemId, onToggleDone, pendingIds = new Set(), regionIsDemo, hidePast, onToggleStep, pendingSteps = new Set(),
+}) {
   const visible = hidePast ? items.filter((item) => item.status !== 'past' || item.id === nextItemId) : items;
   const groups = [];
   for (const item of visible) {
@@ -94,6 +132,8 @@ export function PlanTimeline({ items, nextItemId, onToggleDone, pendingIds = new
                 onToggleDone={onToggleDone}
                 pending={pendingIds.has(item.id)}
                 regionIsDemo={regionIsDemo}
+                onToggleStep={onToggleStep}
+                pendingSteps={pendingSteps}
               />
             ))}
           </ul>

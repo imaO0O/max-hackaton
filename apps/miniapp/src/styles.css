@@ -834,3 +834,38 @@ button {
     color: #4cd964;
   }
 }
+
+/* Шаги чек-листа в пункте плана */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 10px 0 4px;
+  padding: 0;
+  list-style: none;
+}
+
+.steps__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.steps__item--done .vkuiTypography,
+.steps__item--done p {
+  color: var(--text-secondary);
+}
+
+.steps__mark {
+  flex: 0 0 22px;
+  text-align: center;
+  color: var(--icon-positive);
+}
+
+.checkbox--small {
+  width: 22px;
+  height: 22px;
+  margin-top: 0;
+  border-radius: 6px;
+  font-size: 13px;
+}

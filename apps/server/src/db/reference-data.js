@@ -124,6 +124,18 @@ export function validateReferenceData({ regions, interests, specialties, college
     } else {
       check(!keyDate.regionId, `${label}: regionId заполняется только у региональных дат`);
     }
+    if (keyDate.steps !== undefined) {
+      check(keyDate.kind === 'checklist', `${label}: шаги (steps) бывают только у чек-листа (kind: checklist)`);
+      check(Array.isArray(keyDate.steps) && keyDate.steps.length > 0, `${label}: steps — непустой массив`);
+      const stepIds = new Set();
+      for (const step of Array.isArray(keyDate.steps) ? keyDate.steps : []) {
+        check(/^[a-z0-9-]{1,30}$/.test(step.id ?? ''), `${label}: некорректный id шага «${step.id}»`);
+        check(!stepIds.has(step.id), `${label}: шаг «${step.id}» повторяется`);
+        stepIds.add(step.id);
+        check(typeof step.title === 'string' && step.title.length > 0 && step.title.length <= 150,
+          `${label}: у шага «${step.id}» нужен title до 150 символов`);
+      }
+    }
     check(Array.isArray(keyDate.reminders), `${label}: reminders должен быть массивом`);
     for (const rule of keyDate.reminders ?? []) {
       check(['start', 'end'].includes(rule.anchor) && Number.isInteger(rule.daysBefore) && rule.daysBefore >= 0,
@@ -196,19 +208,20 @@ export function applyReferenceData(db, data) {
 
     const upsertKeyDate = db.prepare(`
       INSERT INTO key_dates (id, academic_year, scope, region_id, kind, path, experiment, date_start, date_end,
-        is_approximate, title, description, reminders, source_title, source_url, checked_at, grade)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_approximate, title, description, reminders, source_title, source_url, checked_at, grade, steps)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET academic_year = excluded.academic_year, scope = excluded.scope,
         region_id = excluded.region_id, kind = excluded.kind, path = excluded.path, experiment = excluded.experiment,
         date_start = excluded.date_start, date_end = excluded.date_end, is_approximate = excluded.is_approximate,
         title = excluded.title, description = excluded.description, reminders = excluded.reminders,
         source_title = excluded.source_title, source_url = excluded.source_url, checked_at = excluded.checked_at,
-        grade = excluded.grade`);
+        grade = excluded.grade, steps = excluded.steps`);
     for (const keyDate of data.keyDates) {
       upsertKeyDate.run(keyDate.id, keyDate.academicYear, keyDate.scope, keyDate.regionId ?? null, keyDate.kind,
         keyDate.path, keyDate.experiment, keyDate.dateStart, keyDate.dateEnd ?? null, bool(keyDate.isApproximate),
         keyDate.title, keyDate.description, JSON.stringify(keyDate.reminders ?? []), keyDate.sourceTitle ?? null,
-        keyDate.sourceUrl ?? null, keyDate.checkedAt ?? null, keyDate.grade ?? null);
+        keyDate.sourceUrl ?? null, keyDate.checkedAt ?? null, keyDate.grade ?? null,
+        keyDate.steps ? JSON.stringify(keyDate.steps) : null);
     }
 
     deleteMissing(db, 'key_dates', 'id', data.keyDates.map((item) => item.id));
