@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Typography } from '@maxhub/max-ui';
 
 import { daysText, formatDateRange, monthKey, monthTitle } from '../lib/format.js';
+import { ReportButton } from './ReportButton.jsx';
 import { SourceNote, Tag } from './ui.jsx';
 
 const SCOPE_TAGS = {
@@ -98,6 +99,10 @@ function PlanItem({
                 checkedAt={item.checkedAt}
                 isDemo={item.scope === 'regional' && regionIsDemo}
               />
+            )}
+            {/* О неточности сообщают только про факты с источником: у советов сервиса и демо-дат источника нет */}
+            {item.scope !== 'recommendation' && !(item.scope === 'regional' && regionIsDemo) && (
+              <ReportButton targetType="item" targetId={item.id} />
             )}
           </div>
         )}

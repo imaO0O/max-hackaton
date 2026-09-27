@@ -8,6 +8,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
  * План по ссылке: shared-all:<токен>, family:show (план семьи у того, кто на него подписан).
  * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
  * Шаг чек-листа в карточке пункта: st:<id пункта>:<id шага> — переключает отметку.
+ * Неточность в данных: rp:<p|i>:<id> — выбор причины, rr:<p|i>:<причина>:<id> — сохранить (reports-chat.js).
  */
 
 const button = Keyboard.button;
@@ -28,6 +29,11 @@ export function openAppKeyboard(botUsername, extraRows = [], source = 'from_bot'
     rows.unshift([button.openApp(title, botUsername, undefined, source)]);
   }
   return Keyboard.inlineKeyboard(rows);
+}
+
+/** Кнопка «Неточность в данных» под карточкой программы колледжа (p) или пункта плана (i). */
+export function reportButtonRow(code, targetId) {
+  return [button.callback('⚠️ Неточность в данных', `rp:${code}:${targetId}`)];
 }
 
 /** Главное меню для тех, кто уже прошёл опрос: весь сценарий доступен и без мини-приложения. */
@@ -125,6 +131,8 @@ export function planItemKeyboard({ item, canMarkDone, back = 'plan:all' }) {
   // Заявление на ОГЭ в регионе эксперимента: рядом — подсказка, сколько экзаменов выбрать
   if (item.experiment === 'two_oge') rows.push(EXAM_ADVICE);
   if (item.sourceUrl) rows.push([button.link('Источник', item.sourceUrl)]);
+  // У советов сервиса нет источника — сообщать о неточности можно только о фактах
+  if (item.scope !== 'recommendation') rows.push(reportButtonRow('i', item.id));
   rows.push([back === 'plan:all' ? button.callback('← Все даты', 'plan:all') : button.callback('← Меню', 'menu:show')]);
   return Keyboard.inlineKeyboard(rows);
 }

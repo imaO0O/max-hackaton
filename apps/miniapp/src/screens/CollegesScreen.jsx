@@ -3,6 +3,7 @@ import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui
 import { STUDY_FORMS } from '@posle9/core';
 
 import { ProgramCompare } from '../components/ProgramCompare.jsx';
+import { ReportButton } from '../components/ReportButton.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
 import {
   Card, Chip, DemoTag, ScreenHeader, SectionTitle, SourceNote, Tag, useToast,
@@ -66,6 +67,7 @@ function ProgramCard({
       )}
 
       <SourceNote title="Источник" url={program.sourceUrl} checkedAt={program.checkedAt} isDemo={isDemo} />
+      {!isDemo && <ReportButton targetType="program" targetId={program.id} />}
     </Card>
   );
 }

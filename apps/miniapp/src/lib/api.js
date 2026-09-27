@@ -93,6 +93,7 @@ export const api = {
   revokeShare: () => request('DELETE', '/plan/share'),
   calendarLink: () => request('POST', '/plan/calendar-link'),
   deleteMyData: () => request('DELETE', '/profile'),
+  report: ({ targetType, targetId, reason }) => request('POST', '/reports', { targetType, targetId, reason }),
   sharedPlan: (token) => request('GET', `/shared-plans/${encodeURIComponent(token)}`),
   followSharedPlan: (token, follow) => request('PUT', `/shared-plans/${encodeURIComponent(token)}/follow`, { follow }),
 };

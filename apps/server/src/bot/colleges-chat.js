@@ -3,7 +3,7 @@ import { STUDY_FORMS } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
-import { openAppKeyboard, startKeyboard } from './keyboards.js';
+import { openAppKeyboard, reportButtonRow, startKeyboard } from './keyboards.js';
 import { formatCheckedAt, texts } from './texts.js';
 
 /**
@@ -139,6 +139,7 @@ export function registerCollegesChat({ bot, users, reference, services, runtime 
       ? button.callback('Убрать из избранного', `pu:${programId}`)
       : button.callback('☆ В избранное', `pf:${programId}`)]];
     if (program.sourceUrl) rows.push([button.link('Источник', program.sourceUrl)]);
+    rows.push(reportButtonRow('p', programId));
     rows.push([button.callback('← Все программы', 'colleges:show')]);
     return { text: programCard(program, isFavorite), keyboard: Keyboard.inlineKeyboard(rows) };
   }

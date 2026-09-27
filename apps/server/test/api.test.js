@@ -121,6 +121,40 @@ describe('API мини-приложения', () => {
     assert.equal((await call('PUT', url('documents'), { body: { done: true } })).statusCode, 401);
   });
 
+  test('сообщить о неточности: один раз от семьи, причина из списка, обезличивание после удаления данных', async () => {
+    const REPORTER = 4004;
+    const program = (await call('GET', '/api/colleges?regionId=tatarstan')).json().colleges[0].programs[0];
+    const body = { targetType: 'program', targetId: program.id, reason: 'score' };
+
+    assert.equal((await call('POST', '/api/reports', { body })).statusCode, 401);
+    const first = await call('POST', '/api/reports', { user: REPORTER, body });
+    assert.equal(first.statusCode, 201);
+    assert.deepEqual(first.json(), { created: true });
+    const again = await call('POST', '/api/reports', { user: REPORTER, body });
+    assert.equal(again.statusCode, 200);
+    assert.deepEqual(again.json(), { created: false }, 'повтор не создаёт второе сообщение');
+
+    const item = await call('POST', '/api/reports', {
+      user: REPORTER, body: { targetType: 'item', targetId: '2627-fed-college-admission', reason: 'date' },
+    });
+    assert.equal(item.statusCode, 201);
+    const wrongReason = await call('POST', '/api/reports', {
+      user: REPORTER, body: { targetType: 'item', targetId: '2627-fed-college-admission', reason: 'score' },
+    });
+    assert.equal(wrongReason.statusCode, 400, 'у даты нет причины «балл»');
+    const missing = await call('POST', '/api/reports', { user: REPORTER, body: { ...body, targetId: 'no-such-program' } });
+    assert.equal(missing.statusCode, 404);
+    // Свободный текст не сохраняется: лишние поля Fastify отбрасывает, столбца для текста в таблице нет
+    const extra = await call('POST', '/api/reports', { user: REPORTER, body: { ...body, comment: 'текст' } });
+    assert.deepEqual(extra.json(), { created: false });
+    assert.ok(!Object.keys(ctx.db.prepare('SELECT * FROM data_reports LIMIT 1').get()).includes('comment'));
+
+    await call('DELETE', '/api/profile', { user: REPORTER });
+    const rows = ctx.db.prepare('SELECT user_id FROM data_reports').all();
+    assert.equal(rows.length, 2, 'сообщения остаются для команды проекта');
+    assert.ok(rows.every((row) => row.user_id === null), 'но без ID пользователя');
+  });
+
   test('без подписи мини-приложения личные данные недоступны', async () => {
     const response = await call('GET', '/api/plan');
     assert.equal(response.statusCode, 401);
