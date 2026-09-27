@@ -83,6 +83,44 @@ describe('API мини-приложения', () => {
     assert.equal(all.find((college) => college.id === 'tat-kazan-medical-college').inExperimentList, false);
   });
 
+  test('чек-лист поступления: шаги с отметками, все шаги — пункт выполнен', async () => {
+    const FAMILY = 3003;
+    await call('PUT', '/api/profile', {
+      user: FAMILY, body: { regionId: 'demo-standard', grade: 9, path: 'college', interests: ['it'] },
+    });
+    const checklistOf = async () => (await call('GET', '/api/plan', { user: FAMILY })).json().items
+      .find((item) => item.id === '2627-chk-summer-checklist');
+    const checklist = await checklistOf();
+    assert.equal(checklist.steps.length, 6);
+    assert.ok(checklist.steps.every((step) => step.done === false));
+    const other = (await call('GET', '/api/plan', { user: FAMILY })).json().items.find((item) => item.id !== checklist.id);
+    assert.deepEqual(other.steps, [], 'у обычных пунктов шагов нет');
+
+    const url = (stepId) => `/api/plan/items/${checklist.id}/steps/${stepId}`;
+    const first = await call('PUT', url('documents'), { user: FAMILY, body: { done: true } });
+    assert.equal(first.statusCode, 200);
+    assert.deepEqual(first.json(), {
+      id: checklist.id, stepId: 'documents', done: true, itemDone: false, stepsDone: 1,
+    });
+
+    for (const step of checklist.steps.slice(1)) {
+      await call('PUT', url(step.id), { user: FAMILY, body: { done: true } });
+    }
+    const completed = await checklistOf();
+    assert.equal(completed.done, true, 'все шаги отмечены — пункт выполнен сам');
+    assert.ok(completed.steps.every((step) => step.done));
+
+    const undo = (await call('PUT', url('ratings'), { user: FAMILY, body: { done: false } })).json();
+    assert.equal(undo.itemDone, false, 'сняли отметку с шага — пункт снова не выполнен');
+    assert.equal((await checklistOf()).done, false);
+
+    assert.equal((await call('PUT', url('unknown-step'), { user: FAMILY, body: { done: true } })).statusCode, 404);
+    assert.equal((await call('PUT', '/api/plan/items/2627-fed-college-admission/steps/documents', {
+      user: FAMILY, body: { done: true },
+    })).statusCode, 404, 'у пункта без шагов отмечать нечего');
+    assert.equal((await call('PUT', url('documents'), { body: { done: true } })).statusCode, 401);
+  });
+
   test('без подписи мини-приложения личные данные недоступны', async () => {
     const response = await call('GET', '/api/plan');
     assert.equal(response.statusCode, 401);

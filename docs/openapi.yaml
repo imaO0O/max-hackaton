@@ -179,6 +179,16 @@ components:
         status: { type: string, enum: [past, current, upcoming] }
         daysLeft: { type: [integer, 'null'] }
         done: { type: boolean }
+        steps:
+          type: array
+          description: Шаги чек-листа с отметками семьи. У обычных пунктов — пустой список
+          items:
+            type: object
+            required: [id, title, done]
+            properties:
+              id: { type: string, examples: [documents] }
+              title: { type: string }
+              done: { type: boolean }
     Plan:
       type: object
       required: [academicYear, today, region, profile, items, nextItemId]
@@ -572,6 +582,45 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Отметка сохранена
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/ProfileIncomplete' }
+
+  /api/plan/items/{itemId}/steps/{stepId}:
+    put:
+      operationId: setPlanStepDone
+      tags: [plan]
+      summary: Отметить шаг чек-листа
+      description: Когда отмечены все шаги, пункт плана выполняется сам и напоминания по нему больше не приходят. Если снять отметку с шага выполненного пункта — пункт снова не выполнен.
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: itemId, in: path, required: true, schema: { type: string, examples: [2627-chk-summer-checklist] } }
+        - { name: stepId, in: path, required: true, schema: { type: string, examples: [documents] } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [done]
+              properties:
+                done: { type: boolean }
+      responses:
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '200':
+          description: Отметка сохранена
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, stepId, done, itemDone, stepsDone]
+                properties:
+                  id: { type: string }
+                  stepId: { type: string }
+                  done: { type: boolean }
+                  itemDone: { type: boolean, description: Выполнен ли пункт после этой отметки }
+                  stepsDone: { type: integer, description: Сколько шагов пункта отмечено }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ProfileIncomplete' }

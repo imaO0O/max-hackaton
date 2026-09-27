@@ -84,6 +84,11 @@ export const api = {
   setReminders: (enabled) => request('PUT', '/profile/reminders', { enabled }).then((data) => data.profile),
   plan: () => request('GET', '/plan'),
   setItemDone: (itemId, done) => request('PUT', `/plan/items/${encodeURIComponent(itemId)}`, { done }),
+  setStepDone: (itemId, stepId, done) => request(
+    'PUT',
+    `/plan/items/${encodeURIComponent(itemId)}/steps/${encodeURIComponent(stepId)}`,
+    { done },
+  ),
   sharePlan: () => request('POST', '/plan/share'),
   revokeShare: () => request('DELETE', '/plan/share'),
   calendarLink: () => request('POST', '/plan/calendar-link'),

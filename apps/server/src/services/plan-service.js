@@ -70,7 +70,13 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       now: clock(),
       utcOffsetHours: region.utcOffsetHours,
     });
-    return { region, academicYear, isAdvance: owner.grade === 8, ...built };
+    // Шаги чек-листов — с отметками этой семьи
+    const doneSteps = plans.listDoneSteps(plan.id);
+    const items = built.items.map((item) => ({
+      ...item,
+      steps: (item.steps ?? []).map((step) => ({ ...step, done: doneSteps.has(`${item.id}/${step.id}`) })),
+    }));
+    return { region, academicYear, isAdvance: owner.grade === 8, ...built, items };
   }
 
   /** Пересобирает напоминания владельца плана и всех, кто на план подписан. */
@@ -179,6 +185,32 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
       plans.setItemDone(plan.id, keyDateId, done);
       syncReminders(userId);
       return { id: keyDateId, done };
+    },
+
+    /**
+     * Отметка шага чек-листа. Когда отмечены все шаги, пункт плана выполняется сам и напоминания по нему
+     * больше не приходят; если снять отметку с шага выполненного пункта — пункт снова не выполнен.
+     */
+    setStepDone(userId, keyDateId, stepId, done) {
+      const user = users.ensure(userId);
+      if (!isProfileComplete(user)) {
+        throw conflict('profile_incomplete', 'Сначала ответьте на вопросы о регионе, классе и пути');
+      }
+      const plan = plans.getOrCreate(userId);
+      const item = buildPlanFor(user, plan).items.find((row) => row.id === keyDateId);
+      if (!item) throw notFound('Пункт плана не найден');
+      if (!item.steps.some((step) => step.id === stepId)) throw notFound('Шаг чек-листа не найден');
+
+      const allDone = item.steps.every((step) => (step.id === stepId ? done : step.done));
+      const itemDone = allDone || (item.done && done);
+      transaction(db, () => {
+        plans.setStepDone(plan.id, keyDateId, stepId, done);
+        if (itemDone !== item.done) plans.setItemDone(plan.id, keyDateId, itemDone);
+      });
+      if (itemDone !== item.done) syncReminders(userId);
+      return {
+        id: keyDateId, stepId, done, itemDone, stepsDone: item.steps.filter((step) => (step.id === stepId ? done : step.done)).length,
+      };
     },
 
     /** Создаёт (или возвращает существующую) ссылку на план для подростка или второго родителя. */
