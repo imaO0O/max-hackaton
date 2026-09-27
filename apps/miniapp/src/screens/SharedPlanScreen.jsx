@@ -77,6 +77,9 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
           >
             {data.isFollowing ? 'Не получать напоминания' : 'Получать напоминания'}
           </Button>
+          <Typography.Body variant="small" className="muted">
+            Чтобы присылать напоминания, сервис сохранит ваш ID в MAX — и ничего больше. Отключить можно этой же кнопкой.
+          </Typography.Body>
         </Card>
       )}
 

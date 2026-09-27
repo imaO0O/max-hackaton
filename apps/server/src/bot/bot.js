@@ -118,6 +118,17 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     });
   }
 
+  /** Какие данные храним: и новому пользователю до опроса, и тому, у кого план уже есть. */
+  function sendPrivacy(ctx, { edit = false } = {}) {
+    const user = users.ensure(userIdOf(ctx));
+    const keyboard = isProfileComplete(user)
+      ? Keyboard.inlineKeyboard([backToMenuRow()])
+      : Keyboard.inlineKeyboard([[Keyboard.button.callback('Начать', 'survey:start')]]);
+    return edit
+      ? ctx.answerOnCallback({ message: { text: texts.privacy, attachments: [keyboard] } })
+      : ctx.reply(texts.privacy, { attachments: [keyboard] });
+  }
+
   function sendDeleteConfirm(ctx) {
     return ctx.reply(texts.deleteConfirm, {
       attachments: [Keyboard.inlineKeyboard([[
@@ -144,6 +155,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const freeTextHandlers = {
     help: sendHelp,
     delete: sendDeleteConfirm,
+    privacy: (ctx) => sendPrivacy(ctx),
     reminders: sendRemindersStatus,
     share: (ctx) => planChat.sendShare(ctx),
     plan: planChat.sendPlanPreview,
@@ -172,6 +184,8 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('stats', sendStats);
   bot.command(/^link(?:\s+(.+))?$/, (ctx) => sendCampaignLink(ctx, ctx.match?.[1]?.trim()));
   bot.command('delete_data', sendDeleteConfirm);
+  bot.command('privacy', (ctx) => sendPrivacy(ctx));
+  bot.action('privacy:show', (ctx) => sendPrivacy(ctx, { edit: true }));
   bot.command('help', sendHelp);
 
   bot.action(/^survey:/, async (ctx) => {
@@ -363,6 +377,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'oge', description: 'Сколько ОГЭ сдавать: 2 или 4' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },
+        { name: 'privacy', description: 'Какие данные храним' },
         { name: 'delete_data', description: 'Удалить мои данные' },
         { name: 'help', description: 'Помощь' },
       ]);

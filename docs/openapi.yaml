@@ -191,6 +191,76 @@ components:
               id: { type: string, examples: [documents] }
               title: { type: string }
               done: { type: boolean }
+    Content:
+      type: object
+      required: [paths, nextSteps, disclaimer]
+      properties:
+        paths:
+          type: array
+          description: Экран «Два пути» — те же тексты, что в чате по /paths
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string, enum: [school10, college] }
+              title: { type: string }
+              subtitle: { type: string }
+              duration: { type: string }
+              exams: { type: array, items: { type: string } }
+              admission: { type: string }
+              pros: { type: array, items: { type: string } }
+              cons: { type: array, items: { type: string } }
+              next: { type: string }
+        nextSteps:
+          type: array
+          description: Экран «Что дальше» — переход из колледжа в вуз
+          items:
+            type: object
+            required: [id, title]
+            properties:
+              id: { type: string }
+              title: { type: string }
+              badge: { type: [string, 'null'] }
+              points: { type: array, items: { type: string } }
+              sources:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    title: { type: string }
+                    url: { type: string }
+                    checkedAt: { type: [string, 'null'], format: date }
+        disclaimer: { type: string }
+    SharedPlan:
+      type: object
+      required: [academicYear, today, region, profile, items, nextItemId, isOwner, isFollowing, favorites]
+      properties:
+        academicYear: { type: string }
+        isAdvance: { type: boolean }
+        today: { type: string, format: date }
+        region: { $ref: '#/components/schemas/Region' }
+        profile:
+          type: object
+          description: Ответы владельца плана — без его настроек напоминаний
+          required: [interests, isComplete]
+          properties:
+            regionId: { type: [string, 'null'] }
+            city: { type: [string, 'null'] }
+            grade: { type: [integer, 'null'] }
+            path: { type: [string, 'null'] }
+            interests: { type: array, items: { type: string } }
+            isComplete: { type: boolean }
+        items: { type: array, items: { $ref: '#/components/schemas/PlanItem' } }
+        nextItemId: { type: [string, 'null'] }
+        isOwner: { type: boolean, description: Ссылку открыл сам владелец плана }
+        isFollowing: { type: boolean, description: Открывший ссылку получает напоминания по этому плану }
+        favorites: { type: array, items: { $ref: '#/components/schemas/FavoriteProgram' } }
+    FavoriteResult:
+      type: object
+      required: [programId, isFavorite]
+      properties:
+        programId: { type: string }
+        isFavorite: { type: boolean }
     Plan:
       type: object
       required: [academicYear, today, region, profile, items, nextItemId]
@@ -401,6 +471,9 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Содержимое экранов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Content' }
 
   /api/colleges:
     get:
@@ -545,6 +618,9 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Профиль
+          content:
+            application/json:
+              schema: { type: object, required: [profile], properties: { profile: { $ref: '#/components/schemas/Profile' } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/plan:
@@ -584,6 +660,9 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Отметка сохранена
+          content:
+            application/json:
+              schema: { type: object, required: [id, done], properties: { id: { type: string }, done: { type: boolean } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/ProfileIncomplete' }
@@ -774,6 +853,9 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: План, признак владельца и подписки, избранное семьи
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SharedPlan' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
@@ -838,6 +920,9 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Добавлено (повторный вызов не создаёт дубликат)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FavoriteResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     delete:
@@ -851,4 +936,7 @@ paths:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':
           description: Убрано
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FavoriteResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }

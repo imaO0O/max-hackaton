@@ -26,11 +26,29 @@ function chunk(items, size) {
   return rows;
 }
 
+/**
+ * Регионы по порядку справочника. Пилотный регион с колледжами, «Другой регион» и демо — по одному в строке,
+ * регионы эксперимента без колледжей в справочнике — по два, чтобы список не растягивался на весь экран.
+ */
 export function regionStep(regions) {
-  return {
-    text: texts.askRegion,
-    keyboard: Keyboard.inlineKeyboard(regions.map((region) => [button.callback(region.name, `survey:region:${region.id}`)])),
-  };
+  const rows = [];
+  let pair = [];
+  for (const region of regions) {
+    const regionButton = button.callback(region.name, `survey:region:${region.id}`);
+    if (region.hasColleges || region.isDemo || !region.twoOgeExperiment) {
+      if (pair.length) rows.push(pair);
+      pair = [];
+      rows.push([regionButton]);
+    } else {
+      pair.push(regionButton);
+      if (pair.length === 2) {
+        rows.push(pair);
+        pair = [];
+      }
+    }
+  }
+  if (pair.length) rows.push(pair);
+  return { text: texts.askRegion, keyboard: Keyboard.inlineKeyboard(rows) };
 }
 
 export function cityStep(cities) {
