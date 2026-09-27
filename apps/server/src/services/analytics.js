@@ -1,4 +1,4 @@
-import { PATH_TITLES } from '@posle9/core';
+import { EXAM_ADVICE, PATH_TITLES } from '@posle9/core';
 
 /**
  * Метрики пилота. Событие пишется в журнал и никогда не ломает основной сценарий:
@@ -21,6 +21,7 @@ export const EVENTS = Object.freeze({
   CALENDAR_DOWNLOADED: 'calendar_downloaded',
   REMINDER_SENT: 'reminder_sent',
   DATA_DELETED: 'data_deleted',
+  EXAM_ADVICE: 'exam_advice',
 });
 
 /**
@@ -93,6 +94,8 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       itemsDone: total(EVENTS.ITEM_DONE),
       favoritesAdded: total(EVENTS.FAVORITE_ADDED),
       calendarDownloaded: users(EVENTS.CALENDAR_DOWNLOADED),
+      examAdvice: users(EVENTS.EXAM_ADVICE),
+      examAdviceByReason: events.countUsersByProp(EVENTS.EXAM_ADVICE, 'reason', since),
       remindersSent: total(EVENTS.REMINDER_SENT),
       openedFromReminder: events.countUsersByProp(EVENTS.MINIAPP_OPENED, 'source', since)
         .find((row) => row.value === 'reminder')?.users ?? 0,
@@ -116,6 +119,8 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       .map((row) => `${SOURCE_TITLES[row.value] ?? row.value}: ${row.users}`).join(', ') || '—';
     const campaigns = data.campaigns
       .map((row) => `${row.campaign} — пришли ${row.users}, собрали план ${row.completed}`).join('; ') || '—';
+    const examAdvice = data.examAdviceByReason
+      .map((row) => `${EXAM_ADVICE[row.value]?.title ?? row.value}: ${row.users}`).join(', ');
     return [
       title,
       `Запустили бота: ${data.botStarted}`,
@@ -133,6 +138,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Отмечено пунктов плана: ${data.itemsDone}`,
       `Добавлено в избранное: ${data.favoritesAdded}`,
       `Скачали календарь: ${data.calendarDownloaded}`,
+      `Подсказка «2 или 4 ОГЭ»: ${data.examAdvice}${examAdvice ? ` (${examAdvice})` : ''}`,
       `Регионы: ${regions}`,
       `Путь: ${paths}`,
       `Откуда открывали мини-приложение: ${sources}`,

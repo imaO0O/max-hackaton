@@ -1,5 +1,7 @@
 import { Button, Typography } from '@maxhub/max-ui';
+import { OTHER_REGION_ID } from '@posle9/core';
 
+import { ExamAdvice } from '../components/ExamAdvice.jsx';
 import { ErrorState, LoadingState } from '../components/states.jsx';
 import { Card, ScreenHeader, SourceNote, Tag } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
@@ -17,6 +19,9 @@ function List({ items, marker = '•' }) {
 
 export function PathsScreen({ profile, region, onOpenTab }) {
   const content = useAsync(() => api.content(), []);
+  // Избранное подсказывает ответ в «2 или 4 ОГЭ?»; если не загрузилось — подсказка работает и без него
+  const favorites = useAsync(() => api.favorites(), []);
+  const hasExamChoice = Boolean(region?.twoOgeExperiment) || profile.regionId === OTHER_REGION_ID;
 
   if (!content.data && content.status === 'loading') return <LoadingState />;
   if (!content.data) return <ErrorState error={content.error} onRetry={content.reload} />;
@@ -53,6 +58,15 @@ export function PathsScreen({ profile, region, onOpenTab }) {
             если сомневаетесь, сдавайте четыре.
           </Typography.Body>
         </Card>
+      )}
+
+      {hasExamChoice && (
+        <ExamAdvice
+          profile={profile}
+          region={region}
+          favorites={favorites.data ?? []}
+          onShowListed={region?.experimentList ? () => onOpenTab('colleges', { experimentOnly: true }) : undefined}
+        />
       )}
 
       <div className="paths">

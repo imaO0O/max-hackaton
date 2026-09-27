@@ -1,4 +1,4 @@
-import { daysBetween } from '@posle9/core';
+import { daysBetween, OTHER_REGION_ID } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
@@ -33,6 +33,11 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
     return { text: texts.needSurvey, keyboard: startKeyboard({ hasProfile: false }) };
   }
 
+  /** Выбирать между двумя и четырьмя ОГЭ приходится в регионе эксперимента; в «Другом регионе» — возможно. */
+  function hasExamChoice(regionId) {
+    return regionId === OTHER_REGION_ID || Boolean(reference.getRegion(regionId)?.twoOgeExperiment);
+  }
+
   /** План, который видит пользователь: свой, а если своего нет — план семьи, на который он подписан. */
   function currentPlan(userId) {
     if (isProfileComplete(users.ensure(userId))) return { plan: services.plan.getPlan(userId), own: true };
@@ -55,6 +60,7 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
           remindersEnabled: user.remindersEnabled,
           withReminderExample,
           withFamilyPlan: Boolean(familyToken),
+          withExamAdvice: hasExamChoice(user.regionId),
         }),
       };
     }
@@ -306,6 +312,6 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
   });
 
   return {
-    menuView, sendPlanPreview, sendMenu, sendShare, openSharedPlan, sendReminderExample,
+    menuView, sendPlanPreview, sendMenu, sendShare, openSharedPlan, sendReminderExample, hasExamChoice,
   };
 }

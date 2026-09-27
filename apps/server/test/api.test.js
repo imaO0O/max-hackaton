@@ -66,6 +66,23 @@ describe('API мини-приложения', () => {
     assert.equal(invalid.json().error.code, 'validation_error');
   });
 
+  test('перечень эксперимента: регион, колледжи и фильтр программ для двух ОГЭ', async () => {
+    const regions = (await call('GET', '/api/regions')).json().regions;
+    const tatarstan = regions.find((region) => region.id === 'tatarstan');
+    assert.equal(tatarstan.experimentList.year, 2026);
+    assert.match(tatarstan.experimentList.sourceUrl, /^https:\/\/mon\.tatarstan\.ru\//);
+    assert.equal(regions.find((region) => region.id === 'demo-standard').experimentList, null, 'нет эксперимента — нет перечня');
+
+    const all = (await call('GET', '/api/colleges?regionId=tatarstan')).json().colleges;
+    const listed = (await call('GET', '/api/colleges?regionId=tatarstan&experimentList=true')).json().colleges;
+    const listedPrograms = listed.flatMap((college) => college.programs);
+    assert.ok(listedPrograms.length > 0 && listedPrograms.length < all.flatMap((college) => college.programs).length);
+    assert.ok(listed.every((college) => college.inExperimentList), 'программы из перечня — только у колледжей из перечня');
+    assert.ok(listedPrograms.every((program) => program.inExperimentList));
+    // Медицинского колледжа нет в перечне Минобрнауки РТ 2026 года
+    assert.equal(all.find((college) => college.id === 'tat-kazan-medical-college').inExperimentList, false);
+  });
+
   test('без подписи мини-приложения личные данные недоступны', async () => {
     const response = await call('GET', '/api/plan');
     assert.equal(response.statusCode, 401);

@@ -834,3 +834,26 @@ button {
     color: #4cd964;
   }
 }
+
+/* «2 или 4 ОГЭ?» на экране «Два пути» */
+.exam-advice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.exam-advice__question {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.exam-advice__result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--background-tertiary);
+}

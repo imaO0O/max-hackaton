@@ -560,3 +560,82 @@ describe('команды', () => {
     assert.equal(ctx.services.plan.getProfile(555).isComplete, false);
   });
 });
+
+describe('подсказка «2 или 4 ОГЭ?»', () => {
+  const FAMILY = { ...USER, user_id: 580 };
+
+  before(() => {
+    ctx.services.plan.saveProfile(580, {
+      regionId: 'tatarstan', city: 'Казань', grade: 9, interests: ['it'], path: 'college',
+    });
+  });
+
+  test('колледж из перечня эксперимента: можно два ОГЭ, с источником перечня и программами', async () => {
+    await bot.handleUpdate(command('/oge', FAMILY));
+    assert.match(lastAnswer().text, /^2 или 4 ОГЭ\?/);
+    assert.match(lastAnswer().text, /В ответах опроса: Колледж/);
+    assert.deepEqual(lastAnswer().buttons, ['oge:c:college', 'oge:c:unsure', 'oge:c:school10', 'menu:show']);
+
+    await bot.handleUpdate(press('oge:c:college', FAMILY));
+    assert.match(lastAnswer().text, /перечне эксперимента/);
+    assert.match(lastAnswer().text, /программы из перечня 2026 года: \d+/);
+    assert.ok(lastAnswer().buttons.includes('oge:list'));
+
+    await bot.handleUpdate(press('oge:p:listed', FAMILY));
+    assert.match(lastAnswer().text, /^Можно два ОГЭ/);
+    assert.match(lastAnswer().text, /в 10 класс с таким аттестатом не примут/);
+    assert.match(lastAnswer().text, /Перечень 2026 года/);
+    assert.match(lastAnswer().text, /до 1 марта/);
+    assert.ok(lastAnswer().buttons.includes('link'), 'ссылка на перечень Минобрнауки РТ');
+
+    await bot.handleUpdate(press('oge:list', FAMILY));
+    assert.match(lastAnswer().text, /^Программы из перечня 2026 года/);
+    assert.match(lastAnswer().text, /Повар, кондитер/);
+    assert.doesNotMatch(lastAnswer().text, /Лечебное дело/, 'медицинского колледжа нет в перечне');
+    const programButtons = lastAnswer().buttons.filter((payload) => payload.startsWith('p:'));
+    assert.ok(programButtons.length > 0);
+    await bot.handleUpdate(press(programButtons[0], FAMILY));
+    assert.match(lastAnswer().text, /Проходной балл/, 'номер программы открывает её карточку');
+  });
+
+  test('не уверены или 10 класс — четыре ОГЭ, профессию не спрашиваем', async () => {
+    await bot.handleUpdate(press('oge:c:unsure', FAMILY));
+    assert.match(lastAnswer().text, /^Четыре ОГЭ/);
+    assert.match(lastAnswer().text, /оставляют открытыми и 10 класс, и любой колледж/);
+    await bot.handleUpdate(press('oge:c:school10', FAMILY));
+    assert.match(lastAnswer().text, /В 10 класс принимают только с аттестатом по четырём экзаменам/);
+    await bot.handleUpdate(press('oge:p:not_listed', FAMILY));
+    assert.match(lastAnswer().text, /нет в перечне эксперимента/);
+  });
+
+  test('регион без эксперимента — сразу ответ, без вопросов и без кнопки в меню', async () => {
+    const standard = { ...USER, user_id: 581 };
+    ctx.services.plan.saveProfile(581, {
+      regionId: 'demo-standard', city: 'Демоград', grade: 9, interests: ['it'], path: 'undecided',
+    });
+    await bot.handleUpdate(command('/oge', standard));
+    assert.match(lastAnswer().text, /^Четыре ОГЭ/);
+    assert.match(lastAnswer().text, /нет эксперимента с двумя ОГЭ/);
+    assert.ok(!lastAnswer().buttons.includes('oge:start'), 'заново отвечать не на что');
+
+    await bot.handleUpdate(command('/menu', standard));
+    assert.ok(!lastAnswer().buttons.includes('oge:start'));
+    await bot.handleUpdate(command('/menu', FAMILY));
+    assert.ok(lastAnswer().buttons.includes('oge:start'), 'в регионе эксперимента подсказка есть в меню');
+  });
+
+  test('вопрос текстом ведёт в подсказку, без опроса — предложение ответить на вопросы', async () => {
+    await bot.handleUpdate(command('Сколько ОГЭ сдавать: 2 или 4?', FAMILY));
+    assert.match(lastAnswer().text, /^2 или 4 ОГЭ\?/);
+    await bot.handleUpdate(command('/oge', { ...USER, user_id: 582 }));
+    assert.match(lastAnswer().text, /Сначала ответьте на 5 вопросов/);
+    await bot.handleUpdate(press('oge:c:nonsense', FAMILY));
+    assert.match(lastAnswer().text, /^2 или 4 ОГЭ\?/, 'непонятная кнопка — начать заново');
+  });
+
+  test('подсказка видна в метриках пилота', async () => {
+    await bot.handleUpdate(command('/stats'));
+    assert.match(lastAnswer().text, /Подсказка «2 или 4 ОГЭ»: [1-9]/);
+    assert.match(lastAnswer().text, /Можно два ОГЭ: 1/);
+  });
+});

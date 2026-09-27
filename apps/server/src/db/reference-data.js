@@ -72,7 +72,18 @@ export function validateReferenceData({ regions, interests, specialties, college
     if (region.isDemo === false) {
       check(Boolean(region.checkedAt), `regions.json: у реального региона «${region.id}» нужна дата проверки checkedAt`);
     }
+    if (region.experimentList) {
+      const list = region.experimentList;
+      check(region.twoOgeExperiment === true, `regions.json: перечень эксперимента у «${region.id}» — только в регионе эксперимента`);
+      check(Number.isInteger(list.year), `regions.json: experimentList.year у «${region.id}» — год, например 2026`);
+      check(isDateOrNull(list.checkedAt), `regions.json: experimentList.checkedAt у «${region.id}» — YYYY-MM-DD или null`);
+      if (region.isDemo === false) {
+        check(Boolean(list.sourceUrl) && Boolean(list.checkedAt),
+          `regions.json: у перечня реального региона «${region.id}» нужны sourceUrl и checkedAt`);
+      }
+    }
   }
+  const regionsWithList = new Set(regions.filter((region) => region.experimentList).map((region) => region.id));
 
   const interestIds = uniqueIds(interests, 'id', 'interests.json');
   const specialtyCodes = uniqueIds(specialties, 'code', 'specialties.json');
@@ -88,6 +99,10 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(regionIds.has(college.regionId), `${label}: неизвестный регион «${college.regionId}»`);
     check(typeof college.city === 'string' && college.city.length > 0, `${label}: нет города`);
     check(Array.isArray(college.programs) && college.programs.length > 0, `${label}: нет программ`);
+    check(college.inExperimentList === undefined || typeof college.inExperimentList === 'boolean',
+      `${label}: inExperimentList должен быть true/false`);
+    check(college.inExperimentList === undefined || regionsWithList.has(college.regionId),
+      `${label}: inExperimentList — только для региона с перечнем эксперимента (experimentList в regions.json)`);
     const programKeys = new Set();
     for (const program of college.programs ?? []) {
       const key = `${program.specialtyCode}/${program.form}`;
@@ -98,6 +113,10 @@ export function validateReferenceData({ regions, interests, specialties, college
       check(program.passingScore === null || (program.passingScore >= 2 && program.passingScore <= 5),
         `${label}: проходной балл ${program.specialtyCode} должен быть от 2 до 5 или null`);
       check(isDateOrNull(program.checkedAt), `${label}: checkedAt у ${program.specialtyCode} — YYYY-MM-DD или null`);
+      check(program.inExperimentList === undefined || program.inExperimentList === true,
+        `${label}: inExperimentList у ${program.specialtyCode} — true или не указывается`);
+      check(!program.inExperimentList || college.inExperimentList === true,
+        `${label}: программа ${program.specialtyCode} в перечне эксперимента, а колледж — нет`);
       if (college.isDemo === false) {
         check(Boolean(program.sourceUrl) && Boolean(program.checkedAt),
           `${label}: у реальной программы ${program.specialtyCode} нужны sourceUrl и checkedAt`);
@@ -145,15 +164,18 @@ export function applyReferenceData(db, data) {
   transaction(db, () => {
     // Порядок регионов в опросе — порядок в файле
     const upsertRegion = db.prepare(`
-      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at, sort_order)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO regions (id, name, utc_offset_hours, two_oge_experiment, is_demo, profile_class_rules, profile_class_rules_url, checked_at, sort_order,
+        experiment_list_year, experiment_list_url, experiment_list_checked_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET name = excluded.name, utc_offset_hours = excluded.utc_offset_hours,
         two_oge_experiment = excluded.two_oge_experiment, is_demo = excluded.is_demo,
         profile_class_rules = excluded.profile_class_rules, profile_class_rules_url = excluded.profile_class_rules_url,
-        checked_at = excluded.checked_at, sort_order = excluded.sort_order`);
+        checked_at = excluded.checked_at, sort_order = excluded.sort_order, experiment_list_year = excluded.experiment_list_year,
+        experiment_list_url = excluded.experiment_list_url, experiment_list_checked_at = excluded.experiment_list_checked_at`);
     data.regions.forEach((region, index) => {
       upsertRegion.run(region.id, region.name, region.utcOffsetHours, bool(region.twoOgeExperiment), bool(region.isDemo),
-        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null, index);
+        region.profileClassRules ?? null, region.profileClassRulesUrl ?? null, region.checkedAt ?? null, index,
+        region.experimentList?.year ?? null, region.experimentList?.sourceUrl ?? null, region.experimentList?.checkedAt ?? null);
     });
 
     const upsertInterest = db.prepare(`
@@ -171,26 +193,28 @@ export function applyReferenceData(db, data) {
     }
 
     const upsertCollege = db.prepare(`
-      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo, in_experiment_list)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET region_id = excluded.region_id, city = excluded.city, name = excluded.name,
-        address = excluded.address, website = excluded.website, has_dormitory = excluded.has_dormitory, is_demo = excluded.is_demo`);
+        address = excluded.address, website = excluded.website, has_dormitory = excluded.has_dormitory, is_demo = excluded.is_demo,
+        in_experiment_list = excluded.in_experiment_list`);
     const upsertProgram = db.prepare(`
-      INSERT INTO college_specialty (id, college_id, specialty_code, form, duration, budget_places, passing_score, score_year, entrance_test, source_url, checked_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO college_specialty (id, college_id, specialty_code, form, duration, budget_places, passing_score, score_year, entrance_test, source_url,
+        checked_at, in_experiment_list)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET duration = excluded.duration, budget_places = excluded.budget_places,
         passing_score = excluded.passing_score, score_year = excluded.score_year, entrance_test = excluded.entrance_test,
-        source_url = excluded.source_url, checked_at = excluded.checked_at`);
+        source_url = excluded.source_url, checked_at = excluded.checked_at, in_experiment_list = excluded.in_experiment_list`);
     const programIds = [];
     for (const college of data.colleges) {
       upsertCollege.run(college.id, college.regionId, college.city, college.name, college.address ?? null,
-        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo));
+        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo), bool(college.inExperimentList));
       for (const program of college.programs) {
         const id = programId(college.id, program.specialtyCode, program.form);
         programIds.push(id);
         upsertProgram.run(id, college.id, program.specialtyCode, program.form, program.duration ?? null,
           program.budgetPlaces ?? null, program.passingScore ?? null, program.scoreYear ?? null,
-          program.entranceTest ?? null, program.sourceUrl ?? null, program.checkedAt ?? null);
+          program.entranceTest ?? null, program.sourceUrl ?? null, program.checkedAt ?? null, bool(program.inExperimentList));
       }
     }
 
