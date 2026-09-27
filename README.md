@@ -38,7 +38,7 @@ flowchart LR
   end
   subgraph Контейнер app
     API[HTTP API /api<br/>Fastify, проверка initData]
-    BOT[Бот<br/>long polling]
+    BOT[Бот<br/>Webhook или Long Polling]
     SCH[Планировщик напоминаний]
     CORE[packages/core<br/>план, средний балл]
     DB[(SQLite)]
