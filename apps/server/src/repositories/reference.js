@@ -12,6 +12,10 @@ function mapRegion(row) {
     checkedAt: row.checked_at,
     // Есть ли колледжи региона в справочнике: если нет, мини-приложение не спрашивает город и не показывает фильтры
     hasColleges: toBool(row.has_colleges),
+    // Перечень колледжей и профессий эксперимента с двумя ОГЭ, по которому отмечены программы; null — перечня нет
+    experimentList: row.experiment_list_year
+      ? { year: row.experiment_list_year, sourceUrl: row.experiment_list_url, checkedAt: row.experiment_list_checked_at }
+      : null,
   };
 }
 
@@ -31,6 +35,7 @@ function mapProgram(row) {
     entranceTest: row.entrance_test,
     sourceUrl: row.source_url,
     checkedAt: row.program_checked_at,
+    inExperimentList: toBool(row.program_in_experiment_list),
   };
 }
 
@@ -44,6 +49,7 @@ function mapCollege(row) {
     website: row.website,
     hasDormitory: toBool(row.has_dormitory),
     isDemo: toBool(row.is_demo),
+    inExperimentList: toBool(row.college_in_experiment_list),
   };
 }
 
@@ -71,8 +77,10 @@ export function mapKeyDate(row) {
 
 const PROGRAM_SELECT = `
   SELECT c.id AS college_id, c.region_id, c.city, c.name, c.address, c.website, c.has_dormitory, c.is_demo,
+    c.in_experiment_list AS college_in_experiment_list,
     cs.id AS program_id, cs.specialty_code, s.title AS specialty_title, s.interest_id, cs.form, cs.duration,
-    cs.budget_places, cs.passing_score, cs.score_year, cs.entrance_test, cs.source_url, cs.checked_at AS program_checked_at
+    cs.budget_places, cs.passing_score, cs.score_year, cs.entrance_test, cs.source_url, cs.checked_at AS program_checked_at,
+    cs.in_experiment_list AS program_in_experiment_list
   FROM college_specialty cs
   JOIN colleges c ON c.id = cs.college_id
   JOIN specialties s ON s.code = cs.specialty_code`;
@@ -117,7 +125,9 @@ export function createReferenceRepository(db) {
     },
 
     /** Колледжи региона с программами, подходящими под фильтры. Колледжи без подходящих программ не возвращаются. */
-    searchColleges({ regionId, city, interestIds, specialtyCode, form, budgetOnly }) {
+    searchColleges({
+      regionId, city, interestIds, specialtyCode, form, budgetOnly, experimentOnly,
+    }) {
       const where = ['c.region_id = ?'];
       const params = [regionId];
       if (city) {
@@ -138,6 +148,10 @@ export function createReferenceRepository(db) {
       }
       if (budgetOnly) {
         where.push('cs.budget_places > 0');
+      }
+      if (experimentOnly) {
+        // Программы из перечня эксперимента: на них поступают с аттестатом по двум ОГЭ
+        where.push('cs.in_experiment_list = 1');
       }
       const rows = db.prepare(`${PROGRAM_SELECT} WHERE ${where.join(' AND ')} ORDER BY c.name, cs.specialty_code, cs.form`)
         .all(...params);

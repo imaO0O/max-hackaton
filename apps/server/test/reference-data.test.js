@@ -37,6 +37,20 @@ test('реальные данные без источника и даты про
   assert.equal(errors.length, 2, errors.join('\n'));
 });
 
+test('перечень эксперимента: отметки только в регионе с перечнем и у реального перечня есть источник', () => {
+  const data = loadReferenceData(testConfig().dataDir);
+  const broken = structuredClone(data);
+  // Программа в перечне, а колледж — нет
+  const listedCollege = broken.colleges.find((college) => college.programs.some((program) => program.inExperimentList));
+  listedCollege.inExperimentList = false;
+  // Отметка у колледжа региона без перечня
+  broken.colleges.find((college) => college.regionId === 'demo-standard').inExperimentList = true;
+  // Реальный перечень без источника
+  broken.regions.find((region) => region.id === 'tatarstan').experimentList.sourceUrl = null;
+  const errors = validateReferenceData(broken);
+  assert.equal(errors.length, 3, errors.join('\n'));
+});
+
 test('повторная загрузка справочников сохраняет избранное и удаляет исчезнувшие записи', () => {
   const db = openDatabase(':memory:');
   const data = loadReferenceData(testConfig().dataDir);

@@ -8,6 +8,7 @@ import {
   backToMenuRow, menuKeyboard, openAppKeyboard, remindersKeyboard, remindersStatusKeyboard, startKeyboard, summaryKeyboard,
 } from './keyboards.js';
 import { registerCollegesChat } from './colleges-chat.js';
+import { registerExamsChat } from './exams-chat.js';
 import { registerPathsChat } from './paths-chat.js';
 import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
@@ -54,6 +55,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
   const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
+  const examsChat = registerExamsChat({ bot, users, reference, services });
 
   async function showStep(ctx, step, { edit }) {
     const body = { text: step.text, attachments: [step.keyboard] };
@@ -146,6 +148,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     paths: (ctx) => pathsChat.sendPaths(ctx),
     colleges: (ctx) => collegesChat.sendColleges(ctx),
     grades: sendGradesHint,
+    oge: (ctx) => examsChat.sendExamAdvice(ctx),
     thanks: (ctx) => ctx.reply(texts.thanks, { attachments: [planChat.menuView(userIdOf(ctx)).keyboard] }),
     greeting: (ctx) => sendStart(ctx),
   };
@@ -242,7 +245,8 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         const interestTitles = reference.listInterests().filter((interest) => profile.interests.includes(interest.id));
         const preview = planText(services.plan.getPlan(userId), { limit: 3 });
         const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
-        return showStep(ctx, { text, keyboard: summaryKeyboard(runtime.botUsername) }, { edit: true });
+        const keyboard = summaryKeyboard(runtime.botUsername, { withExamAdvice: planChat.hasExamChoice(profile.regionId) });
+        return showStep(ctx, { text, keyboard }, { edit: true });
       }
       case 'back': {
         // Возврат на шаг назад с сохранением уже выбранных ответов
@@ -354,6 +358,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'share', description: 'Отправить план подростку' },
         { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'paths', description: '10 класс или колледж: сравнить' },
+        { name: 'oge', description: 'Сколько ОГЭ сдавать: 2 или 4' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },
         { name: 'delete_data', description: 'Удалить мои данные' },

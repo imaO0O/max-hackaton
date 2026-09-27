@@ -37,11 +37,14 @@ export function registerCatalogRoutes(api, { catalog, analytics }) {
           specialty: { type: 'string', pattern: '^\\d{2}\\.\\d{2}\\.\\d{2}$' },
           form: { type: 'string', enum: ['full_time', 'part_time', 'extramural'] },
           budgetOnly: { type: 'boolean', default: false },
+          experimentList: { type: 'boolean', default: false },
         },
       },
     },
   }, async (request) => {
-    const { regionId, city, interests, specialty, form, budgetOnly } = request.query;
+    const {
+      regionId, city, interests, specialty, form, budgetOnly, experimentList,
+    } = request.query;
     const colleges = catalog.searchColleges({
       regionId,
       city,
@@ -49,6 +52,7 @@ export function registerCatalogRoutes(api, { catalog, analytics }) {
       specialtyCode: specialty,
       form,
       budgetOnly,
+      experimentOnly: experimentList,
     });
     return { colleges };
   });

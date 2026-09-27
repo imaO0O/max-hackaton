@@ -63,7 +63,17 @@ components:
         profileClassRules: { type: [string, 'null'] }
         profileClassRulesUrl: { type: [string, 'null'] }
         checkedAt: { type: [string, 'null'], format: date }
-        hasColleges: { type: boolean, description: Есть ли колледжи региона в справочнике. Если нет — план по федеральным срокам, город не нужен }
+        hasColleges: { type: boolean, description: 'Есть ли колледжи региона в справочнике. Если нет — план по федеральным срокам, город не нужен' }
+        experimentList:
+          description: Перечень колледжей и профессий эксперимента с двумя ОГЭ, по которому отмечены программы. null — перечня в справочнике нет
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [year]
+              properties:
+                year: { type: integer, examples: [2026] }
+                sourceUrl: { type: [string, 'null'] }
+                checkedAt: { type: [string, 'null'], format: date }
     Interest:
       type: object
       required: [id, title]
@@ -87,6 +97,7 @@ components:
         entranceTest: { type: [string, 'null'] }
         sourceUrl: { type: [string, 'null'] }
         checkedAt: { type: [string, 'null'], format: date }
+        inExperimentList: { type: boolean, description: Колледж и профессия были в перечне эксперимента региона — на программу поступали с аттестатом по двум ОГЭ }
     College:
       type: object
       required: [id, regionId, city, name, isDemo, programs]
@@ -99,6 +110,7 @@ components:
         website: { type: [string, 'null'] }
         hasDormitory: { type: boolean }
         isDemo: { type: boolean }
+        inExperimentList: { type: boolean, description: Колледж в перечне эксперимента с двумя ОГЭ }
         programs:
           type: array
           items: { $ref: '#/components/schemas/Program' }
@@ -391,6 +403,7 @@ paths:
         - { name: specialty, in: query, schema: { type: string, examples: ['09.02.07'] } }
         - { name: form, in: query, schema: { type: string, enum: [full_time, part_time, extramural] } }
         - { name: budgetOnly, in: query, schema: { type: boolean } }
+        - { name: experimentList, in: query, description: Только программы из перечня эксперимента с двумя ОГЭ, schema: { type: boolean } }
       responses:
         '429': { $ref: '#/components/responses/TooManyRequests' }
         '200':

@@ -68,9 +68,13 @@ export const api = {
   cities: (regionId) => request('GET', `/regions/${encodeURIComponent(regionId)}/cities`).then((data) => data.cities),
   interests: () => request('GET', '/interests').then((data) => data.interests),
   content: () => request('GET', '/content'),
-  colleges: ({ regionId, city, interests, form, budgetOnly }) => request(
+  colleges: ({
+    regionId, city, interests, form, budgetOnly, experimentList,
+  }) => request(
     'GET',
-    `/colleges${query({ regionId, city, interests, form, budgetOnly })}`,
+    `/colleges${query({
+      regionId, city, interests, form, budgetOnly, experimentList,
+    })}`,
   ).then((data) => data.colleges),
   college: (id) => request('GET', `/colleges/${encodeURIComponent(id)}`).then((data) => data.college),
   favorites: () => request('GET', '/favorites').then((data) => data.favorites),

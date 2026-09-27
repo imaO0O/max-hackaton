@@ -19,13 +19,16 @@ function minScore(programs) {
   return scores.length ? Math.min(...scores) : null;
 }
 
-function ProgramCard({ program, isFavorite, onToggleFavorite, pending, myAverage, isDemo }) {
+function ProgramCard({
+  program, isFavorite, onToggleFavorite, pending, myAverage, isDemo, experimentYear,
+}) {
   return (
     <Card className="program">
       <div className="program__head">
         <div>
           <Typography.Label variant="small" className="muted">{program.specialtyCode}</Typography.Label>
           <Typography.Body variant="medium-strong">{program.specialtyTitle}</Typography.Body>
+          {experimentYear && program.inExperimentList && <Tag tone="soft">{`перечень ${experimentYear}: можно с двумя ОГЭ`}</Tag>}
         </div>
         <button
           type="button"
@@ -67,7 +70,9 @@ function ProgramCard({ program, isFavorite, onToggleFavorite, pending, myAverage
   );
 }
 
-function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, onBack }) {
+function CollegeDetails({
+  collegeId, favoriteIds, onToggleFavorite, pendingIds, onBack, experimentYear,
+}) {
   const college = useAsync(() => api.college(collegeId), [collegeId]);
   const myAverage = loadLocal(AVERAGE_STORAGE_KEY, null);
 
@@ -85,6 +90,11 @@ function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, 
             subtitle={[college.data.address ?? college.data.city, college.data.hasDormitory ? 'есть общежитие' : 'без общежития'].join(' · ')}
             after={college.data.isDemo ? <DemoTag /> : null}
           />
+          {experimentYear && college.data.inExperimentList && (
+            <Typography.Body variant="small" className="muted hint">
+              {`Колледж в перечне эксперимента ${experimentYear} года. С аттестатом по двум ОГЭ сюда поступают только на отмеченные профессии — уточняйте в приёмной комиссии.`}
+            </Typography.Body>
+          )}
           <SectionTitle>{`Программы (${college.data.programs.length})`}</SectionTitle>
           <div className="stack">
             {college.data.programs.map((program) => (
@@ -92,6 +102,7 @@ function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, 
                 key={program.id}
                 program={program}
                 isDemo={college.data.isDemo}
+                experimentYear={experimentYear}
                 myAverage={myAverage}
                 isFavorite={favoriteIds.has(program.id)}
                 pending={pendingIds.has(program.id)}
@@ -105,7 +116,9 @@ function CollegeDetails({ collegeId, favoriteIds, onToggleFavorite, pendingIds, 
   );
 }
 
-const NO_FILTERS = { city: null, interests: [], form: null, budgetOnly: false, withinMyScore: false };
+const NO_FILTERS = {
+  city: null, interests: [], form: null, budgetOnly: false, withinMyScore: false, experimentOnly: false,
+};
 
 /** Программы, где прошлогодний проходной балл не выше расчёта семьи. Без опубликованного балла — не показываем. */
 function withinScore(colleges, average) {
@@ -117,11 +130,17 @@ function withinScore(colleges, average) {
     .filter((college) => college.programs.length > 0);
 }
 
-export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
+export function CollegesScreen({
+  profile, region = null, initialCompare = false, initialExperimentOnly = false, onOpenTab,
+}) {
+  // Перечень эксперимента с двумя ОГЭ: фильтр и отметки у программ — только если он есть у региона
+  const experimentYear = region?.experimentList?.year ?? null;
   const [filters, setFilters] = useState({
     ...NO_FILTERS,
     city: profile.city ?? null,
-    interests: profile.interests ?? [],
+    // Из подсказки «2 или 4 ОГЭ?» — все программы перечня, без фильтра по интересам
+    interests: initialExperimentOnly ? [] : profile.interests ?? [],
+    experimentOnly: initialExperimentOnly && Boolean(experimentYear),
   });
   // Средний балл считается и хранится только на устройстве, фильтр по нему тоже работает на устройстве
   const myAverage = loadLocal(AVERAGE_STORAGE_KEY, null);
@@ -135,9 +154,14 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
   const reference = useAsync(() => Promise.all([api.cities(profile.regionId), api.interests()]), [profile.regionId]);
   const colleges = useAsync(
     () => api.colleges({
-      regionId: profile.regionId, city: filters.city, interests: filters.interests, form: filters.form, budgetOnly: filters.budgetOnly,
+      regionId: profile.regionId,
+      city: filters.city,
+      interests: filters.interests,
+      form: filters.form,
+      budgetOnly: filters.budgetOnly,
+      experimentList: filters.experimentOnly,
     }),
-    [profile.regionId, filters.city, filters.interests.join(','), filters.form, filters.budgetOnly],
+    [profile.regionId, filters.city, filters.interests.join(','), filters.form, filters.budgetOnly, filters.experimentOnly],
   );
   const favorites = useAsync(() => api.favorites(), []);
   const favoriteIds = useMemo(() => new Set((favorites.data ?? []).map((item) => item.id)), [favorites.data]);
@@ -199,6 +223,7 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
           pendingIds={pendingIds}
           onToggleFavorite={toggleFavorite}
           onBack={closeCollege}
+          experimentYear={experimentYear}
         />
         {toast}
       </>
@@ -206,7 +231,8 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
   }
 
   const [cities, interests] = reference.data ?? [[], []];
-  const hasFilters = filters.city || filters.interests.length || filters.form || filters.budgetOnly || filters.withinMyScore;
+  const hasFilters = filters.city || filters.interests.length || filters.form || filters.budgetOnly || filters.withinMyScore
+    || filters.experimentOnly;
   const noColleges = Boolean(reference.data) && cities.length === 0;
 
   return (
@@ -284,6 +310,17 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
                 <span>Только с бюджетными местами</span>
                 <Switch checked={filters.budgetOnly} onChange={() => setFilter({ budgetOnly: !filters.budgetOnly })} />
               </label>
+              {experimentYear && (
+                <label className="switch-row">
+                  <span>
+                    <span>Можно с двумя ОГЭ</span>
+                    <Typography.Body variant="small" className="muted">
+                      {`Колледж и профессия были в перечне эксперимента ${experimentYear} года`}
+                    </Typography.Body>
+                  </span>
+                  <Switch checked={filters.experimentOnly} onChange={() => setFilter({ experimentOnly: !filters.experimentOnly })} />
+                </label>
+              )}
               <label className="switch-row">
                 <span>
                   <span>Где в прошлом году проходили с моим баллом</span>
@@ -308,6 +345,12 @@ export function CollegesScreen({ profile, initialCompare = false, onOpenTab }) {
           {scoreFilterOn && (
             <Typography.Body variant="small" className="muted hint">
               Показаны программы, где прошлогодний проходной балл не выше вашего расчёта. Программы, по которым колледж не опубликовал балл, скрыты — их можно посмотреть без этого фильтра.
+            </Typography.Body>
+          )}
+
+          {filters.experimentOnly && (
+            <Typography.Body variant="small" className="muted hint">
+              {`Показаны программы, где колледж и профессия были в перечне эксперимента ${experimentYear} года: на них поступали с аттестатом по двум ОГЭ. Перечень меняется каждый год — перед подачей документов уточните в приёмной комиссии.`}
             </Typography.Body>
           )}
 
