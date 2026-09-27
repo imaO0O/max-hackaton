@@ -678,3 +678,45 @@ describe('чек-лист поступления в чате', () => {
     assert.match(lastAnswer().text, /больше нет в плане/, "без своего плана отмечать нечего");
   });
 });
+
+describe('неточность в данных', () => {
+  const PARENT = { ...USER, user_id: 600 };
+
+  test('из карточки программы: причина, благодарность, повтор не дублируется', async () => {
+    const program = ctx.services.catalog.searchColleges({ regionId: 'tatarstan' })[0].programs[0];
+    await bot.handleUpdate(press(`p:${program.id}`, PARENT));
+    assert.ok(lastAnswer().buttons.includes(`rp:p:${program.id}`));
+
+    await bot.handleUpdate(press(`rp:p:${program.id}`, PARENT));
+    assert.match(lastAnswer().text, /^Что не так\?/);
+    assert.match(lastAnswer().text, /Личные данные не передаются/);
+    assert.ok(lastAnswer().buttons.includes(`rr:p:score:${program.id}`));
+    assert.ok(lastAnswer().buttons.includes(`p:${program.id}`), 'можно вернуться к карточке');
+
+    await bot.handleUpdate(press(`rr:p:score:${program.id}`, PARENT));
+    assert.match(lastAnswer().text, /^Спасибо! Команда проекта сверит факт/);
+    await bot.handleUpdate(press(`rr:p:score:${program.id}`, PARENT));
+    assert.match(lastAnswer().text, /Вы уже сообщали об этом/);
+  });
+
+  test('у дат с источником кнопка есть, у советов сервиса — нет; неизвестная запись не ломает диалог', async () => {
+    await bot.handleUpdate(press('item:2627-fed-college-admission', PARENT));
+    assert.ok(lastAnswer().buttons.includes('rp:i:2627-fed-college-admission'));
+    await bot.handleUpdate(press('item:2627-chk-summer-checklist', PARENT));
+    assert.ok(!lastAnswer().buttons.some((payload) => payload.startsWith('rp:')));
+    await bot.handleUpdate(press('rp:i:no-such-date', PARENT));
+    assert.match(lastAnswer().text, /больше нет в плане/);
+    await bot.handleUpdate(press('rr:i:score:2627-fed-college-admission', PARENT));
+    assert.match(lastAnswer().text, /больше нет в плане/, 'неподходящая причина не сохраняется');
+  });
+
+  test('/reports — сводка только для команды проекта', async () => {
+    await bot.handleUpdate(command('/reports', PARENT));
+    assert.match(lastAnswer().text, /только команде проекта/);
+    await bot.handleUpdate(command('/reports'));
+    assert.match(lastAnswer().text, /^Сообщения о неточностях за 30 дней: [1-9]/);
+    assert.match(lastAnswer().text, /Другой балл или число мест · семей: 1/);
+    await bot.handleUpdate(command('/stats'));
+    assert.match(lastAnswer().text, /Сообщили о неточностях в данных: [1-9]/);
+  });
+});

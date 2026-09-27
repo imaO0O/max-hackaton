@@ -5,11 +5,13 @@ import { createFavoriteRepository } from './repositories/favorites.js';
 import { createPlanRepository } from './repositories/plans.js';
 import { createReferenceRepository } from './repositories/reference.js';
 import { createReminderRepository } from './repositories/reminders.js';
+import { createReportRepository } from './repositories/reports.js';
 import { createUserRepository } from './repositories/users.js';
 import { createAnalytics } from './services/analytics.js';
 import { calendarSecret, createCalendarLinks, createCalendarService } from './services/calendar.js';
 import { createCatalogService } from './services/catalog-service.js';
 import { createPlanService } from './services/plan-service.js';
+import { createReportService } from './services/reports-service.js';
 
 /**
  * Собирает зависимости приложения: база, справочники, репозитории и сервисы.
@@ -32,6 +34,7 @@ export function createContainer(config, { clock } = {}) {
     favorites: createFavoriteRepository(db),
     reminders: createReminderRepository(db),
     events: createEventRepository(db),
+    reports: createReportRepository(db),
   };
 
   const plan = createPlanService({ db, repos, config, runtime, clock });
@@ -43,6 +46,7 @@ export function createContainer(config, { clock } = {}) {
       links: createCalendarLinks({ secret: calendarSecret(config.botToken), clock }),
     }),
     analytics: createAnalytics({ repos, clock }),
+    reports: createReportService({ repos, clock }),
   };
 
   return { db, repos, services, runtime };

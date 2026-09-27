@@ -13,6 +13,7 @@ import { registerPathsChat } from './paths-chat.js';
 import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
+import { registerReportsChat } from './reports-chat.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
 } from './survey.js';
@@ -55,6 +56,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
   const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
+  registerReportsChat({ bot, reference, services, config });
   const examsChat = registerExamsChat({ bot, users, reference, services });
 
   async function showStep(ctx, step, { edit }) {

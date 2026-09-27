@@ -10,6 +10,7 @@ import { createRateLimiter } from './rate-limit.js';
 import { registerCatalogRoutes } from './routes/catalog.js';
 import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerPlanRoutes } from './routes/plan.js';
+import { registerReportRoutes } from './routes/reports.js';
 
 /**
  * HTTP-сервер: REST API мини-приложения под /api и статика собранного мини-приложения.
@@ -103,6 +104,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
     registerCatalogRoutes(api, services);
     registerPlanRoutes(api, services);
     registerCalendarRoutes(api, services);
+    registerReportRoutes(api, services);
   }, { prefix: '/api' });
 
   const indexHtml = path.join(config.miniappDistDir, 'index.html');

@@ -24,6 +24,8 @@ tags:
     description: План, отметки, отправка подростку
   - name: favorites
     description: Избранные программы колледжей
+  - name: reports
+    description: Сообщения о неточностях в данных
 
 components:
   securitySchemes:
@@ -695,6 +697,43 @@ paths:
                   eventsCount: { type: integer, description: Сколько дат попадёт в календарь }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/ProfileIncomplete' }
+
+  /api/reports:
+    post:
+      operationId: reportInaccuracy
+      tags: [reports]
+      summary: Сообщить о неточности в данных
+      description: Программа колледжа или пункт плана и причина из списка — без свободного текста, лишние поля отбрасываются. Одна семья сообщает об одной неточности один раз. После удаления данных пользователя сообщение остаётся обезличенным. Сводка для команды проекта — команда /reports в боте.
+      security: [{ maxInitData: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetType, targetId, reason]
+              properties:
+                targetType: { type: string, enum: [program, item] }
+                targetId: { type: string, examples: [tat-kazan-construction-college--080127--full_time, 2627-fed-college-admission] }
+                reason:
+                  type: string
+                  description: 'Для program — score, program, link, other; для item — date, link, other'
+                  examples: [score]
+      responses:
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '201':
+          description: Сообщение сохранено
+          content:
+            application/json:
+              schema: { type: object, required: [created], properties: { created: { type: boolean, const: true } } }
+        '200':
+          description: Эта семья уже сообщала о той же неточности
+          content:
+            application/json:
+              schema: { type: object, required: [created], properties: { created: { type: boolean, const: false } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
 
   /api/calendar/{file}:
     get:

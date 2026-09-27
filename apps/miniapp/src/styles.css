@@ -892,3 +892,18 @@ button {
   border-radius: 6px;
   font-size: 13px;
 }
+
+/* «Сообщить о неточности» у программы и пункта плана */
+.report {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.report__open {
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: 0.8;
+}
