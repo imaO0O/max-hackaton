@@ -168,7 +168,7 @@ export function OnboardingScreen({ initialProfile, onSaved, onCancel, notice = n
       </CellList>
 
       <Typography.Body variant="small" className="muted hint">
-        Мы храним только ответы на эти вопросы и ID в MAX — без имени и оценок ребёнка.
+        Мы храним только ответы на эти вопросы и ID в MAX — без имени и оценок ребёнка. Сохраняя ответы, вы соглашаетесь на обработку этих данных для работы сервиса. Удалить их можно в «Моём плане», раздел «Ваши данные».
       </Typography.Body>
 
       <footer className="sticky-footer">

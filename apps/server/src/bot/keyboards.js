@@ -8,6 +8,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
  * План по ссылке: shared-all:<токен>, family:show (план семьи у того, кто на него подписан).
  * Под напоминанием: ritem:<id>, rdone:<id>, rundo:<id> — они не редактируют текст напоминания.
  * Шаг чек-листа в карточке пункта: st:<id пункта>:<id шага> — переключает отметку.
+ * Какие данные храним: privacy:show.
  * Неточность в данных: rp:<p|i>:<id> — выбор причины, rr:<p|i>:<причина>:<id> — сохранить (reports-chat.js).
  */
 
@@ -40,15 +41,17 @@ export function reportButtonRow(code, targetId) {
 export function menuKeyboard({
   botUsername, remindersEnabled, withReminderExample = false, withFamilyPlan = false, withExamAdvice = false,
 }) {
+  // Короткие подписи по две в строке: меню помещается на экран телефона без прокрутки
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Даты плана', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
     ...(withExamAdvice ? [EXAM_ADVICE] : []),
-    [button.callback('🏫 Колледжи по интересам', 'colleges:show')],
-    [button.callback('📨 Отправить план подростку', 'share:show')],
+    [button.callback('🏫 Колледжи', 'colleges:show'), button.callback('📨 Отправить подростку', 'share:show')],
     ...(withFamilyPlan ? [[button.callback('👪 План, которым поделились со мной', 'family:show')]] : []),
-    [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
+    [
+      button.callback(remindersEnabled ? '🔕 Напоминания: выкл' : '🔔 Напоминания: вкл', 'reminders:toggle'),
+      button.callback('✏️ Изменить ответы', 'survey:start'),
+    ],
     ...(withReminderExample ? [REMINDER_EXAMPLE] : []),
-    [button.callback('✏️ Изменить ответы', 'survey:start')],
   ]);
 }
 
@@ -69,9 +72,8 @@ export function summaryKeyboard(botUsername, { withExamAdvice = false } = {}) {
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Все даты', 'plan:all'), button.callback('🏫 Колледжи', 'colleges:show')],
     ...(withExamAdvice ? [EXAM_ADVICE] : []),
-    [button.callback('📨 Отправить план подростку', 'share:show')],
+    [button.callback('📨 Отправить подростку', 'share:show'), button.callback('☰ Меню', 'menu:show')],
     REMINDER_EXAMPLE,
-    [button.callback('☰ Меню', 'menu:show')],
   ]);
 }
 
@@ -94,6 +96,7 @@ export function startKeyboard({ hasProfile, botUsername, remindersEnabled = true
   return Keyboard.inlineKeyboard([
     [button.callback('Начать', 'survey:start')],
     [button.callback('⚖️ 10 класс или колледж?', 'paths:show')],
+    [button.callback('🔒 Какие данные храним', 'privacy:show')],
   ]);
 }
 

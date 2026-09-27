@@ -110,7 +110,8 @@ describe('опрос в боте', () => {
   test('от /start до готового плана с датами в чате', async () => {
     await bot.handleUpdate(command('/start'));
     assert.match(lastAnswer().text, /помогу семье девятиклассника/);
-    assert.deepEqual(lastAnswer().buttons, ['survey:start', 'paths:show']);
+    assert.deepEqual(lastAnswer().buttons, ['survey:start', 'paths:show', 'privacy:show']);
+    assert.match(lastAnswer().text, /без имени ребёнка и оценок/, 'о данных — ещё до опроса');
 
     await bot.handleUpdate(press('paths:show'));
     assert.match(lastAnswer().text, /^10–11 класс или колледж: чем отличаются пути/);
@@ -172,12 +173,20 @@ describe('опрос в боте', () => {
 });
 
 describe('опрос: регионы', () => {
-  test('пилотный регион первым, затем «Другой регион», демо — в конце', async () => {
+  test('пилотный регион первым, затем 11 регионов эксперимента по два в строке, «Другой регион», демо — в конце', async () => {
     await bot.handleUpdate(press('survey:start', { ...USER, user_id: 560 }));
     const regions = lastAnswer().buttons.filter((payload) => payload.startsWith('survey:region:'));
-    assert.deepEqual(regions.slice(0, 2), ['survey:region:tatarstan', 'survey:region:other']);
-    assert.ok(regions.indexOf('survey:region:demo-standard') > 1);
+    assert.equal(regions[0], 'survey:region:tatarstan');
+    assert.equal(regions.length, 15);
+    assert.ok(regions.indexOf('survey:region:other') > regions.indexOf('survey:region:kamchatka'));
+    assert.ok(regions.indexOf('survey:region:demo-standard') > regions.indexOf('survey:region:other'));
+
+    const rows = requests.at(-1).body.message.attachments[0].payload.buttons;
+    assert.equal(rows[0].length, 1, 'пилотный регион — отдельной строкой');
+    assert.equal(rows[1].length, 2, 'регионы эксперимента — по два');
+    assert.ok(rows.length <= 10, 'список регионов не растягивается на 15 строк');
   });
+
 
   test('«Другой регион»: без вопроса о городе, федеральные сроки, колледжей нет', async () => {
     const other = { ...USER, user_id: 560 };
@@ -718,5 +727,60 @@ describe('неточность в данных', () => {
     assert.match(lastAnswer().text, /Другой балл или число мест · семей: 1/);
     await bot.handleUpdate(command('/stats'));
     assert.match(lastAnswer().text, /Сообщили о неточностях в данных: [1-9]/);
+  });
+});
+
+describe('регионы эксперимента без колледжей', () => {
+  test('регион эксперимента без колледжей: без вопроса о городе, правила региона и подсказка «2 или 4 ОГЭ?»', async () => {
+    const family = { ...USER, user_id: 610 };
+    await bot.handleUpdate(press('survey:start', family));
+    await bot.handleUpdate(press('survey:region:moscow', family));
+    assert.match(lastAnswer().text, /Шаг 3 из 5/, 'городов в справочнике нет — вопрос о городе пропущен');
+    await bot.handleUpdate(press('survey:grade:9', family));
+    await bot.handleUpdate(press('survey:interests-done', family));
+    await bot.handleUpdate(press('survey:path:college', family));
+    assert.match(lastAnswer().text, /Регион: Москва/);
+    assert.ok(lastAnswer().buttons.includes('oge:start'), 'в регионе эксперимента — подсказка под итогом опроса');
+
+    const plan = ctx.services.plan.getPlan(610);
+    assert.ok(plan.items.some((item) => item.id === '2627-fed-gia-application-two-oge'), 'заявление на ОГЭ с выбором 2 или 4');
+    assert.equal(plan.region.utcOffsetHours, 3);
+
+    await bot.handleUpdate(press('oge:c:college', family));
+    assert.match(lastAnswer().text, /региональное министерство образования/, 'перечня в справочнике нет — куда смотреть');
+    assert.ok(!lastAnswer().buttons.includes('oge:list'));
+  });
+});
+
+describe('какие данные храним', () => {
+  test('/privacy, кнопка на старте и вопрос текстом: что храним, чего нет, как удалить', async () => {
+    const newcomer = { ...USER, user_id: 620 };
+    await bot.handleUpdate(press('privacy:show', newcomer));
+    const text = lastAnswer().text;
+    assert.match(text, /^Какие данные хранит «После 9-го»/);
+    assert.match(text, /ID в MAX/);
+    assert.match(text, /подросток открыл ваш план по ссылке/, 'про данные подростка — отдельно');
+    assert.match(text, /Не храним: имя ребёнка, оценки/);
+    assert.match(text, /\/delete_data/);
+    assert.deepEqual(lastAnswer().buttons, ['survey:start'], 'до опроса — сразу к вопросам');
+
+    await bot.handleUpdate(command('/privacy', { ...USER, user_id: 590 }));
+    assert.match(lastAnswer().text, /^Какие данные хранит/);
+    assert.deepEqual(lastAnswer().buttons, ['menu:show'], 'с готовым планом — назад в меню');
+
+    await bot.handleUpdate(command('Какие данные вы храните?', newcomer));
+    assert.match(lastAnswer().text, /^Какие данные хранит/);
+    await bot.handleUpdate(command('/help'));
+    assert.match(lastAnswer().text, /\/privacy — какие данные храним/);
+  });
+});
+
+describe('меню помещается на экран', () => {
+  test('у родителя в регионе эксперимента — пять строк кнопок, короткие подписи по две', async () => {
+    await bot.handleUpdate(command('/menu', { ...USER, user_id: 580 }));
+    const rows = requests.at(-1).body.attachments[0].payload.buttons;
+    assert.ok(rows.length <= 5, `строк: ${rows.length}`);
+    const labels = rows.flat().map((button) => button.text);
+    assert.ok(labels.includes('🏫 Колледжи') && labels.includes('📨 Отправить подростку'));
   });
 });
