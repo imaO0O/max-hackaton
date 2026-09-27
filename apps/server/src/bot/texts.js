@@ -245,11 +245,17 @@ export function planItemCard(item) {
   else if (item.sourceTitle || item.sourceUrl) {
     source = `Источник: ${item.sourceTitle ?? 'по ссылке ниже'}${item.checkedAt ? `, проверено ${formatCheckedAt(item.checkedAt)}` : ', дата не проверена'}.`;
   } else source = 'Источник не указан.';
+  // Чек-лист: шаги с отметками, у пунктов из справочника без плана — просто список
+  const steps = item.steps?.length
+    ? ['', `Шаги (${item.steps.filter((step) => step.done).length} из ${item.steps.length}):`,
+      ...item.steps.map((step) => `${step.done ? '✅' : '▫️'} ${step.title}`)]
+    : [];
   return [
     `📌 ${item.title}`,
     `${date}${item.isApproximate ? ' (ориентировочно)' : ''}${status ? ` · ${status}` : ''}`,
     '',
     item.description,
+    ...steps,
     '',
     source,
   ].join('\n');

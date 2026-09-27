@@ -639,3 +639,42 @@ describe('подсказка «2 или 4 ОГЭ?»', () => {
     assert.match(lastAnswer().text, /Можно два ОГЭ: 1/);
   });
 });
+
+describe('чек-лист поступления в чате', () => {
+  const FAMILY = { ...USER, user_id: 590 };
+  const ITEM = '2627-chk-summer-checklist';
+
+  before(() => {
+    ctx.services.plan.saveProfile(590, {
+      regionId: 'demo-standard', city: 'Демоград', grade: 9, interests: ['it'], path: 'college',
+    });
+  });
+
+  test('шаги в карточке пункта отмечаются кнопками, все шаги — пункт выполнен', async () => {
+    await bot.handleUpdate(press(`item:${ITEM}`, FAMILY));
+    assert.match(lastAnswer().text, /Шаги \(0 из 6\):/);
+    assert.match(lastAnswer().text, /▫️ Собрать документы/);
+    const stepButtons = lastAnswer().buttons.filter((payload) => payload.startsWith('st:'));
+    assert.equal(stepButtons.length, 6);
+
+    await bot.handleUpdate(press(stepButtons[0], FAMILY));
+    assert.match(lastAnswer().text, /Шаги \(1 из 6\):/);
+    assert.match(lastAnswer().text, /✅ Собрать документы/);
+
+    for (const payload of stepButtons.slice(1)) await bot.handleUpdate(press(payload, FAMILY));
+    assert.match(lastAnswer().text, /Шаги \(6 из 6\):/);
+    assert.ok(lastAnswer().buttons.includes(`item-undo:${ITEM}`), 'пункт отмечен выполненным');
+    assert.ok(ctx.services.plan.getPlan(590).items.find((item) => item.id === ITEM).done);
+
+    await bot.handleUpdate(press(stepButtons[0], FAMILY));
+    assert.match(lastAnswer().text, /Шаги \(5 из 6\):/);
+    assert.ok(lastAnswer().buttons.includes(`item-done:${ITEM}`), 'сняли шаг — пункт снова не выполнен');
+  });
+
+  test('чужой или несуществующий шаг не ломает диалог', async () => {
+    await bot.handleUpdate(press(`st:${ITEM}:nope`, FAMILY));
+    assert.match(lastAnswer().text, /больше нет в плане/);
+    await bot.handleUpdate(press(`st:${ITEM}:documents`, { ...USER, user_id: 591 }));
+    assert.match(lastAnswer().text, /больше нет в плане/, "без своего плана отмечать нечего");
+  });
+});

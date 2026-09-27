@@ -242,6 +242,18 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
     return show(ctx, itemView(userId, itemId), { edit: true });
   });
 
+  /** Шаг чек-листа: переключает отметку; когда отмечены все шаги, пункт выполняется сам. */
+  bot.action(/^st:/, async (ctx) => {
+    const userId = userIdOf(ctx);
+    const [, itemId, stepId] = payloadOf(ctx).split(':');
+    const current = currentPlan(userId);
+    const step = current?.own ? current.plan.items.find((item) => item.id === itemId)?.steps.find((row) => row.id === stepId) : null;
+    if (!step) return ctx.answerOnCallback({ message: { text: texts.itemNotFound } });
+    const result = services.plan.setStepDone(userId, itemId, stepId, !step.done);
+    if (result.done) services.analytics.track(EVENTS.STEP_DONE, userId, { itemId, stepId, from: 'chat' });
+    return show(ctx, itemView(userId, itemId), { edit: true });
+  });
+
   // Кнопки под напоминанием: само напоминание остаётся в чате
 
   bot.action(/^ritem:/, async (ctx) => {

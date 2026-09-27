@@ -69,6 +69,8 @@ export function mapKeyDate(row) {
     title: row.title,
     description: row.description,
     reminders: JSON.parse(row.reminders),
+    // Шаги чек-листа ({ id, title }); у обычных пунктов — пустой список
+    steps: row.steps ? JSON.parse(row.steps) : [],
     sourceTitle: row.source_title,
     sourceUrl: row.source_url,
     checkedAt: row.checked_at,

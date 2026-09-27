@@ -25,6 +25,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
   // Она действует 10 минут, поэтому, пока экран открыт, обновляем её за минуту до конца
   const calendarLink = useAsync(() => api.calendarLink().then((link) => ({ ...link, receivedAt: Date.now() })), []);
   const [pendingIds, setPendingIds] = useState(new Set());
+  const [pendingSteps, setPendingSteps] = useState(new Set());
   const [sharing, setSharing] = useState(false);
   const [savingReminders, setSavingReminders] = useState(false);
   const [showPast, setShowPast] = useState(false);
@@ -70,6 +71,38 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
       setPendingIds((previous) => {
         const next = new Set(previous);
         next.delete(item.id);
+        return next;
+      });
+    }
+  };
+
+  /** Шаг чек-листа: отметка сразу на экране, при ошибке — возврат и сообщение. Все шаги — пункт выполнен. */
+  const toggleStep = async (item, step) => {
+    const key = `${item.id}/${step.id}`;
+    const done = !step.done;
+    const withStep = (value) => (data) => ({
+      ...data,
+      items: data.items.map((row) => (row.id === item.id
+        ? { ...row, steps: row.steps.map((current) => (current.id === step.id ? { ...current, done: value } : current)) }
+        : row)),
+    });
+    setPendingSteps((previous) => new Set(previous).add(key));
+    plan.setData(withStep(done));
+    try {
+      const result = await api.setStepDone(item.id, step.id, done);
+      if (done) haptic('success');
+      if (result.itemDone !== item.done) {
+        showToast(result.itemDone ? 'Все шаги готовы — пункт выполнен' : 'Пункт снова в работе');
+      }
+      plan.reload();
+    } catch (error) {
+      plan.setData(withStep(!done));
+      haptic('error');
+      showToast(error.message, 'error');
+    } finally {
+      setPendingSteps((previous) => {
+        const next = new Set(previous);
+        next.delete(key);
         return next;
       });
     }
@@ -250,6 +283,8 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
             nextItemId={plan.data.nextItemId}
             onToggleDone={toggleDone}
             pendingIds={pendingIds}
+            onToggleStep={toggleStep}
+            pendingSteps={pendingSteps}
             regionIsDemo={region.isDemo}
             hidePast={!showPast}
           />

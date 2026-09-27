@@ -81,6 +81,30 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     return result;
   });
 
+  api.put('/plan/items/:itemId/steps/:stepId', {
+    config: { auth: true },
+    schema: {
+      params: {
+        type: 'object',
+        required: ['itemId', 'stepId'],
+        properties: {
+          itemId: { type: 'string', pattern: '^[a-z0-9-]{1,100}$' },
+          stepId: { type: 'string', pattern: '^[a-z0-9-]{1,30}$' },
+        },
+      },
+      body: {
+        type: 'object',
+        required: ['done'],
+        additionalProperties: false,
+        properties: { done: { type: 'boolean' } },
+      },
+    },
+  }, async (request) => {
+    const result = plan.setStepDone(request.maxUser.id, request.params.itemId, request.params.stepId, request.body.done);
+    if (result.done) analytics.track(EVENTS.STEP_DONE, request.maxUser.id, { itemId: result.id, stepId: result.stepId });
+    return result;
+  });
+
   api.post('/plan/share', { config: { auth: true } }, async (request) => plan.createShareLink(request.maxUser.id));
 
   api.delete('/plan/share', { config: { auth: true } }, async (request) => plan.revokeShareLink(request.maxUser.id));
