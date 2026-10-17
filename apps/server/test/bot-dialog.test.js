@@ -95,6 +95,7 @@ before(() => {
     runtime: ctx.runtime,
     logger: silentLogger,
     clientOptions: { fetch: fakeFetch },
+    clock: () => ctx.clock.now,
   });
 });
 
@@ -388,6 +389,22 @@ describe('меню, план в чате и отправка подростку'
     await bot.handleUpdate(press(`pu:${programId}`));
     assert.doesNotMatch(lastAnswer().text, /★ В избранном/);
     assert.ok(!ctx.services.catalog.listFavorites(555).some((program) => program.id === programId));
+  });
+
+  test('статус данных программы: подтверждённый и неполный случай, дата проверки и приёмная комиссия', async () => {
+    await bot.handleUpdate(press('p:tat-kazan-aviation-technical-college--090211--full_time'));
+    const confirmed = lastAnswer();
+    assert.match(confirmed.text, /✅ Данные подтверждены · проверено 16.09.2026/);
+    assert.doesNotMatch(confirmed.text, /Уточните в приёмной комиссии/);
+    assert.ok(allButtons(requests.at(-1).body.message).some((button) => button.type === 'link' && button.text === 'Источник'));
+
+    await bot.handleUpdate(press('p:tat-kazan-radiomechanical-college--090201--full_time'));
+    const incomplete = lastAnswer();
+    assert.match(incomplete.text, /⚠️ Неполные данные · проверено 16.09.2026/);
+    assert.match(incomplete.text, /Колледж не опубликовал: прошлогодний проходной балл, число бюджетных мест./);
+    assert.match(incomplete.text, /Прошлогодний проходной балл колледж не публикует/);
+    assert.match(incomplete.text, /Уточните в приёмной комиссии колледжа./);
+    assert.ok(allButtons(requests.at(-1).body.message).some((button) => button.type === 'link' && button.text === 'Приёмная комиссия и источник'));
   });
 
   test('колледжи в чате: если в городе нет программ по интересам — показываем регион', async () => {

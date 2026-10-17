@@ -27,7 +27,9 @@ const HEALTH_FAILURES_BEFORE_ALERT = 3;
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
-export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
+export function createBot({
+  config, repos, services, runtime, logger, clientOptions, clock = () => new Date(),
+}) {
   // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX.
   // Поверх него — оформление сообщений (жирные заголовки), если BOT_RICH_TEXT не выключен
   const baseFetch = clientOptions?.fetch ?? globalThis.fetch;
@@ -54,7 +56,9 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   }
 
   const planChat = registerPlanChat({ bot, users, reference, services, runtime });
-  const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
+  const collegesChat = registerCollegesChat({
+    bot, users, reference, services, runtime, clock,
+  });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
   registerReportsChat({ bot, reference, services, config });
   const examsChat = registerExamsChat({ bot, users, reference, services });
