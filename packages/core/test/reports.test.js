@@ -12,6 +12,11 @@ test('срок обработки: рабочие дни без субботы �
   assert.equal(addWorkdays('2026-09-19', 1), '2026-09-21', 'суббота → понедельник');
 });
 
+test('срок обработки: праздники не считаются', () => {
+  assert.equal(addWorkdays('2026-11-03', 3), '2026-11-09', '4 ноября — праздник');
+  assert.equal(addWorkdays('2026-12-30', 3), '2027-01-12', 'новогодние каникулы: 31 декабря, 11 и 12 января');
+});
+
 test('итог обработки сообщения', () => {
   assert.equal(parseReportResolution('Исправлено'), REPORT_RESOLUTIONS.FIXED);
   assert.equal(parseReportResolution('верно'), REPORT_RESOLUTIONS.CONFIRMED);
