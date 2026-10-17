@@ -1,6 +1,7 @@
 import { Keyboard } from '@maxhub/max-bot-api';
 import {
-  DATA_STATUS, DATA_STATUS_ICONS, DATA_STATUS_TITLES, dataStatusExplanation, localDateString, programDataStatus, STUDY_FORMS,
+  DATA_STATUS, DATA_STATUS_ICONS, DATA_STATUS_TITLES, dataStatusExplanation, dataStatusIcon, localDateString, programDataStatus,
+  STUDY_FORMS,
 } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
@@ -26,10 +27,10 @@ function shorten(text, maxLength) {
 }
 
 /** Номер программы в списке — он же на кнопке, чтобы подпись кнопки была короткой и не обрезалась на телефоне. */
-function programLine(program, number, status) {
+function programLine(program, number, info) {
   const score = program.passingScore === null ? 'балл: нет данных' : `балл ${program.scoreYear ?? ''}: ${formatScore(program.passingScore)}`;
   const places = program.budgetPlaces ? `, бюджет ${program.budgetPlaces}` : '';
-  return `${number}. ${program.specialtyTitle} — ${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places} ${DATA_STATUS_ICONS[status]}`;
+  return `${number}. ${program.specialtyTitle} — ${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places} ${dataStatusIcon(info)}`;
 }
 
 /**
@@ -70,7 +71,7 @@ function programCard(program, isFavorite, today) {
   lines.push(
     `Адрес: ${program.college.address ?? program.college.city}${program.college.hasDormitory ? ', есть общежитие' : ''}`,
     '',
-    `${DATA_STATUS_ICONS[programDataStatus(program, { today }).status]} ${status.title}`,
+    `${dataStatusIcon(programDataStatus(program, { today }))} ${status.title}`,
     ...status.lines,
   );
   if (program.passingScore !== null) lines.push('', 'Балл — ориентир по прошлому году, а не прогноз поступления.');
@@ -120,14 +121,17 @@ export function registerCollegesChat({
     const lines = [];
     shown.forEach((program, index) => {
       if (index === 0 || shown[index - 1].college.id !== program.college.id) lines.push('', `🏫 ${program.college.name}`);
-      lines.push(programLine(program, index + 1, programDataStatus(program, { today: todayMsk(clock) }).status));
+      lines.push(programLine(program, index + 1, programDataStatus(program, { today: todayMsk(clock) })));
     });
     // Легенда — только для значков, которые есть в списке
-    const present = [...new Set(shown.map((program) => programDataStatus(program, { today: todayMsk(clock) }).status))];
-    const legend = [DATA_STATUS.CONFIRMED, DATA_STATUS.INCOMPLETE, DATA_STATUS.STALE, DATA_STATUS.UNVERIFIED, DATA_STATUS.DEMO]
-      .filter((item) => present.includes(item))
-      .map((item) => `${DATA_STATUS_ICONS[item]} ${DATA_STATUS_TITLES[item].toLowerCase()}`)
-      .join(', ');
+    const infos = shown.map((program) => programDataStatus(program, { today: todayMsk(clock) }));
+    const present = [...new Set(infos.map((info) => info.status))];
+    const legend = [
+      ...[DATA_STATUS.CONFIRMED, DATA_STATUS.INCOMPLETE, DATA_STATUS.STALE, DATA_STATUS.UNVERIFIED, DATA_STATUS.DEMO]
+        .filter((item) => infos.some((info) => info.status === item && !info.minor))
+        .map((item) => `${DATA_STATUS_ICONS[item]} ${DATA_STATUS_TITLES[item].toLowerCase()}`),
+      ...(infos.some((info) => info.minor) ? ['ℹ️ колледж не публикует прошлогодний балл'] : []),
+    ].join(', ');
     const text = [
       `Колледжи: ${region?.name ?? ''}${user.city ? `, ${user.city}` : ''}`,
       note,

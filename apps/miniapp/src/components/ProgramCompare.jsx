@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Button, Switch, Typography } from '@maxhub/max-ui';
-import { STUDY_FORMS } from '@posle9/core';
+import {
+  DATA_STATUS_TITLES, dataStatusIcon, localDateString, programDataStatus, STUDY_FORMS,
+} from '@posle9/core';
 
 import { formatScore } from '../lib/format.js';
 import { showBackButton } from '../lib/max-bridge.js';
@@ -17,6 +19,8 @@ const budgetText = (places) => {
 /**
  * Строки сравнения. text — значение для проверки «одинаково у всех», render — что показать в ячейке.
  */
+const statusOf = (program) => programDataStatus(program, { today: localDateString(new Date(), 3) });
+
 const ROWS = [
   { id: 'college', label: 'Колледж', text: (program) => `${program.college.name}, ${program.college.city}` },
   { id: 'specialty', label: 'Код', text: (program) => program.specialtyCode },
@@ -34,11 +38,17 @@ const ROWS = [
   { id: 'dormitory', label: 'Общежитие', text: (program) => (program.college.hasDormitory ? 'есть' : 'нет') },
   {
     id: 'source',
-    label: 'Источник',
-    text: (program) => `${program.sourceUrl ?? ''}|${program.checkedAt ?? ''}|${program.college.isDemo}`,
-    render: (program) => (
-      <SourceNote title={program.sourceUrl ? 'Открыть' : null} url={program.sourceUrl} checkedAt={program.checkedAt} isDemo={program.college.isDemo} />
-    ),
+    label: 'Данные и источник',
+    text: (program) => `${statusOf(program).status}|${program.sourceUrl ?? ''}|${program.checkedAt ?? ''}|${program.college.isDemo}`,
+    render: (program) => {
+      const info = statusOf(program);
+      return (
+        <>
+          <span>{`${dataStatusIcon(info)} ${DATA_STATUS_TITLES[info.status]}`}</span>
+          <SourceNote title={program.sourceUrl ? 'Открыть' : null} url={program.sourceUrl} checkedAt={program.checkedAt} isDemo={program.college.isDemo} />
+        </>
+      );
+    },
   },
 ];
 

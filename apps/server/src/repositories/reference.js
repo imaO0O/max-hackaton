@@ -76,6 +76,8 @@ export function mapKeyDate(row) {
     sourceTitle: row.source_title,
     sourceUrl: row.source_url,
     checkedAt: row.checked_at,
+    // Оговорка к сроку, например «приказ № 457 действует до 01.01.2027»
+    dataNote: row.data_note ?? null,
   };
 }
 

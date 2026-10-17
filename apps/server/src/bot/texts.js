@@ -1,4 +1,6 @@
-import { OTHER_REGION_ID, PATH_TITLES, planPeriodLabel } from '@posle9/core';
+import {
+  DATA_STATUS_ICONS, keyDateDataStatus, localDateString, OTHER_REGION_ID, PATH_TITLES, planPeriodLabel,
+} from '@posle9/core';
 
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -254,14 +256,13 @@ function itemStatusText(item) {
 }
 
 /** Карточка пункта плана: дата, статус, что сделать и откуда это известно. */
-export function planItemCard(item) {
+/** today — сегодняшняя дата для статуса «давно не проверялось» (по умолчанию — по Москве); regionIsDemo — даты демо-региона. */
+export function planItemCard(item, { today = localDateString(new Date(), 3), regionIsDemo = false } = {}) {
   const date = item.dateEnd ? `${formatDate(item.dateStart)} — ${formatDate(item.dateEnd)}` : formatDate(item.dateStart);
   const status = itemStatusText(item);
-  let source;
-  if (item.scope === 'recommendation') source = 'Совет сервиса.';
-  else if (item.sourceTitle || item.sourceUrl) {
-    source = `Источник: ${item.sourceTitle ?? 'по ссылке ниже'}${item.checkedAt ? `, проверено ${formatCheckedAt(item.checkedAt)}` : ', дата не проверена'}.`;
-  } else source = 'Источник не указан.';
+  // Статус даты — как у программ колледжей: заметная дата проверки и где уточнить
+  const dataStatus = keyDateDataStatus(item, { today, regionIsDemo });
+  const source = [`${DATA_STATUS_ICONS[dataStatus.status]} ${dataStatus.title}`, ...dataStatus.lines].join('\n');
   // Чек-лист: шаги с отметками, у пунктов из справочника без плана — просто список
   const steps = item.steps?.length
     ? ['', `Шаги (${item.steps.filter((step) => step.done).length} из ${item.steps.length}):`,

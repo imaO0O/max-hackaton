@@ -21,6 +21,8 @@ export const DATA_STATUS = Object.freeze({
   STALE: 'stale',
   UNVERIFIED: 'unverified',
   DEMO: 'demo',
+  APPROXIMATE: 'approximate',
+  ADVICE: 'advice',
 });
 
 /** Что из ключевых сведений о программе не опубликовано. */
@@ -55,11 +57,52 @@ export function programDataStatus(program, { today }) {
   if (program.college?.isDemo) return { ...base, status: DATA_STATUS.DEMO };
   if (!program.sourceUrl || !program.checkedAt) return { ...base, status: DATA_STATUS.UNVERIFIED };
   if (daysBetween(program.checkedAt, today) > STALE_AFTER_DAYS) return { ...base, status: DATA_STATUS.STALE };
-  return { ...base, status: missing.length ? DATA_STATUS.INCOMPLETE : DATA_STATUS.CONFIRMED };
+  // Не опубликован только прошлогодний балл — так у большинства колледжей: показываем спокойнее, текст тот же
+  const minor = missing.length === 1 && missing[0] === PROGRAM_FIELDS[0][1];
+  return { ...base, status: missing.length ? DATA_STATUS.INCOMPLETE : DATA_STATUS.CONFIRMED, minor };
+}
+
+/** Значок статуса: для «не опубликован только балл» — ℹ️ вместо ⚠️. */
+export function dataStatusIcon(info) {
+  return info.minor ? 'ℹ️' : DATA_STATUS_ICONS[info.status];
+}
+
+/**
+ * Статус даты или правила в плане: подтверждена, ориентировочная, совет сервиса, давно не проверялась.
+ * Где уточнять: даты приёма в колледж — в приёмной комиссии, остальное — в школе.
+ * @param {object} item пункт плана или запись справочника дат
+ * @param {{ today: string, regionIsDemo?: boolean }} options сегодняшняя дата YYYY-MM-DD; демо-регион — вымышленные даты
+ * @returns {{ status: string, title: string, lines: string[] }}
+ */
+export function keyDateDataStatus(item, { today, regionIsDemo = false }) {
+  const ask = `Уточните ${item.path === 'college' ? 'в приёмной комиссии колледжа' : 'в школе'}.`;
+  const date = formatCheckDate(item.checkedAt);
+  const checked = date ? ` · проверено ${date}` : '';
+  let source = null;
+  if (item.sourceUrl) source = item.sourceTitle ? `Источник: ${item.sourceTitle}.` : 'Источник — по ссылке ниже.';
+  const note = item.dataNote ?? null;
+  const result = (status, title, lines) => ({ status, title, lines: lines.filter(Boolean) });
+
+  if (item.scope === 'recommendation') return result(DATA_STATUS.ADVICE, 'Совет сервиса', ['Это рекомендация, а не официальный срок.']);
+  if (item.scope === 'regional' && regionIsDemo) {
+    return result(DATA_STATUS.DEMO, DATA_STATUS_TITLES[DATA_STATUS.DEMO], ['Вымышленный регион для демонстрации сценария.']);
+  }
+  if (item.checkedAt && daysBetween(item.checkedAt, today) > STALE_AFTER_DAYS) {
+    return result(DATA_STATUS.STALE, `Давно не проверялось${checked}`, [source, 'Правила могли измениться.', note, ask]);
+  }
+  if (item.isApproximate) {
+    return result(DATA_STATUS.APPROXIMATE, `Дата ориентировочная${checked}`, [source, 'Точный срок ещё не опубликован — дата по прошлым годам.', note, ask]);
+  }
+  if (!source || !item.checkedAt) {
+    return result(DATA_STATUS.UNVERIFIED, DATA_STATUS_TITLES[DATA_STATUS.UNVERIFIED], [source ?? 'Нет первоисточника.', !item.checkedAt && 'Дата проверки не указана.', ask]);
+  }
+  return result(DATA_STATUS.CONFIRMED, `Дата подтверждена${checked}`, [source, note, note && ask]);
 }
 
 /** Короткая подпись статуса — для списков и значков. */
 export const DATA_STATUS_TITLES = Object.freeze({
+  [DATA_STATUS.APPROXIMATE]: 'Дата ориентировочная',
+  [DATA_STATUS.ADVICE]: 'Совет сервиса',
   [DATA_STATUS.CONFIRMED]: 'Данные подтверждены',
   [DATA_STATUS.INCOMPLETE]: 'Неполные данные',
   [DATA_STATUS.STALE]: 'Давно не проверялось',
@@ -68,6 +111,8 @@ export const DATA_STATUS_TITLES = Object.freeze({
 });
 
 export const DATA_STATUS_ICONS = Object.freeze({
+  [DATA_STATUS.APPROXIMATE]: '🕓',
+  [DATA_STATUS.ADVICE]: '💡',
   [DATA_STATUS.CONFIRMED]: '✅',
   [DATA_STATUS.INCOMPLETE]: '⚠️',
   [DATA_STATUS.STALE]: '⚠️',

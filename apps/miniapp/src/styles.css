@@ -314,6 +314,11 @@ button {
   background: color-mix(in srgb, #ff9f0a 12%, transparent);
 }
 
+.data-status--info {
+  border-left-color: #0a84ff;
+  background: color-mix(in srgb, #0a84ff 8%, transparent);
+}
+
 .data-status .link-button {
   align-self: flex-start;
   padding: 0;

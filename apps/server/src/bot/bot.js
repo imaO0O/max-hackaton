@@ -56,7 +56,9 @@ export function createBot({
     });
   }
 
-  const planChat = registerPlanChat({ bot, users, reference, services, runtime });
+  const planChat = registerPlanChat({
+    bot, users, reference, services, runtime, clock,
+  });
   const collegesChat = registerCollegesChat({
     bot, users, reference, services, runtime, clock,
   });

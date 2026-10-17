@@ -1,4 +1,4 @@
-import { daysBetween, OTHER_REGION_ID } from '@posle9/core';
+import { daysBetween, localDateString, OTHER_REGION_ID } from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
@@ -21,8 +21,12 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{16,64}$/;
  * Тот, кто подписался на чужой план (обычно подросток), видит его в меню и по /plan как «План семьи».
  * Переходы по кнопкам редактируют одно сообщение, команды присылают новое.
  */
-export function registerPlanChat({ bot, users, reference, services, runtime }) {
+export function registerPlanChat({
+  bot, users, reference, services, runtime, clock = () => new Date(),
+}) {
   const userIdOf = (ctx) => ctx.user?.user_id;
+  // Статус «давно не проверялось» считается по московской дате
+  const todayMsk = () => localDateString(clock(), 3);
   const payloadOf = (ctx) => ctx.callback?.payload ?? '';
 
   const show = (ctx, view, { edit }) => (edit
@@ -96,11 +100,14 @@ export function registerPlanChat({ bot, users, reference, services, runtime }) {
     const current = currentPlan(userId);
     const item = current?.plan.items.find((row) => row.id === itemId);
     if (item) {
-      return { text: planItemCard(item), keyboard: planItemKeyboard({ item, canMarkDone: current.own, back: 'plan:all' }) };
+      const card = planItemCard(item, { today: todayMsk(), regionIsDemo: Boolean(current.plan.region?.isDemo) });
+      return { text: card, keyboard: planItemKeyboard({ item, canMarkDone: current.own, back: 'plan:all' }) };
     }
     const keyDate = reference.getKeyDate(itemId);
     if (!keyDate) return null;
-    return { text: planItemCard(keyDate), keyboard: planItemKeyboard({ item: keyDate, canMarkDone: false, back: 'menu:show' }) };
+    const regionIsDemo = Boolean(keyDate.regionId && reference.getRegion(keyDate.regionId)?.isDemo);
+    const card = planItemCard(keyDate, { today: todayMsk(), regionIsDemo });
+    return { text: card, keyboard: planItemKeyboard({ item: keyDate, canMarkDone: false, back: 'menu:show' }) };
   }
 
   function shareView(userId) {

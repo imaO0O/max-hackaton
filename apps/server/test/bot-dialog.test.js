@@ -786,6 +786,28 @@ describe('неточность в данных', () => {
     assert.match(lastAnswer().text, /больше нет в плане/, 'неподходящая причина не сохраняется');
   });
 
+  test('статус даты в карточке пункта: подтверждена, ориентировочная — где уточнить, совет сервиса', async () => {
+    await bot.handleUpdate(press('item:2627-fed-gia-application', PARENT));
+    assert.match(lastAnswer().text, /✅ Дата подтверждена · проверено 16.09.2026/);
+    assert.doesNotMatch(lastAnswer().text, /Уточните/);
+
+    await bot.handleUpdate(press('item:2627-fed-original-document', PARENT));
+    assert.match(lastAnswer().text, /🕓 Дата ориентировочная · проверено 16.09.2026/);
+    assert.match(lastAnswer().text, /Уточните в приёмной комиссии колледжа\./);
+
+    await bot.handleUpdate(press('item:2627-fed-college-admission', PARENT));
+    assert.match(lastAnswer().text, /✅ Дата подтверждена · проверено 16.09.2026/);
+    assert.match(lastAnswer().text, /приказ № 457 действует до 1 января 2027 года/);
+    assert.match(lastAnswer().text, /Уточните в приёмной комиссии колледжа\./);
+
+    await bot.handleUpdate(press('item:2627-fed-oge-main-period', PARENT));
+    assert.match(lastAnswer().text, /🕓 Дата ориентировочная\n/);
+    assert.match(lastAnswer().text, /Уточните в школе\./);
+
+    await bot.handleUpdate(press('item:2627-chk-summer-checklist', PARENT));
+    assert.match(lastAnswer().text, /💡 Совет сервиса/);
+  });
+
   test('/reports — сводка только для команды проекта', async () => {
     await bot.handleUpdate(command('/reports', PARENT));
     assert.match(lastAnswer().text, /только команде проекта/);

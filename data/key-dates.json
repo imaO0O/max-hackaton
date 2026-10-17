@@ -205,7 +205,8 @@
     "reminders": [{ "anchor": "start", "daysBefore": 3 }, { "anchor": "end", "daysBefore": 7 }],
     "sourceTitle": "Порядок приёма на обучение по программам СПО (приказ Минпросвещения России № 457)",
     "sourceUrl": "https://www.consultant.ru/document/cons_doc_LAW_366971/",
-    "checkedAt": "2026-09-16"
+    "checkedAt": "2026-09-16",
+    "dataNote": "Сроки — по действующему Порядку приёма в СПО (приказ № 457 действует до 1 января 2027 года). Новый порядок сверим в январе 2027."
   },
   {
     "id": "2627-fed-original-document",
@@ -223,7 +224,8 @@
     "reminders": [{ "anchor": "start", "daysBefore": 5 }, { "anchor": "start", "daysBefore": 1 }],
     "sourceTitle": "Порядок приёма на обучение по программам СПО (приказ Минпросвещения России № 457)",
     "sourceUrl": "https://www.consultant.ru/document/cons_doc_LAW_366971/",
-    "checkedAt": "2026-09-16"
+    "checkedAt": "2026-09-16",
+    "dataNote": "Сроки — по действующему Порядку приёма в СПО (приказ № 457 действует до 1 января 2027 года). Новый порядок сверим в январе 2027."
   },
   {
     "id": "2627-reg-demo-standard-fair",
@@ -359,6 +361,7 @@
     "experiment": "any",
     "dateEnd": null,
     "checkedAt": "2026-09-16",
+    "dataNote": "Описаны правила приёма 2026 года. Правила на 2027 год колледжи публикуют не позднее 1 марта.",
     "kind": "checklist",
     "path": "college",
     "dateStart": "2027-06-20",
