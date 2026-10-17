@@ -54,4 +54,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD wget -qO- http://127.0.0.1:8080/api/health > /dev/null || exit 1
 
-CMD ["node", "--disable-warning=ExperimentalWarning", "apps/server/src/index.js"]
+# Обёртка запускает сервер; с SUPABASE_URL и SUPABASE_SECRET_KEY ещё и хранит копию базы в Supabase Storage
+CMD ["node", "--disable-warning=ExperimentalWarning", "apps/server/src/db-backup/run.js"]
