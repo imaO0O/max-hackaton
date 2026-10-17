@@ -32,3 +32,36 @@ export function isReportReason(targetType, reason) {
 export function reportReasonTitle(targetType, reason) {
   return REPORT_REASONS[targetType]?.find((item) => item.id === reason)?.title ?? reason;
 }
+
+/** Срок обработки сообщения: сверить факт с источником и исправить или подтвердить — 3 рабочих дня. */
+export const REPORT_SLA_WORKDAYS = 3;
+
+export const REPORT_RESOLUTIONS = Object.freeze({
+  FIXED: 'fixed',
+  CONFIRMED: 'confirmed',
+});
+
+export const REPORT_RESOLUTION_TITLES = Object.freeze({
+  [REPORT_RESOLUTIONS.FIXED]: 'исправлено',
+  [REPORT_RESOLUTIONS.CONFIRMED]: 'данные верны',
+});
+
+/** «исправлено» → fixed, «верно» или «данные верны» → confirmed. */
+export function parseReportResolution(word) {
+  const normalized = (word ?? '').trim().toLowerCase().replaceAll('ё', 'е');
+  if (/^(исправлено|fixed)$/.test(normalized)) return REPORT_RESOLUTIONS.FIXED;
+  if (/^(верно|данные верны|confirmed)$/.test(normalized)) return REPORT_RESOLUTIONS.CONFIRMED;
+  return null;
+}
+
+/** Дата YYYY-MM-DD через days рабочих дней: суббота и воскресенье не считаются, праздники — тоже рабочие. */
+export function addWorkdays(date, days) {
+  const current = new Date(`${date}T00:00:00Z`);
+  let left = days;
+  while (left > 0) {
+    current.setUTCDate(current.getUTCDate() + 1);
+    const weekday = current.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) left -= 1;
+  }
+  return current.toISOString().slice(0, 10);
+}

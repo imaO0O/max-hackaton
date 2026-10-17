@@ -740,10 +740,35 @@ describe('неточность в данных', () => {
     await bot.handleUpdate(command('/reports', PARENT));
     assert.match(lastAnswer().text, /только команде проекта/);
     await bot.handleUpdate(command('/reports'));
-    assert.match(lastAnswer().text, /^Сообщения о неточностях за 30 дней: [1-9]/);
-    assert.match(lastAnswer().text, /Другой балл или число мест · семей: 1/);
+    const summary = lastAnswer().text;
+    assert.match(summary, /^Открытые сообщения о неточностях: 1\. Закрыто за 30 дней: 0\./);
+    assert.match(summary, /Другой балл или число мест · семей: 1 · получено 16\.09 · срок до 21\.09/, '3 рабочих дня: выходные не считаются');
+    assert.match(summary, /\/report_done <номер> исправлено/);
+    const groupId = /#(\d+) /.exec(summary)[1];
     await bot.handleUpdate(command('/stats'));
     assert.match(lastAnswer().text, /Сообщили о неточностях в данных: [1-9]/);
+
+    await bot.handleUpdate(command(`/report_done ${groupId} проверим`));
+    assert.match(lastAnswer().text, /Итог — «исправлено» или «верно»/);
+    await bot.handleUpdate(command(`/report_done ${groupId} исправлено`, PARENT));
+    assert.match(lastAnswer().text, /только команде проекта/);
+    await bot.handleUpdate(command(`/report_done ${groupId} исправлено`));
+    assert.match(lastAnswer().text, new RegExp(`^Закрыто #${groupId}: .+ — исправлено\\. Сообщений: 1\\.`));
+    await bot.handleUpdate(command(`/report_done ${groupId} верно`));
+    assert.match(lastAnswer().text, /уже закрыто/);
+    await bot.handleUpdate(command('/reports'));
+    assert.match(lastAnswer().text, /^Открытых сообщений о неточностях нет\. Закрыто за 30 дней: 1, в среднем за 0,0 дн\./);
+  });
+
+  test('срок обработки сообщения: 3 рабочих дня, просроченное помечено', async () => {
+    const program = ctx.repos.reference.getProgram('tat-kazan-radiomechanical-college--090201--full_time');
+    await bot.handleUpdate(press(`rr:p:other:${program.id}`, { ...USER, user_id: 601 }));
+    const realNow = ctx.clock.now;
+    ctx.clock.now = new Date('2026-09-24T09:00:00Z');
+    await bot.handleUpdate(command('/reports'));
+    assert.match(lastAnswer().text, /просрочено: 1/);
+    assert.match(lastAnswer().text, /срок до 21\.09 · ⚠️ просрочено/);
+    ctx.clock.now = realNow;
   });
 });
 

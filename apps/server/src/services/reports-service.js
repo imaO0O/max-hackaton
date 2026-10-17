@@ -1,4 +1,7 @@
-import { isReportReason, REPORT_TARGETS, reportReasonTitle } from '@posle9/core';
+import {
+  addWorkdays, isReportReason, parseReportResolution, REPORT_RESOLUTION_TITLES, REPORT_SLA_WORKDAYS, REPORT_TARGETS,
+  reportReasonTitle,
+} from '@posle9/core';
 
 import { badRequest, notFound } from './errors.js';
 
@@ -23,24 +26,50 @@ export function createReportService({ repos, clock = () => new Date() }) {
       if (!targetTitle(targetType, targetId)) throw notFound('Запись не найдена');
       users.ensure(userId);
       const created = reports.create({
-        userId, targetType, targetId, reason,
+        userId, targetType, targetId, reason, createdAt: clock().toISOString(),
       });
       return { created };
     },
 
-    /** Текст для команды проекта: за 30 дней, самые частые сверху. */
+    /** Сводка для команды проекта: открытые сообщения со сроком обработки, просроченные помечены. */
     summaryText() {
+      const today = clock().toISOString().slice(0, 10);
       const since = new Date(clock().getTime() - SUMMARY_DAYS * 24 * 3600 * 1000).toISOString();
-      const rows = reports.summary({ since });
-      if (!rows.length) return `Сообщений о неточностях за ${SUMMARY_DAYS} дней нет.`;
+      const groups = reports.openGroups().map((group) => {
+        const due = addWorkdays(group.firstAt.slice(0, 10), REPORT_SLA_WORKDAYS);
+        return { ...group, due, overdue: today > due };
+      });
+      const resolved = reports.resolvedStats(since);
+      const resolvedLine = resolved.count
+        ? `Закрыто за ${SUMMARY_DAYS} дней: ${resolved.count}, в среднем за ${resolved.avgDays.toFixed(1).replace('.', ',')} дн.`
+        : `Закрыто за ${SUMMARY_DAYS} дней: 0.`;
+      if (!groups.length) return `Открытых сообщений о неточностях нет. ${resolvedLine}`;
+      const overdue = groups.filter((group) => group.overdue).length;
+      const shortDate = (date) => `${date.slice(8, 10)}.${date.slice(5, 7)}`;
       return [
-        `Сообщения о неточностях за ${SUMMARY_DAYS} дней: ${reports.count(since)}`,
+        `Открытые сообщения о неточностях: ${groups.length}${overdue ? `, просрочено: ${overdue}` : ''}. ${resolvedLine}`,
         '',
-        ...rows.map((row, index) => `${index + 1}. ${targetTitle(row.targetType, row.targetId) ?? row.targetId}\n`
-          + `   ${reportReasonTitle(row.targetType, row.reason)} · семей: ${row.count} · ${row.lastAt.slice(0, 10)}`),
+        ...groups.map((group) => `#${group.groupId} ${targetTitle(group.targetType, group.targetId) ?? group.targetId}\n`
+          + `   ${reportReasonTitle(group.targetType, group.reason)} · семей: ${group.count} · получено ${shortDate(group.firstAt)}`
+          + ` · срок до ${shortDate(group.due)}${group.overdue ? ' · ⚠️ просрочено' : ''}`),
         '',
-        'Сверьте факты с источником, исправьте data/*.json и обновите сервер.',
+        `Срок — ${REPORT_SLA_WORKDAYS} рабочих дня: сверить факт с первоисточником, исправить data/*.json с новой датой проверки или подтвердить, что данные верны.`,
+        'Закрыть: /report_done <номер> исправлено — или — /report_done <номер> верно',
       ].join('\n');
+    },
+
+    /** Закрыть группу сообщений: «исправлено» или «данные верны». */
+    resolve(groupId, word) {
+      const resolution = parseReportResolution(word);
+      if (!resolution) throw badRequest('Итог — «исправлено» или «верно»');
+      const target = reports.getGroupTarget(groupId);
+      if (!target) throw notFound('Сообщение не найдено');
+      const closed = reports.resolve(groupId, resolution, clock().toISOString());
+      return {
+        closed,
+        title: targetTitle(target.targetType, target.targetId) ?? target.targetId,
+        resolutionTitle: REPORT_RESOLUTION_TITLES[resolution],
+      };
     },
   };
 }

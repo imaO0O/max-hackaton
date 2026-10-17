@@ -69,4 +69,26 @@ export function registerReportsChat({ bot, reference, services, config }) {
     }
     await ctx.reply(services.reports.summaryText());
   });
+
+  // Закрыть сообщение: /report_done 17 исправлено | верно
+  bot.command(/^report_done(?:\s+(\d+))?(?:\s+(.+))?$/, async (ctx) => {
+    const userId = userIdOf(ctx);
+    if (!config.adminUserIds.includes(userId)) {
+      await ctx.reply(`Команда доступна только команде проекта. Ваш ID в MAX: ${userId}`);
+      return;
+    }
+    const [, id, word] = ctx.match ?? [];
+    if (!id || !word) {
+      await ctx.reply('Формат: /report_done <номер из /reports> исправлено — или — /report_done <номер> верно');
+      return;
+    }
+    try {
+      const result = services.reports.resolve(Number(id), word);
+      await ctx.reply(result.closed
+        ? `Закрыто #${id}: ${result.title} — ${result.resolutionTitle}. Сообщений: ${result.closed}.`
+        : `#${id} уже закрыто.`);
+    } catch (error) {
+      await ctx.reply(error.message);
+    }
+  });
 }
