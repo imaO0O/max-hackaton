@@ -11,6 +11,7 @@ import { createAnalytics } from './services/analytics.js';
 import { calendarSecret, createCalendarLinks, createCalendarService } from './services/calendar.js';
 import { createCatalogService } from './services/catalog-service.js';
 import { createPlanService } from './services/plan-service.js';
+import { createQuizService } from './services/quiz-service.js';
 import { createReportService } from './services/reports-service.js';
 
 /**
@@ -48,6 +49,7 @@ export function createContainer(config, { clock } = {}) {
     analytics: createAnalytics({ repos, clock }),
     reports: createReportService({ repos, clock }),
   };
+  services.quiz = createQuizService({ repos, plan, analytics: services.analytics });
 
   return { db, repos, services, runtime };
 }

@@ -94,6 +94,9 @@ export const api = {
   calendarLink: () => request('POST', '/plan/calendar-link'),
   deleteMyData: () => request('DELETE', '/profile'),
   report: ({ targetType, targetId, reason }) => request('POST', '/reports', { targetType, targetId, reason }),
+  quizStatus: () => request('GET', '/quiz'),
+  submitQuiz: (answers) => request('POST', '/quiz', { answers }),
+  skipQuiz: () => request('POST', '/quiz/skip'),
   sharedPlan: (token) => request('GET', `/shared-plans/${encodeURIComponent(token)}`),
   followSharedPlan: (token, follow) => request('PUT', `/shared-plans/${encodeURIComponent(token)}/follow`, { follow }),
 };

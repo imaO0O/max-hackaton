@@ -64,7 +64,7 @@ export function createBot({
   registerReportsChat({ bot, reference, services, config });
   // Вопросы «до» в начале опроса: после ответов сразу продолжаем опрос
   const quizChat = registerQuizChat({
-    bot, users, services, onBeforeDone: (ctx) => startSurvey(ctx, texts.quizBeforeThanks),
+    bot, services, onBeforeDone: (ctx) => startSurvey(ctx, texts.quizBeforeThanks),
   });
   const examsChat = registerExamsChat({ bot, users, reference, services });
 
@@ -230,6 +230,8 @@ export function createBot({
         return startSurvey(ctx);
       }
       case 'begin':
+        // «Пропустить» под предложением вопросов «до»
+        if (!isProfileComplete(user) && quizChat.shouldOfferBefore(userId)) services.quiz.skip(userId, { from: 'bot' });
         return startSurvey(ctx);
       case 'region': {
         const region = reference.getRegion(value);

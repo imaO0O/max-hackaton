@@ -3,6 +3,7 @@ import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui
 import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
+import { QuizCard } from '../components/QuizCard.jsx';
 import { ErrorState, LoadingState } from '../components/states.jsx';
 import {
   Card, DemoTag, ScreenHeader, SectionTitle, Tag, useToast,
@@ -250,6 +251,8 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
           {`План открыли по ссылке и получают напоминания: ${plan.data.followersCount}`}
         </Typography.Body>
       )}
+
+      <QuizCard />
 
       <Card>
         <label className="switch-row">

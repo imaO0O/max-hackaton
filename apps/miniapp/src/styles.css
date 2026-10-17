@@ -280,6 +280,19 @@ button {
   font-size: 13px;
 }
 
+/* Проверка понимания правил: вопрос и варианты ответа */
+.quiz {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quiz__options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 /* Статус данных программы: подтверждено или уточнить в приёмной комиссии */
 .data-status {
   display: flex;

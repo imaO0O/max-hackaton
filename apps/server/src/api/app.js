@@ -10,6 +10,7 @@ import { createRateLimiter } from './rate-limit.js';
 import { registerCatalogRoutes } from './routes/catalog.js';
 import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerPlanRoutes } from './routes/plan.js';
+import { registerQuizRoutes } from './routes/quiz.js';
 import { registerReportRoutes } from './routes/reports.js';
 
 /**
@@ -105,6 +106,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
     registerPlanRoutes(api, services);
     registerCalendarRoutes(api, services);
     registerReportRoutes(api, services);
+    registerQuizRoutes(api, services);
   }, { prefix: '/api' });
 
   const indexHtml = path.join(config.miniappDistDir, 'index.html');

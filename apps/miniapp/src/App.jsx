@@ -11,6 +11,7 @@ import { NextScreen } from './screens/NextScreen.jsx';
 import { OnboardingScreen } from './screens/OnboardingScreen.jsx';
 import { PathsScreen } from './screens/PathsScreen.jsx';
 import { PlanScreen } from './screens/PlanScreen.jsx';
+import { QuizGateScreen } from './screens/QuizGateScreen.jsx';
 import { SharedPlanScreen } from './screens/SharedPlanScreen.jsx';
 
 /** Параметр запуска из ссылки https://max.ru/<bot>?startapp=plan_<token> */
@@ -29,6 +30,10 @@ export function App() {
   const [compareOnOpen, setCompareOnOpen] = useState(false);
   const [experimentOnlyOnOpen, setExperimentOnlyOnOpen] = useState(false);
   const [dataDeleted, setDataDeleted] = useState(false);
+  // Новой семье — сначала три вопроса «до»; если статус не загрузился, просто идём к опросу
+  const quizStatus = useAsync(() => api.quizStatus().catch(() => null), []);
+  const [quizGateDone, setQuizGateDone] = useState(false);
+  const [quizNotice, setQuizNotice] = useState(null);
 
   useEffect(() => {
     if (!session.data) return;
@@ -61,11 +66,24 @@ export function App() {
     return <SharedPlanScreen token={sharedToken} onOpenOwnPlan={() => setSharedToken(null)} />;
   }
 
+  const newFamily = !profile?.isComplete && !editingProfile && !dataDeleted;
+  if (newFamily && !quizGateDone && quizStatus.status === 'loading' && !quizStatus.data) {
+    return <LoadingState fullScreen text="Открываем план…" />;
+  }
+  if (newFamily && !quizGateDone && quizStatus.data?.phase === 'before') {
+    return (
+      <QuizGateScreen
+        onDone={() => { setQuizNotice('Спасибо! Ответы сравним, когда план будет готов.'); setQuizGateDone(true); }}
+        onSkip={() => { api.skipQuiz().catch(() => {}); setQuizGateDone(true); }}
+      />
+    );
+  }
+
   if (!profile?.isComplete || editingProfile) {
     return (
       <OnboardingScreen
         initialProfile={profile}
-        notice={dataDeleted ? 'Данные удалены. Чтобы снова собрать план, ответьте на вопросы.' : null}
+        notice={dataDeleted ? 'Данные удалены. Чтобы снова собрать план, ответьте на вопросы.' : quizNotice}
         onCancel={profile?.isComplete ? () => setEditingProfile(false) : undefined}
         onSaved={(saved) => {
           const firstTime = !profile?.isComplete;

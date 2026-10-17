@@ -66,6 +66,29 @@ describe('API мини-приложения', () => {
     assert.equal(invalid.json().error.code, 'validation_error');
   });
 
+  test('проверка понимания в мини-приложении: «до», затем «после» со сравнением; ответы проверяет сервер', async () => {
+    const user = 8008;
+    assert.equal((await call('GET', '/api/quiz')).statusCode, 401);
+    assert.deepEqual((await call('GET', '/api/quiz', { user })).json(), { phase: 'before', before: null });
+
+    const before = (await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 0, colleges: 1 } } })).json();
+    assert.equal(before.phase, 'before');
+    assert.equal(before.score, 2);
+    assert.deepEqual(before.answers, { deadline: true, two_oge: false, colleges: true });
+
+    assert.deepEqual((await call('GET', '/api/quiz', { user })).json(), { phase: 'after', before: { score: 2, total: 3 } });
+    const after = (await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 2, colleges: 1 } } })).json();
+    assert.equal(after.phase, 'after');
+    assert.equal(after.score, 3);
+    assert.deepEqual(after.before, { score: 2, total: 3 });
+
+    const invalid = await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 7, colleges: 1 } } });
+    assert.equal(invalid.statusCode, 400);
+    const skipped = await call('POST', '/api/quiz/skip', { user: 8009 });
+    assert.deepEqual(skipped.json(), { ok: true });
+    assert.match(ctx.services.analytics.report(), /пропустили вопросы «до»: 1 чел\./);
+  });
+
   test('план, собранный в мини-приложении, учитывается в метриках как пройденный опрос', async () => {
     const user = 7007;
     await call('PUT', '/api/profile', { user, body: { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: [] } });

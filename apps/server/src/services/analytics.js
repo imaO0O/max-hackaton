@@ -1,5 +1,5 @@
 import {
-  EXAM_ADVICE, localDateString, PATH_TITLES, QUIZ_PHASES, summarizeQuiz,
+  EXAM_ADVICE, localDateString, PATH_TITLES, QUIZ_PHASES, QUIZ_QUESTIONS, summarizeQuiz,
 } from '@posle9/core';
 
 /**
@@ -27,6 +27,7 @@ export const EVENTS = Object.freeze({
   DATA_DELETED: 'data_deleted',
   EXAM_ADVICE: 'exam_advice',
   QUIZ_COMPLETED: 'quiz_completed',
+  QUIZ_SKIPPED: 'quiz_skipped',
 });
 
 /**
@@ -110,6 +111,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       completedByRegion: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'regionId', since),
       completedByPath: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'path', since),
       steps: stepsOnTime(since),
+      quizSkipped: users(EVENTS.QUIZ_SKIPPED),
       quiz: summarizeQuiz(events.list(EVENTS.QUIZ_COMPLETED, since)
         .filter((event) => event.userId !== null)
         .map((event) => ({ userId: event.userId, ...event.props }))),
@@ -207,6 +209,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Откуда открывали мини-приложение: ${sources}`,
       `Ссылки для школ: ${campaigns}`,
       ...quizLines(data.quiz),
+      `  пропустили вопросы «до»: ${data.quizSkipped} чел. — сравнение «до → после» только по ответившим`,
     ].join('\n');
   }
 
@@ -220,7 +223,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
     /** Последняя попытка пользователя в фазе: { score, total }. */
     lastQuiz(userId, phase) {
       const props = events.lastByUser(EVENTS.QUIZ_COMPLETED, userId, 'phase', phase);
-      return props ? { score: props.score, total: 3 } : null;
+      return props ? { score: props.score, total: QUIZ_QUESTIONS.length } : null;
     },
     /** Текстовый отчёт для бота и командной строки: за всё время и за 7 дней. */
     report() {
