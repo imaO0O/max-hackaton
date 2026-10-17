@@ -113,6 +113,7 @@ components:
         hasDormitory: { type: boolean }
         isDemo: { type: boolean }
         inExperimentList: { type: boolean, description: Колледж в перечне эксперимента с двумя ОГЭ }
+        dataNote: { type: [string, "null"], description: "Почему у программ неполные данные, например «прошлогодний проходной балл колледж не публикует»" }
         programs:
           type: array
           items: { $ref: '#/components/schemas/Program' }

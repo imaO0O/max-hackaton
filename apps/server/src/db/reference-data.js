@@ -99,6 +99,8 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(regionIds.has(college.regionId), `${label}: неизвестный регион «${college.regionId}»`);
     check(typeof college.city === 'string' && college.city.length > 0, `${label}: нет города`);
     check(Array.isArray(college.programs) && college.programs.length > 0, `${label}: нет программ`);
+    check(college.dataNote === undefined || college.dataNote === null || typeof college.dataNote === 'string',
+      `${label}: dataNote — строка или пусто`);
     check(college.inExperimentList === undefined || typeof college.inExperimentList === 'boolean',
       `${label}: inExperimentList должен быть true/false`);
     check(college.inExperimentList === undefined || regionsWithList.has(college.regionId),
@@ -205,11 +207,11 @@ export function applyReferenceData(db, data) {
     }
 
     const upsertCollege = db.prepare(`
-      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo, in_experiment_list)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo, in_experiment_list, data_note)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET region_id = excluded.region_id, city = excluded.city, name = excluded.name,
         address = excluded.address, website = excluded.website, has_dormitory = excluded.has_dormitory, is_demo = excluded.is_demo,
-        in_experiment_list = excluded.in_experiment_list`);
+        in_experiment_list = excluded.in_experiment_list, data_note = excluded.data_note`);
     const upsertProgram = db.prepare(`
       INSERT INTO college_specialty (id, college_id, specialty_code, form, duration, budget_places, passing_score, score_year, entrance_test, source_url,
         checked_at, in_experiment_list)
@@ -220,7 +222,8 @@ export function applyReferenceData(db, data) {
     const programIds = [];
     for (const college of data.colleges) {
       upsertCollege.run(college.id, college.regionId, college.city, college.name, college.address ?? null,
-        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo), bool(college.inExperimentList));
+        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo), bool(college.inExperimentList),
+        college.dataNote ?? null);
       for (const program of college.programs) {
         const id = programId(college.id, program.specialtyCode, program.form);
         programIds.push(id);

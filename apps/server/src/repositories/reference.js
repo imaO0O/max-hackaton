@@ -50,6 +50,7 @@ function mapCollege(row) {
     hasDormitory: toBool(row.has_dormitory),
     isDemo: toBool(row.is_demo),
     inExperimentList: toBool(row.college_in_experiment_list),
+    dataNote: row.data_note ?? null,
   };
 }
 
@@ -78,7 +79,7 @@ export function mapKeyDate(row) {
 }
 
 const PROGRAM_SELECT = `
-  SELECT c.id AS college_id, c.region_id, c.city, c.name, c.address, c.website, c.has_dormitory, c.is_demo,
+  SELECT c.id AS college_id, c.region_id, c.city, c.name, c.address, c.website, c.has_dormitory, c.is_demo, c.data_note,
     c.in_experiment_list AS college_in_experiment_list,
     cs.id AS program_id, cs.specialty_code, s.title AS specialty_title, s.interest_id, cs.form, cs.duration,
     cs.budget_places, cs.passing_score, cs.score_year, cs.entrance_test, cs.source_url, cs.checked_at AS program_checked_at,

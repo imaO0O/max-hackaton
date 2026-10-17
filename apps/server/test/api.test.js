@@ -66,6 +66,13 @@ describe('API мини-приложения', () => {
     assert.equal(invalid.json().error.code, 'validation_error');
   });
 
+  test('у колледжа с неполными данными есть пояснение, почему', async () => {
+    const radio = (await call('GET', '/api/colleges/tat-kazan-radiomechanical-college')).json().college;
+    assert.match(radio.dataNote, /проходной балл колледж не публикует/);
+    const aviation = (await call('GET', '/api/colleges/tat-kazan-aviation-technical-college')).json().college;
+    assert.equal(aviation.dataNote, null, 'у колледжа с полными данными пояснения нет');
+  });
+
   test('перечень эксперимента: регион, колледжи и фильтр программ для двух ОГЭ', async () => {
     const regions = (await call('GET', '/api/regions')).json().regions;
     const tatarstan = regions.find((region) => region.id === 'tatarstan');
