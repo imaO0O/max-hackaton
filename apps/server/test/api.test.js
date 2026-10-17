@@ -66,6 +66,13 @@ describe('API мини-приложения', () => {
     assert.equal(invalid.json().error.code, 'validation_error');
   });
 
+  test('план, собранный в мини-приложении, учитывается в метриках как пройденный опрос', async () => {
+    const user = 7007;
+    await call('PUT', '/api/profile', { user, body: { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: [] } });
+    const completed = ctx.repos.events.list('survey_completed', '1970-01-01T00:00:00.000Z');
+    assert.ok(completed.some((event) => event.userId === user && event.props.from === 'miniapp' && event.props.grade === 9));
+  });
+
   test('у колледжа с неполными данными есть пояснение, почему', async () => {
     const radio = (await call('GET', '/api/colleges/tat-kazan-radiomechanical-college')).json().college;
     assert.match(radio.dataNote, /проходной балл колледж не публикует/);

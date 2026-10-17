@@ -58,6 +58,7 @@ export function mapKeyDate(row) {
   return {
     id: row.id,
     academicYear: row.academic_year,
+    keyStep: toBool(row.key_step),
     grade: row.grade ?? 9,
     scope: row.scope,
     regionId: row.region_id,

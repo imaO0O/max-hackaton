@@ -46,12 +46,13 @@ export function quizResult(mask) {
 
 /**
  * Сводка для метрик: доля верных ответов до и после и сдвиг у тех, кто ответил оба раза.
+ * Берётся первая попытка в каждой фазе: после первой «после» бот показывает разбор, повтор уже не измеряет план.
  * @param {Array<{ userId: number, phase: string, score: number, answers: object }>} attempts попытки в порядке времени
  */
 export function summarizeQuiz(attempts) {
-  const latest = { before: new Map(), after: new Map() };
+  const first = { before: new Map(), after: new Map() };
   for (const attempt of attempts) {
-    if (latest[attempt.phase]) latest[attempt.phase].set(attempt.userId, attempt);
+    if (first[attempt.phase] && !first[attempt.phase].has(attempt.userId)) first[attempt.phase].set(attempt.userId, attempt);
   }
   const share = (map) => {
     const list = [...map.values()];
@@ -63,15 +64,15 @@ export function summarizeQuiz(attempts) {
       const list = [...map.values()];
       return list.length ? Math.round((list.filter((attempt) => attempt.answers?.[question.id]).length / list.length) * 100) : null;
     };
-    return { id: question.id, title: question.title, before: percent(latest.before), after: percent(latest.after) };
+    return { id: question.id, title: question.title, before: percent(first.before), after: percent(first.after) };
   });
-  const paired = [...latest.before.keys()].filter((userId) => latest.after.has(userId));
+  const paired = [...first.before.keys()].filter((userId) => first.after.has(userId));
   const average = (phase) => (paired.length
-    ? paired.reduce((sum, userId) => sum + latest[phase].get(userId).score, 0) / paired.length
+    ? paired.reduce((sum, userId) => sum + first[phase].get(userId).score, 0) / paired.length
     : null);
   return {
-    before: share(latest.before),
-    after: share(latest.after),
+    before: share(first.before),
+    after: share(first.after),
     paired: { people: paired.length, before: average('before'), after: average('after') },
     byQuestion,
   };

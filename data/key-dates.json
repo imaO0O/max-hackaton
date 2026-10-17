@@ -91,6 +91,7 @@
   },
   {
     "id": "2627-fed-gia-application",
+    "keyStep": true,
     "academicYear": "2026/2027",
     "scope": "federal",
     "regionId": null,
@@ -109,6 +110,7 @@
   },
   {
     "id": "2627-fed-gia-application-two-oge",
+    "keyStep": true,
     "academicYear": "2026/2027",
     "scope": "federal",
     "regionId": null,

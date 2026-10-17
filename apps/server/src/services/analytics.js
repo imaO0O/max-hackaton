@@ -63,7 +63,7 @@ const SOURCE_TITLES = {
 };
 
 export function createAnalytics({ repos, logger, clock = () => new Date() }) {
-  const { events, reference } = repos;
+  const { events, reference, plans } = repos;
 
   function track(name, userId, props = {}) {
     try {
@@ -120,24 +120,39 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
   }
 
   /**
-   * Реально выполненный следующий шаг: семья, собравшая план, отметила пункт выполненным не позже его срока
-   * (дата окончания периода или сама дата). Отличает полезный результат от простого открытия плана.
-   * Отметка — самоотчёт семьи (кнопка «✅ Сделано» в напоминании, в плане в чате или в мини-приложении).
+   * Реально выполненный шаг — отличает полезный результат от простого открытия плана.
+   * Ключевой шаг (keyStep в справочнике) — заявление на ОГЭ, отмеченное до 1 марта: главный показатель для семей 9 класса.
+   * «Любой шаг в срок» — пункт плана отмечен не позже его даты (окончания периода или самой даты).
+   * Считаются только пункты, отмеченные и сейчас: отметку могли снять. Отметка — самоотчёт семьи.
    */
   function stepsOnTime(since) {
-    const families = new Set(events.list(EVENTS.SURVEY_COMPLETED, since).map((event) => event.userId).filter((id) => id !== null));
+    const completed = events.list(EVENTS.SURVEY_COMPLETED, since).filter((event) => event.userId !== null);
+    const families = new Set(completed.map((event) => event.userId));
+    const ninthGrade = new Set(completed.filter((event) => event.props.grade === 9).map((event) => event.userId));
+    const doneNow = new Map();
+    const isDoneNow = (userId, itemId) => {
+      if (!doneNow.has(userId)) {
+        const plan = plans.getByUser(userId);
+        doneNow.set(userId, new Set(plan ? plans.listDoneItemIds(plan.id) : []));
+      }
+      return doneNow.get(userId).has(itemId);
+    };
     const onTime = new Set();
     const fromReminder = new Set();
+    const keyStep = new Set();
     for (const event of events.list(EVENTS.ITEM_DONE, since)) {
       if (event.userId === null || !families.has(event.userId)) continue;
       const keyDate = reference.getKeyDate(event.props.itemId);
       if (!keyDate) continue;
-      const doneDate = localDateString(new Date(event.createdAt), 3);
-      if (doneDate > (keyDate.dateEnd ?? keyDate.dateStart)) continue;
+      if (localDateString(new Date(event.createdAt), 3) > (keyDate.dateEnd ?? keyDate.dateStart)) continue;
+      if (!isDoneNow(event.userId, keyDate.id)) continue;
       onTime.add(event.userId);
       if (event.props.from === 'reminder') fromReminder.add(event.userId);
+      if (keyDate.keyStep && ninthGrade.has(event.userId)) keyStep.add(event.userId);
     }
-    return { families: families.size, onTime: onTime.size, fromReminder: fromReminder.size };
+    return {
+      families: families.size, onTime: onTime.size, fromReminder: fromReminder.size, ninthGrade: ninthGrade.size, keyStep: keyStep.size,
+    };
   }
 
   const percent = (part, whole) => (whole ? ` (${Math.round((part / whole) * 100)}%)` : '');
@@ -180,7 +195,8 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Отправлено напоминаний: ${data.remindersSent}`,
       `Вернулись из напоминания в мини-приложение: ${data.openedFromReminder}`,
       `Отмечено пунктов плана: ${data.itemsDone}`,
-      `Выполнили шаг плана в срок: ${data.steps.onTime} из ${data.steps.families} собравших план${percent(data.steps.onTime, data.steps.families)}; из них по кнопке «Сделано» в напоминании: ${data.steps.fromReminder}`,
+      `Ключевой шаг — заявление на ОГЭ отмечено до 1 марта: ${data.steps.keyStep} из ${data.steps.ninthGrade} семей 9 класса${percent(data.steps.keyStep, data.steps.ninthGrade)}`,
+      `Любой шаг плана в срок: ${data.steps.onTime} из ${data.steps.families} собравших план${percent(data.steps.onTime, data.steps.families)}; из них по кнопке «Сделано» в напоминании: ${data.steps.fromReminder}`,
       `Отмечено шагов чек-листа поступления: ${data.stepsDone}`,
       `Добавлено в избранное: ${data.favoritesAdded}`,
       `Сообщили о неточностях в данных: ${data.dataReported} (подробно — /reports)`,

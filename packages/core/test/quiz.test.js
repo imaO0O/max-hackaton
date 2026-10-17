@@ -23,13 +23,13 @@ test('сводка: доля верных до и после, сдвиг у от
   const summary = summarizeQuiz([
     attempt(1, 'before', 0b001),
     attempt(1, 'after', 0b011),
-    attempt(1, 'after', 0b111), // повтор «после» — считается последняя попытка
+    attempt(1, 'after', 0b111), // повтор после разбора ответов — не считается, берётся первая попытка
     attempt(2, 'before', 0b000),
     attempt(3, 'after', 0b110),
   ]);
   assert.deepEqual(summary.before, { people: 2, percent: 17 });
-  assert.deepEqual(summary.after, { people: 2, percent: 83 });
-  assert.deepEqual(summary.paired, { people: 1, before: 1, after: 3 });
+  assert.deepEqual(summary.after, { people: 2, percent: 67 });
+  assert.deepEqual(summary.paired, { people: 1, before: 1, after: 2 });
   assert.deepEqual(summary.byQuestion.find((row) => row.id === 'two_oge'), {
     id: 'two_oge', title: 'два ОГЭ и 10 класс', before: 0, after: 100,
   });
