@@ -1,4 +1,6 @@
-import { EXAM_ADVICE, PATH_TITLES } from '@posle9/core';
+import {
+  EXAM_ADVICE, PATH_TITLES, QUIZ_PHASES, summarizeQuiz,
+} from '@posle9/core';
 
 /**
  * Метрики пилота. Событие пишется в журнал и никогда не ломает основной сценарий:
@@ -24,6 +26,7 @@ export const EVENTS = Object.freeze({
   REMINDER_SENT: 'reminder_sent',
   DATA_DELETED: 'data_deleted',
   EXAM_ADVICE: 'exam_advice',
+  QUIZ_COMPLETED: 'quiz_completed',
 });
 
 /**
@@ -106,6 +109,9 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       opensBySource: events.countUsersByProp(EVENTS.MINIAPP_OPENED, 'source', since),
       completedByRegion: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'regionId', since),
       completedByPath: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'path', since),
+      quiz: summarizeQuiz(events.list(EVENTS.QUIZ_COMPLETED, since)
+        .filter((event) => event.userId !== null)
+        .map((event) => ({ userId: event.userId, ...event.props }))),
       campaigns: events.countCampaigns({
         entryEvents: [EVENTS.BOT_STARTED, EVENTS.MINIAPP_OPENED], goalEvent: EVENTS.SURVEY_COMPLETED, since,
       }),
@@ -113,6 +119,18 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
   }
 
   const percent = (part, whole) => (whole ? ` (${Math.round((part / whole) * 100)}%)` : '');
+
+  /** Проверка понимания правил: доля верных до и после, сдвиг у ответивших оба раза, по вопросам. */
+  function quizLines(quiz) {
+    if (!quiz.before.people && !quiz.after.people) return ['Проверка понимания правил: пока никто не отвечал'];
+    const pct = (value) => (value === null ? '—' : `${value}%`);
+    const avg = (value) => (value === null ? '—' : value.toFixed(1).replace('.', ','));
+    return [
+      `Проверка понимания правил: до плана — ${pct(quiz.before.percent)} верных (${quiz.before.people} чел.), после — ${pct(quiz.after.percent)} (${quiz.after.people} чел.)`,
+      `  ответили оба раза: ${quiz.paired.people} чел., в среднем было ${avg(quiz.paired.before)} из 3 → стало ${avg(quiz.paired.after)} из 3`,
+      `  по вопросам до → после: ${quiz.byQuestion.map((row) => `${row.title} ${pct(row.before)} → ${pct(row.after)}`).join('; ')}`,
+    ];
+  }
 
   function formatFunnel(title, data) {
     const regions = data.completedByRegion
@@ -149,12 +167,22 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Путь: ${paths}`,
       `Откуда открывали мини-приложение: ${sources}`,
       `Ссылки для школ: ${campaigns}`,
+      ...quizLines(data.quiz),
     ].join('\n');
   }
 
   return {
     track,
     funnel,
+    /** Отвечал ли пользователь на вопросы «до». */
+    hasQuizBefore(userId) {
+      return Boolean(events.lastByUser(EVENTS.QUIZ_COMPLETED, userId, 'phase', QUIZ_PHASES.BEFORE));
+    },
+    /** Последняя попытка пользователя в фазе: { score, total }. */
+    lastQuiz(userId, phase) {
+      const props = events.lastByUser(EVENTS.QUIZ_COMPLETED, userId, 'phase', phase);
+      return props ? { score: props.score, total: 3 } : null;
+    },
     /** Текстовый отчёт для бота и командной строки: за всё время и за 7 дней. */
     report() {
       return [

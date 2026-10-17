@@ -10,6 +10,7 @@ import {
 import { registerCollegesChat } from './colleges-chat.js';
 import { registerExamsChat } from './exams-chat.js';
 import { registerPathsChat } from './paths-chat.js';
+import { registerQuizChat } from './quiz-chat.js';
 import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
@@ -61,6 +62,10 @@ export function createBot({
   });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
   registerReportsChat({ bot, reference, services, config });
+  // Вопросы «до» в начале опроса: после ответов сразу продолжаем опрос
+  const quizChat = registerQuizChat({
+    bot, users, services, onBeforeDone: (ctx) => startSurvey(ctx, texts.quizBeforeThanks),
+  });
   const examsChat = registerExamsChat({ bot, users, reference, services });
 
   async function showStep(ctx, step, { edit }) {
@@ -70,6 +75,15 @@ export function createBot({
     } else {
       await ctx.reply(step.text, { attachments: [step.keyboard] });
     }
+  }
+
+  /** Начать опрос с первого вопроса — региона. intro — строка перед вопросом, например после вопросов «до». */
+  async function startSurvey(ctx, intro = null) {
+    const userId = userIdOf(ctx);
+    users.setSurveyState(userId, { draft: {} });
+    services.analytics.track(EVENTS.SURVEY_STARTED, userId);
+    const step = regionStep(reference.listRegions());
+    return showStep(ctx, intro ? { ...step, text: `${intro}\n\n${step.text}` } : step, { edit: true });
   }
 
   async function sendStart(ctx, payload) {
@@ -179,6 +193,7 @@ export function createBot({
   bot.command('menu', planChat.sendMenu);
   bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
   bot.command('paths', (ctx) => pathsChat.sendPaths(ctx));
+  bot.command('quiz', (ctx) => quizChat.sendQuiz(ctx));
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', planChat.sendReminderExample);
   bot.action('reminder:example', async (ctx) => {
@@ -208,10 +223,14 @@ export function createBot({
 
     switch (action) {
       case 'start': {
-        save({});
-        services.analytics.track(EVENTS.SURVEY_STARTED, userId);
-        return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
+        // Новой семье — сначала три вопроса о правилах (можно пропустить), чтобы сравнить «до» и «после»
+        if (!isProfileComplete(user) && quizChat.shouldOfferBefore(userId)) {
+          return showStep(ctx, quizChat.offerView(), { edit: true });
+        }
+        return startSurvey(ctx);
       }
+      case 'begin':
+        return startSurvey(ctx);
       case 'region': {
         const region = reference.getRegion(value);
         if (!region) return restart();
@@ -379,6 +398,7 @@ export function createBot({
         { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'paths', description: '10 класс или колледж: сравнить' },
         { name: 'oge', description: 'Сколько ОГЭ сдавать: 2 или 4' },
+        { name: 'quiz', description: 'Проверить себя: 3 вопроса о правилах' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },
         { name: 'privacy', description: 'Какие данные храним' },

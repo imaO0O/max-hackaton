@@ -122,8 +122,18 @@ describe('опрос в боте', () => {
     assert.ok(lastAnswer().text.length < 4000, 'помещается в одно сообщение');
     assert.ok(lastAnswer().buttons.includes('survey:start'), 'до опроса — предложение собрать план');
 
+    // Новой семье — сначала три вопроса о правилах «до» (их можно пропустить)
     await bot.handleUpdate(press('survey:start'));
-    assert.match(lastAnswer().text, /Шаг 1 из 5/);
+    assert.match(lastAnswer().text, /^Перед планом — три коротких вопроса о правилах/);
+    assert.deepEqual(lastAnswer().buttons, ['qz:go:p', 'survey:begin']);
+    await bot.handleUpdate(press('qz:go:p'));
+    assert.match(lastAnswer().text, /Вопрос 1 из 3\n\nДо какой даты девятиклассник подаёт заявление на ОГЭ/);
+    await bot.handleUpdate(press('qz:b:p:0:0:0')); // верно: до 1 марта
+    assert.match(lastAnswer().text, /Вопрос 2 из 3/);
+    await bot.handleUpdate(press('qz:b:p:1:0:1')); // неверно: «да, в любой 10 класс»
+    await bot.handleUpdate(press('qz:b:p:2:1:1')); // верно: в несколько колледжей
+    assert.match(lastAnswer().text, /^Спасибо! Ответы сравним, когда план будет готов\.\n\nШаг 1 из 5/, 'сразу продолжаем опрос, ответы «до» не раскрываем');
+    assert.doesNotMatch(lastAnswer().text, /✅|❌/);
     assert.equal(lastAnswer().path, '/answers', 'шаги опроса редактируют то же сообщение');
     assert.ok(lastAnswer().buttons.includes('survey:region:demo-standard'));
 
@@ -175,7 +185,7 @@ describe('опрос в боте', () => {
 
 describe('опрос: регионы', () => {
   test('пилотный регион первым, затем 11 регионов эксперимента по два в строке, «Другой регион», демо — в конце', async () => {
-    await bot.handleUpdate(press('survey:start', { ...USER, user_id: 560 }));
+    await bot.handleUpdate(press('survey:begin', { ...USER, user_id: 560 }));
     const regions = lastAnswer().buttons.filter((payload) => payload.startsWith('survey:region:'));
     assert.equal(regions[0], 'survey:region:tatarstan');
     assert.equal(regions.length, 15);
@@ -217,7 +227,7 @@ describe('опрос: регионы', () => {
 describe('опрос: кнопка «Назад»', () => {
   test('возвращает на предыдущий шаг и сохраняет ответы', async () => {
     const other = { ...USER, user_id: 556 };
-    await bot.handleUpdate(press('survey:start', other));
+    await bot.handleUpdate(press('survey:begin', other));
     await bot.handleUpdate(press('survey:region:demo-standard', other));
     assert.ok(lastAnswer().buttons.includes('survey:back:region'));
     await bot.handleUpdate(press('survey:back:region', other));
@@ -479,6 +489,46 @@ describe('напоминание остаётся в чате', () => {
     await bot.handleUpdate(command('/reminders'));
     assert.match(lastAnswer().text, /Напоминания включены/);
     assert.ok(lastAnswer().buttons.includes('reminder:example'));
+  });
+});
+
+describe('проверка понимания правил до и после', () => {
+  test('после плана: результат, сравнение с ответами «до» и разбор каждого вопроса', async () => {
+    await bot.handleUpdate(command('/quiz'));
+    assert.match(lastAnswer().text, /^Вопрос 1 из 3/, 'у семьи уже есть план — это проверка «после»');
+    assert.ok(lastAnswer().buttons.every((payload) => payload.startsWith('qz:a:p:0:')));
+    await bot.handleUpdate(press('qz:a:p:0:0:0'));
+    await bot.handleUpdate(press('qz:a:p:1:2:1'));
+    await bot.handleUpdate(press('qz:a:p:2:1:3'));
+    const result = lastAnswer().text;
+    assert.match(result, /^Ваш результат: 3 из 3 \(до плана — 2 из 3\)\./);
+    assert.match(result, /✅ Заявление на ОГЭ с выбором предметов подают до 1 марта/);
+    assert.match(result, /✅ С аттестатом по двум ОГЭ поступают только в колледж/);
+
+    await bot.handleUpdate(command('/stats'));
+    const stats = lastAnswer().text;
+    assert.match(stats, /Проверка понимания правил: до плана — 67% верных \(1 чел\.\), после — 100% \(1 чел\.\)/);
+    assert.match(stats, /ответили оба раза: 1 чел\., в среднем было 2,0 из 3 → стало 3,0 из 3/);
+    assert.match(stats, /два ОГЭ и 10 класс 0% → 100%/);
+  });
+
+  test('подросток по ссылке: вопросы «до» с кнопки под планом семьи, потом «после»', async () => {
+    const teen = { ...TEEN, user_id: 791 };
+    await bot.handleUpdate(press('qz:go:t', teen));
+    assert.match(lastAnswer().text, /^Три коротких вопроса о правилах — до плана/);
+    await bot.handleUpdate(press('qz:b:t:0:1:0', teen));
+    await bot.handleUpdate(press('qz:b:t:1:2:0', teen));
+    await bot.handleUpdate(press('qz:b:t:2:0:2', teen));
+    assert.match(lastAnswer().text, /^Спасибо! Посмотрите план семьи и ответьте ещё раз/);
+    assert.doesNotMatch(lastAnswer().text, /✅|❌/, 'ответы «до» не раскрываются');
+
+    await bot.handleUpdate(command('/quiz', teen));
+    assert.ok(lastAnswer().buttons.every((payload) => payload.startsWith('qz:a:')), 'второй раз — «после»');
+  });
+
+  test('устаревшая кнопка вопроса не ломает диалог', async () => {
+    await bot.handleUpdate(press('qz:a:p:7:0:0'));
+    assert.match(lastAnswer().text, /Вопрос устарел/);
   });
 });
 
@@ -775,7 +825,7 @@ describe('неточность в данных', () => {
 describe('регионы эксперимента без колледжей', () => {
   test('регион эксперимента без колледжей: без вопроса о городе, правила региона и подсказка «2 или 4 ОГЭ?»', async () => {
     const family = { ...USER, user_id: 610 };
-    await bot.handleUpdate(press('survey:start', family));
+    await bot.handleUpdate(press('survey:begin', family));
     await bot.handleUpdate(press('survey:region:moscow', family));
     assert.match(lastAnswer().text, /Шаг 3 из 5/, 'городов в справочнике нет — вопрос о городе пропущен');
     await bot.handleUpdate(press('survey:grade:9', family));

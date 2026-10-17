@@ -17,6 +17,8 @@ const BACK_TO_MENU = [button.callback('← Меню', 'menu:show')];
 const REMINDER_EXAMPLE = [button.callback('⏰ Пример напоминания', 'reminder:example')];
 // Подсказка «2 или 4 ОГЭ?» — в регионах эксперимента и для «Другого региона» (payload oge:…)
 const EXAM_ADVICE = [button.callback('🧮 Сколько ОГЭ сдавать: 2 или 4', 'oge:start')];
+// Проверка понимания правил «после»; в меню — рядом с подсказкой «2 или 4 ОГЭ?», чтобы меню не стало длиннее
+const QUIZ_BUTTON = button.callback('🧠 Проверить себя', 'qz:go:p');
 
 /**
  * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
@@ -44,7 +46,7 @@ export function menuKeyboard({
   // Короткие подписи по две в строке: меню помещается на экран телефона без прокрутки
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Даты плана', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
-    ...(withExamAdvice ? [EXAM_ADVICE] : []),
+    withExamAdvice ? [button.callback('🧮 2 или 4 ОГЭ?', 'oge:start'), QUIZ_BUTTON] : [QUIZ_BUTTON],
     [button.callback('🏫 Колледжи', 'colleges:show'), button.callback('📨 Отправить подростку', 'share:show')],
     ...(withFamilyPlan ? [[button.callback('👪 План, которым поделились со мной', 'family:show')]] : []),
     [
@@ -63,7 +65,7 @@ export function followerMenuKeyboard({
     [button.callback('📅 План семьи', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
     [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
     ...(withReminderExample ? [REMINDER_EXAMPLE] : []),
-    [button.callback('Собрать свой план', 'survey:start')],
+    [button.callback('🧠 Проверить себя', 'qz:go:t'), button.callback('Собрать свой план', 'survey:start')],
   ], `plan_${token}`, 'Открыть план семьи');
 }
 
@@ -180,7 +182,7 @@ export function sharedPlanKeyboard({ botUsername, token, isFollowing }) {
     [isFollowing
       ? button.callback('Не получать напоминания', `unfollow:${token}`)
       : button.callback('🔔 Получать напоминания', `follow:${token}`)],
-    [button.callback('📅 Все даты', `shared-all:${token}`)],
+    [button.callback('📅 Все даты', `shared-all:${token}`), button.callback('🧠 3 вопроса о правилах', 'qz:go:t')],
     BACK_TO_MENU,
   ], `plan_${token}`, 'Открыть в мини-приложении');
 }
