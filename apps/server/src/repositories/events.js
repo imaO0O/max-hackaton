@@ -2,9 +2,9 @@ import { nowIso } from '../db/database.js';
 
 export function createEventRepository(db) {
   return {
-    insert(name, userId, props = {}) {
+    insert(name, userId, props = {}, createdAt = nowIso()) {
       db.prepare('INSERT INTO events (name, user_id, props, created_at) VALUES (?, ?, ?, ?)')
-        .run(name, userId ?? null, JSON.stringify(props), nowIso());
+        .run(name, userId ?? null, JSON.stringify(props), createdAt);
     },
 
     /** Сколько раз произошло событие и у скольких разных пользователей. */

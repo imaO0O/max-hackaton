@@ -1,5 +1,5 @@
 import {
-  EXAM_ADVICE, PATH_TITLES, QUIZ_PHASES, summarizeQuiz,
+  EXAM_ADVICE, localDateString, PATH_TITLES, QUIZ_PHASES, summarizeQuiz,
 } from '@posle9/core';
 
 /**
@@ -67,7 +67,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
 
   function track(name, userId, props = {}) {
     try {
-      events.insert(name, userId, props);
+      events.insert(name, userId, props, clock().toISOString());
     } catch (error) {
       logger?.warn({ err: error, event: name }, 'event not recorded');
     }
@@ -109,6 +109,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       opensBySource: events.countUsersByProp(EVENTS.MINIAPP_OPENED, 'source', since),
       completedByRegion: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'regionId', since),
       completedByPath: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'path', since),
+      steps: stepsOnTime(since),
       quiz: summarizeQuiz(events.list(EVENTS.QUIZ_COMPLETED, since)
         .filter((event) => event.userId !== null)
         .map((event) => ({ userId: event.userId, ...event.props }))),
@@ -116,6 +117,27 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
         entryEvents: [EVENTS.BOT_STARTED, EVENTS.MINIAPP_OPENED], goalEvent: EVENTS.SURVEY_COMPLETED, since,
       }),
     };
+  }
+
+  /**
+   * Реально выполненный следующий шаг: семья, собравшая план, отметила пункт выполненным не позже его срока
+   * (дата окончания периода или сама дата). Отличает полезный результат от простого открытия плана.
+   * Отметка — самоотчёт семьи (кнопка «✅ Сделано» в напоминании, в плане в чате или в мини-приложении).
+   */
+  function stepsOnTime(since) {
+    const families = new Set(events.list(EVENTS.SURVEY_COMPLETED, since).map((event) => event.userId).filter((id) => id !== null));
+    const onTime = new Set();
+    const fromReminder = new Set();
+    for (const event of events.list(EVENTS.ITEM_DONE, since)) {
+      if (event.userId === null || !families.has(event.userId)) continue;
+      const keyDate = reference.getKeyDate(event.props.itemId);
+      if (!keyDate) continue;
+      const doneDate = localDateString(new Date(event.createdAt), 3);
+      if (doneDate > (keyDate.dateEnd ?? keyDate.dateStart)) continue;
+      onTime.add(event.userId);
+      if (event.props.from === 'reminder') fromReminder.add(event.userId);
+    }
+    return { families: families.size, onTime: onTime.size, fromReminder: fromReminder.size };
   }
 
   const percent = (part, whole) => (whole ? ` (${Math.round((part / whole) * 100)}%)` : '');
@@ -158,6 +180,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Отправлено напоминаний: ${data.remindersSent}`,
       `Вернулись из напоминания в мини-приложение: ${data.openedFromReminder}`,
       `Отмечено пунктов плана: ${data.itemsDone}`,
+      `Выполнили шаг плана в срок: ${data.steps.onTime} из ${data.steps.families} собравших план${percent(data.steps.onTime, data.steps.families)}; из них по кнопке «Сделано» в напоминании: ${data.steps.fromReminder}`,
       `Отмечено шагов чек-листа поступления: ${data.stepsDone}`,
       `Добавлено в избранное: ${data.favoritesAdded}`,
       `Сообщили о неточностях в данных: ${data.dataReported} (подробно — /reports)`,

@@ -107,5 +107,7 @@ test('подписчику по чужому плану напоминание �
   const payloads = (message) => message.extra.attachments[0].payload.buttons.flat().map((button) => button.payload);
   assert.ok(payloads(parent).some((payload) => payload.startsWith('rdone:')));
   assert.ok(!payloads(teen).some((payload) => payload.startsWith('rdone:')));
+  assert.match(parent.text, /Когда сделаете — нажмите «✅ Сделано»/, 'владельцу — подсказка отметить шаг');
+  assert.doesNotMatch(teen.text, /Сделано/, 'подписчику подсказки нет: отмечает только родитель');
   ctx.db.close();
 });

@@ -84,3 +84,19 @@ test('ошибка записи события не ломает сценари�
     assert.equal(warnings.length, 1);
   });
 });
+
+test('шаг выполнен в срок: отметка до даты пункта считается, после — нет', () => {
+  const app = createTestApp({ now: '2027-02-20T09:00:00Z' });
+  const { analytics } = app.services;
+  analytics.track(EVENTS.SURVEY_COMPLETED, 501);
+  analytics.track(EVENTS.SURVEY_COMPLETED, 502);
+  analytics.track(EVENTS.SURVEY_COMPLETED, 503);
+  analytics.track(EVENTS.ITEM_DONE, 501, { itemId: '2627-fed-gia-application', from: 'reminder' });
+  app.clock.now = new Date('2027-03-05T09:00:00Z');
+  analytics.track(EVENTS.ITEM_DONE, 502, { itemId: '2627-fed-gia-application', from: 'chat' });
+  analytics.track(EVENTS.ITEM_DONE, 504, { itemId: '2627-fed-gia-application', from: 'chat' });
+  const { steps } = analytics.funnel(null);
+  assert.deepEqual(steps, { families: 3, onTime: 1, fromReminder: 1 }, '502 отметил после 1 марта, 504 не собирал план');
+  assert.match(analytics.report(), /Выполнили шаг плана в срок: 1 из 3 собравших план \(33%\); из них по кнопке «Сделано» в напоминании: 1/);
+  app.db.close();
+});
