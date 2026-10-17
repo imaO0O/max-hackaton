@@ -8,6 +8,7 @@ test('три вопроса, у каждого ровно один верный 
   for (const question of QUIZ_QUESTIONS) {
     assert.ok(question.correct >= 0 && question.correct < question.options.length, question.id);
     assert.ok(question.explanation.length > 0);
+    for (const option of question.options) assert.ok(option.length <= 34, `подпись кнопки помещается на телефоне: ${option}`);
   }
 });
 

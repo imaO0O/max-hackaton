@@ -9,7 +9,7 @@ info:
 
     Ошибки возвращаются в едином формате `{ "error": { "code", "message" } }`.
 servers:
-  - url: https://158-160-18-41.sslip.io
+  - url: https://posle9.onrender.com
     description: Развёрнутый сервис
   - url: http://localhost:8080
     description: Локальный запуск
@@ -771,7 +771,7 @@ paths:
                 type: object
                 required: [url, fileName, expiresInSeconds, eventsCount]
                 properties:
-                  url: { type: string, format: uri, examples: ['https://158-160-18-41.sslip.io/api/calendar/7007.1790000000.abc.ics'] }
+                  url: { type: string, format: uri, examples: ['https://posle9.onrender.com/api/calendar/7007.1790000000.abc.ics'] }
                   fileName: { type: string, examples: [posle9-plan-2026-2027.ics] }
                   expiresInSeconds: { type: integer, examples: [600] }
                   eventsCount: { type: integer, description: Сколько дат попадёт в календарь }
