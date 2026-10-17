@@ -13,7 +13,7 @@ solution:
   name: "После 9-го — план выбора пути после 9 класса для семьи девятиклассника"
 
 api:
-  baseUrl: "https://158-160-18-41.sslip.io"
+  baseUrl: "https://posle9.onrender.com"
   openapi: "./docs/openapi.yaml"
   defaultHeaders:
     Accept: "application/json"

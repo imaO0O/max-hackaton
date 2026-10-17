@@ -99,6 +99,8 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(regionIds.has(college.regionId), `${label}: неизвестный регион «${college.regionId}»`);
     check(typeof college.city === 'string' && college.city.length > 0, `${label}: нет города`);
     check(Array.isArray(college.programs) && college.programs.length > 0, `${label}: нет программ`);
+    check(college.dataNote === undefined || college.dataNote === null || typeof college.dataNote === 'string',
+      `${label}: dataNote — строка или пусто`);
     check(college.inExperimentList === undefined || typeof college.inExperimentList === 'boolean',
       `${label}: inExperimentList должен быть true/false`);
     check(college.inExperimentList === undefined || regionsWithList.has(college.regionId),
@@ -136,6 +138,9 @@ export function validateReferenceData({ regions, interests, specialties, college
     check(isDateOrNull(keyDate.dateEnd), `${label}: dateEnd — YYYY-MM-DD или null`);
     check(!keyDate.dateEnd || keyDate.dateEnd >= keyDate.dateStart, `${label}: dateEnd раньше dateStart`);
     check(isDateOrNull(keyDate.checkedAt), `${label}: checkedAt — YYYY-MM-DD или null`);
+    check(keyDate.keyStep === undefined || typeof keyDate.keyStep === 'boolean', `${label}: keyStep — true или false`);
+    check(keyDate.dataNote === undefined || keyDate.dataNote === null || typeof keyDate.dataNote === 'string',
+      `${label}: dataNote — строка или пусто`);
     check(keyDate.grade === undefined || keyDate.grade === null || [8, 9].includes(keyDate.grade),
       `${label}: grade — 8 (шаг 8 класса), 9 или пусто`);
     if (keyDate.scope === 'regional') {
@@ -205,11 +210,11 @@ export function applyReferenceData(db, data) {
     }
 
     const upsertCollege = db.prepare(`
-      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo, in_experiment_list)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO colleges (id, region_id, city, name, address, website, has_dormitory, is_demo, in_experiment_list, data_note)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET region_id = excluded.region_id, city = excluded.city, name = excluded.name,
         address = excluded.address, website = excluded.website, has_dormitory = excluded.has_dormitory, is_demo = excluded.is_demo,
-        in_experiment_list = excluded.in_experiment_list`);
+        in_experiment_list = excluded.in_experiment_list, data_note = excluded.data_note`);
     const upsertProgram = db.prepare(`
       INSERT INTO college_specialty (id, college_id, specialty_code, form, duration, budget_places, passing_score, score_year, entrance_test, source_url,
         checked_at, in_experiment_list)
@@ -220,7 +225,8 @@ export function applyReferenceData(db, data) {
     const programIds = [];
     for (const college of data.colleges) {
       upsertCollege.run(college.id, college.regionId, college.city, college.name, college.address ?? null,
-        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo), bool(college.inExperimentList));
+        college.website ?? null, bool(college.hasDormitory), bool(college.isDemo), bool(college.inExperimentList),
+        college.dataNote ?? null);
       for (const program of college.programs) {
         const id = programId(college.id, program.specialtyCode, program.form);
         programIds.push(id);
@@ -232,20 +238,21 @@ export function applyReferenceData(db, data) {
 
     const upsertKeyDate = db.prepare(`
       INSERT INTO key_dates (id, academic_year, scope, region_id, kind, path, experiment, date_start, date_end,
-        is_approximate, title, description, reminders, source_title, source_url, checked_at, grade, steps)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_approximate, title, description, reminders, source_title, source_url, checked_at, grade, steps, key_step, data_note)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET academic_year = excluded.academic_year, scope = excluded.scope,
         region_id = excluded.region_id, kind = excluded.kind, path = excluded.path, experiment = excluded.experiment,
         date_start = excluded.date_start, date_end = excluded.date_end, is_approximate = excluded.is_approximate,
         title = excluded.title, description = excluded.description, reminders = excluded.reminders,
         source_title = excluded.source_title, source_url = excluded.source_url, checked_at = excluded.checked_at,
-        grade = excluded.grade, steps = excluded.steps`);
+        grade = excluded.grade, steps = excluded.steps,
+        key_step = excluded.key_step, data_note = excluded.data_note`);
     for (const keyDate of data.keyDates) {
       upsertKeyDate.run(keyDate.id, keyDate.academicYear, keyDate.scope, keyDate.regionId ?? null, keyDate.kind,
         keyDate.path, keyDate.experiment, keyDate.dateStart, keyDate.dateEnd ?? null, bool(keyDate.isApproximate),
         keyDate.title, keyDate.description, JSON.stringify(keyDate.reminders ?? []), keyDate.sourceTitle ?? null,
         keyDate.sourceUrl ?? null, keyDate.checkedAt ?? null, keyDate.grade ?? null,
-        keyDate.steps ? JSON.stringify(keyDate.steps) : null);
+        keyDate.steps ? JSON.stringify(keyDate.steps) : null, bool(keyDate.keyStep), keyDate.dataNote ?? null);
     }
 
     deleteMissing(db, 'key_dates', 'id', data.keyDates.map((item) => item.id));

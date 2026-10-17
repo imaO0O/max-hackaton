@@ -228,6 +228,7 @@
     "website": "https://edu.tatar.ru/vahit/org6237",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует. Таблица мест на странице приёма 2026/27 подписана «КЦП план 2025/26», поэтому число мест не перенесено.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "13.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/vahit/org6237/page1872427.htm", "checkedAt": "2026-09-16" },
@@ -244,6 +245,7 @@
     "website": "https://krmk.org",
     "hasDormitory": false,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует. Число бюджетных мест по программам на сайте не найдено.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "09.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://krmk.org/abiturientu/", "checkedAt": "2026-09-16" },
@@ -261,6 +263,7 @@
     "website": "https://kbmk.ru",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует.",
     "inExperimentList": false,
     "programs": [
       { "specialtyCode": "31.02.01", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 60, "passingScore": null, "scoreYear": null, "entranceTest": "Обязательный медосмотр. Нужны четыре ОГЭ, документы — до 10 августа", "sourceUrl": "https://kbmk.ru/abitur/plan-priema.php", "checkedAt": "2026-09-16" },
@@ -277,6 +280,7 @@
     "website": "https://edu.tatar.ru/priv/org6253",
     "hasDormitory": false,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "09.02.11", "form": "full_time", "duration": "3 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6253/files/%D0%9F%D0%BB%D0%B0%D0%BD%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026(1).pdf", "checkedAt": "2026-09-16" },
@@ -294,6 +298,7 @@
     "website": "https://edu.tatar.ru/sovetcki/KCK",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "08.01.27", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/upload/storage/org6262/files/%D0%9A%D0%BE%D0%BD%D1%82%D1%80%D0%BE%D0%BB%D1%8C%D0%BD%D1%8B%D0%B5%20%D1%86%D0%B8%D1%84%D1%80%D1%8B%20%D0%BF%D1%80%D0%B8%D0%B5%D0%BC%D0%B0%202026.docx", "checkedAt": "2026-09-16", "inExperimentList": true },
@@ -311,6 +316,7 @@
     "website": "https://college-service.ru",
     "hasDormitory": false,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "43.01.09", "form": "full_time", "duration": "1 г. 10 мес.", "budgetPlaces": 100, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/nsav/page2322.htm/page5602196.htm", "checkedAt": "2026-09-16", "inExperimentList": true },
@@ -328,6 +334,7 @@
     "website": "https://kktd.ru",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует. Места по программам не найдены: план приёма опубликован сканом; сроки обучения на странице приёма не указаны.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "09.02.09", "form": "full_time", "duration": null, "budgetPlaces": null, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://kktd.ru/specialties/", "checkedAt": "2026-09-16" },
@@ -343,6 +350,7 @@
     "website": "https://edu.tatar.ru/sovetcki/org6264",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Колледж ранжирует заявления по итоговому конкурсному баллу (до 10 баллов) — его нельзя сравнивать со средним баллом аттестата. Сроки обучения на странице приёма не указаны.",
     "inExperimentList": false,
     "programs": [
       { "specialtyCode": "44.02.01", "form": "full_time", "duration": null, "budgetPlaces": 75, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://edu.tatar.ru/sovetcki/org6264/page5772678.htm", "checkedAt": "2026-09-16" },
@@ -359,6 +367,7 @@
     "website": "https://ktet.ru",
     "hasDormitory": true,
     "isDemo": false,
+    "dataNote": "Прошлогодний проходной балл колледж не публикует.",
     "inExperimentList": true,
     "programs": [
       { "specialtyCode": "38.02.01", "form": "full_time", "duration": "2 г. 10 мес.", "budgetPlaces": 25, "passingScore": null, "scoreYear": null, "entranceTest": null, "sourceUrl": "https://ktet.ru/specialties/", "checkedAt": "2026-09-16" },

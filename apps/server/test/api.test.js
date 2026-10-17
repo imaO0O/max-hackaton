@@ -66,6 +66,43 @@ describe('API мини-приложения', () => {
     assert.equal(invalid.json().error.code, 'validation_error');
   });
 
+  test('проверка понимания в мини-приложении: «до», затем «после» со сравнением; ответы проверяет сервер', async () => {
+    const user = 8008;
+    assert.equal((await call('GET', '/api/quiz')).statusCode, 401);
+    assert.deepEqual((await call('GET', '/api/quiz', { user })).json(), { phase: 'before', before: null });
+
+    const before = (await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 0, colleges: 1 } } })).json();
+    assert.equal(before.phase, 'before');
+    assert.equal(before.score, 2);
+    assert.deepEqual(before.answers, { deadline: true, two_oge: false, colleges: true });
+
+    assert.deepEqual((await call('GET', '/api/quiz', { user })).json(), { phase: 'after', before: { score: 2, total: 3 } });
+    const after = (await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 2, colleges: 1 } } })).json();
+    assert.equal(after.phase, 'after');
+    assert.equal(after.score, 3);
+    assert.deepEqual(after.before, { score: 2, total: 3 });
+
+    const invalid = await call('POST', '/api/quiz', { user, body: { answers: { deadline: 0, two_oge: 7, colleges: 1 } } });
+    assert.equal(invalid.statusCode, 400);
+    const skipped = await call('POST', '/api/quiz/skip', { user: 8009 });
+    assert.deepEqual(skipped.json(), { ok: true });
+    assert.match(ctx.services.analytics.report(), /пропустили вопросы «до»: 1 чел\./);
+  });
+
+  test('план, собранный в мини-приложении, учитывается в метриках как пройденный опрос', async () => {
+    const user = 7007;
+    await call('PUT', '/api/profile', { user, body: { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: [] } });
+    const completed = ctx.repos.events.list('survey_completed', '1970-01-01T00:00:00.000Z');
+    assert.ok(completed.some((event) => event.userId === user && event.props.from === 'miniapp' && event.props.grade === 9));
+  });
+
+  test('у колледжа с неполными данными есть пояснение, почему', async () => {
+    const radio = (await call('GET', '/api/colleges/tat-kazan-radiomechanical-college')).json().college;
+    assert.match(radio.dataNote, /проходной балл колледж не публикует/);
+    const aviation = (await call('GET', '/api/colleges/tat-kazan-aviation-technical-college')).json().college;
+    assert.equal(aviation.dataNote, null, 'у колледжа с полными данными пояснения нет');
+  });
+
   test('перечень эксперимента: регион, колледжи и фильтр программ для двух ОГЭ', async () => {
     const regions = (await call('GET', '/api/regions')).json().regions;
     const tatarstan = regions.find((region) => region.id === 'tatarstan');

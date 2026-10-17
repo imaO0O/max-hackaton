@@ -9,7 +9,7 @@ info:
 
     Ошибки возвращаются в едином формате `{ "error": { "code", "message" } }`.
 servers:
-  - url: https://158-160-18-41.sslip.io
+  - url: https://posle9.onrender.com
     description: Развёрнутый сервис
   - url: http://localhost:8080
     description: Локальный запуск
@@ -26,6 +26,8 @@ tags:
     description: Избранные программы колледжей
   - name: reports
     description: Сообщения о неточностях в данных
+  - name: quiz
+    description: Проверка понимания правил до и после плана
 
 components:
   securitySchemes:
@@ -113,6 +115,7 @@ components:
         hasDormitory: { type: boolean }
         isDemo: { type: boolean }
         inExperimentList: { type: boolean, description: Колледж в перечне эксперимента с двумя ОГЭ }
+        dataNote: { type: [string, "null"], description: "Почему у программ неполные данные, например «прошлогодний проходной балл колледж не публикует»" }
         programs:
           type: array
           items: { $ref: '#/components/schemas/Program' }
@@ -151,6 +154,12 @@ components:
         path: { type: string, enum: [school10, college, undecided] }
         interests: { type: array, maxItems: 20, items: { type: string } }
         remindersEnabled: { type: boolean }
+    QuizScore:
+      type: object
+      required: [score, total]
+      properties:
+        score: { type: integer, minimum: 0, maximum: 3, description: Число верных ответов }
+        total: { type: integer, const: 3 }
     PlanItem:
       type: object
       required: [id, scope, kind, path, dateStart, title, description, status, done]
@@ -178,6 +187,8 @@ components:
         sourceTitle: { type: [string, 'null'] }
         sourceUrl: { type: [string, 'null'] }
         checkedAt: { type: [string, 'null'], format: date }
+        dataNote: { type: [string, 'null'], description: 'Оговорка к сроку, например «приказ № 457 действует до 01.01.2027»' }
+        keyStep: { type: boolean, description: 'Ключевой шаг для метрики выполненного шага (заявление на ОГЭ)' }
         status: { type: string, enum: [past, current, upcoming] }
         daysLeft: { type: [integer, 'null'] }
         done: { type: boolean }
@@ -770,7 +781,7 @@ paths:
                 type: object
                 required: [url, fileName, expiresInSeconds, eventsCount]
                 properties:
-                  url: { type: string, format: uri, examples: ['https://158-160-18-41.sslip.io/api/calendar/7007.1790000000.abc.ics'] }
+                  url: { type: string, format: uri, examples: ['https://posle9.onrender.com/api/calendar/7007.1790000000.abc.ics'] }
                   fileName: { type: string, examples: [posle9-plan-2026-2027.ics] }
                   expiresInSeconds: { type: integer, examples: [600] }
                   eventsCount: { type: integer, description: Сколько дат попадёт в календарь }
@@ -813,6 +824,94 @@ paths:
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/quiz:
+    get:
+      operationId: getQuizStatus
+      tags: [quiz]
+      summary: Какие вопросы показать — «до» или «после» плана
+      description: «До» — пока у пользователя нет ни ответов «до», ни плана (своего или плана семьи по ссылке). Мини-приложение показывает вопросы «до» перед опросом, «после» — карточкой на экране плана.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Фаза и прежний результат «до», если он есть
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [phase, before]
+                properties:
+                  phase: { type: string, enum: [before, after] }
+                  before:
+                    oneOf:
+                      - { $ref: '#/components/schemas/QuizScore' }
+                      - { type: 'null' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: submitQuiz
+      tags: [quiz]
+      summary: Ответы на три вопроса о правилах
+      description: Номера выбранных вариантов. Ответы проверяет сервер, в метрики пишется только «верно или неверно» по каждому вопросу. Фаза определяется на сервере так же, как в GET /api/quiz.
+      security: [{ maxInitData: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [answers]
+              additionalProperties: false
+              properties:
+                answers:
+                  type: object
+                  required: [deadline, two_oge, colleges]
+                  additionalProperties: false
+                  properties:
+                    deadline: { type: integer, minimum: 0, maximum: 2, description: До какого числа подать заявление на ОГЭ }
+                    two_oge: { type: integer, minimum: 0, maximum: 2, description: С двумя ОГЭ в регионе эксперимента — куда можно поступить }
+                    colleges: { type: integer, minimum: 0, maximum: 2, description: В сколько колледжей можно подать документы }
+            examples:
+              allCorrect: { value: { answers: { deadline: 0, two_oge: 2, colleges: 1 } } }
+      responses:
+        '200':
+          description: Результат; для «после» — и результат «до» для сравнения
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [phase, score, total, answers, before]
+                properties:
+                  phase: { type: string, enum: [before, after] }
+                  score: { type: integer, minimum: 0, maximum: 3 }
+                  total: { type: integer, const: 3 }
+                  answers:
+                    type: object
+                    description: Верно ли отвечен каждый вопрос
+                    properties:
+                      deadline: { type: boolean }
+                      two_oge: { type: boolean }
+                      colleges: { type: boolean }
+                  before:
+                    oneOf:
+                      - { $ref: '#/components/schemas/QuizScore' }
+                      - { type: 'null' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api/quiz/skip:
+    post:
+      operationId: skipQuiz
+      tags: [quiz]
+      summary: Вопросы «до» пропущены
+      description: Нужно для метрик — чтобы понимать, насколько сравнение «до → после» выборочное.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Пропуск учтён
+          content:
+            application/json:
+              schema: { type: object, required: [ok], properties: { ok: { type: boolean, const: true } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/calendar/{file}:
     get:

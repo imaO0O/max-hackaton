@@ -5,6 +5,7 @@ import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
 import { Card, DemoTag, ScreenHeader, SectionTitle, useToast } from '../components/ui.jsx';
+import { QuizCard } from '../components/QuizCard.jsx';
 import { api } from '../lib/api.js';
 import { formatScore } from '../lib/format.js';
 import { haptic } from '../lib/max-bridge.js';
@@ -82,6 +83,8 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
           </Typography.Body>
         </Card>
       )}
+
+      {!data.isOwner && <QuizCard />}
 
       {data.isAdvance && (
         <Card className="notice">

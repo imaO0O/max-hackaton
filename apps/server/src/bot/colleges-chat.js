@@ -1,10 +1,13 @@
 import { Keyboard } from '@maxhub/max-bot-api';
-import { STUDY_FORMS } from '@posle9/core';
+import {
+  DATA_STATUS, DATA_STATUS_ICONS, DATA_STATUS_TITLES, dataStatusExplanation, dataStatusIcon, localDateString, programDataStatus,
+  STUDY_FORMS,
+} from '@posle9/core';
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
 import { openAppKeyboard, reportButtonRow, startKeyboard } from './keyboards.js';
-import { formatCheckedAt, texts } from './texts.js';
+import { texts } from './texts.js';
 
 /**
  * Колледжи в чате: программы по интересам и городу из ответов, карточка программы с источником
@@ -14,6 +17,9 @@ import { formatCheckedAt, texts } from './texts.js';
 const MAX_PROGRAMS = 8;
 const button = Keyboard.button;
 
+/** Сегодняшняя дата для статуса данных — по московскому времени, как в справочнике. */
+const todayMsk = (clock) => localDateString(clock(), 3);
+
 const formatScore = (value) => (value === null || value === undefined ? 'нет данных' : value.toFixed(2).replace('.', ','));
 
 function shorten(text, maxLength) {
@@ -21,10 +27,10 @@ function shorten(text, maxLength) {
 }
 
 /** Номер программы в списке — он же на кнопке, чтобы подпись кнопки была короткой и не обрезалась на телефоне. */
-function programLine(program, number) {
+function programLine(program, number, info) {
   const score = program.passingScore === null ? 'балл: нет данных' : `балл ${program.scoreYear ?? ''}: ${formatScore(program.passingScore)}`;
   const places = program.budgetPlaces ? `, бюджет ${program.budgetPlaces}` : '';
-  return `${number}. ${program.specialtyTitle} — ${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places}`;
+  return `${number}. ${program.specialtyTitle} — ${STUDY_FORMS[program.form].toLowerCase()}, ${score.replace(/ +:/, ':')}${places} ${dataStatusIcon(info)}`;
 }
 
 /**
@@ -50,7 +56,8 @@ export function pickPrograms(programs, limit) {
   return order.flatMap((collegeId) => picked.filter((program) => program.college.id === collegeId));
 }
 
-function programCard(program, isFavorite) {
+function programCard(program, isFavorite, today) {
+  const status = dataStatusExplanation(programDataStatus(program, { today }));
   const lines = [
     `🏫 ${program.college.name}`,
     `${program.specialtyCode} ${program.specialtyTitle}`,
@@ -64,14 +71,17 @@ function programCard(program, isFavorite) {
   lines.push(
     `Адрес: ${program.college.address ?? program.college.city}${program.college.hasDormitory ? ', есть общежитие' : ''}`,
     '',
-    program.college.isDemo ? 'Демо-данные.' : `Источник проверен ${program.checkedAt ? formatCheckedAt(program.checkedAt) : ': дата не указана'}.`,
-    'Балл — ориентир по прошлому году, а не прогноз поступления.',
+    `${dataStatusIcon(programDataStatus(program, { today }))} ${status.title}`,
+    ...status.lines,
   );
+  if (program.passingScore !== null) lines.push('', 'Балл — ориентир по прошлому году, а не прогноз поступления.');
   if (isFavorite) lines.push('', '★ В избранном — видно в мини-приложении и у подростка в плане семьи.');
   return lines.join('\n');
 }
 
-export function registerCollegesChat({ bot, users, reference, services, runtime }) {
+export function registerCollegesChat({
+  bot, users, reference, services, runtime, clock = () => new Date(),
+}) {
   const userIdOf = (ctx) => ctx.user?.user_id;
 
   /** Программы под ответы семьи. Если по городу пусто — весь регион, если по интересам пусто — все сферы. */
@@ -111,8 +121,17 @@ export function registerCollegesChat({ bot, users, reference, services, runtime 
     const lines = [];
     shown.forEach((program, index) => {
       if (index === 0 || shown[index - 1].college.id !== program.college.id) lines.push('', `🏫 ${program.college.name}`);
-      lines.push(programLine(program, index + 1));
+      lines.push(programLine(program, index + 1, programDataStatus(program, { today: todayMsk(clock) })));
     });
+    // Легенда — только для значков, которые есть в списке
+    const infos = shown.map((program) => programDataStatus(program, { today: todayMsk(clock) }));
+    const present = [...new Set(infos.map((info) => info.status))];
+    const legend = [
+      ...[DATA_STATUS.CONFIRMED, DATA_STATUS.INCOMPLETE, DATA_STATUS.STALE, DATA_STATUS.UNVERIFIED, DATA_STATUS.DEMO]
+        .filter((item) => infos.some((info) => info.status === item && !info.minor))
+        .map((item) => `${DATA_STATUS_ICONS[item]} ${DATA_STATUS_TITLES[item].toLowerCase()}`),
+      ...(infos.some((info) => info.minor) ? ['ℹ️ колледж не публикует прошлогодний балл'] : []),
+    ].join(', ');
     const text = [
       `Колледжи: ${region?.name ?? ''}${user.city ? `, ${user.city}` : ''}`,
       note,
@@ -121,6 +140,7 @@ export function registerCollegesChat({ bot, users, reference, services, runtime 
       programs.length > shown.length
         ? `Показано ${shown.length} из ${programs.length}. Все программы, фильтры и сравнение — в мини-приложении.`
         : 'Сравнить программы рядом можно в мини-приложении.',
+      `${legend}${present.some((item) => item !== DATA_STATUS.CONFIRMED && item !== DATA_STATUS.DEMO) ? ' — уточните в приёмной комиссии' : ''}.`,
       'Нажмите на номер программы, чтобы открыть подробности и добавить в избранное.',
     ].filter((line) => line !== null).join('\n');
     const rows = shown.map((program, index) => [button.callback(
@@ -138,10 +158,13 @@ export function registerCollegesChat({ bot, users, reference, services, runtime 
     const rows = [[isFavorite
       ? button.callback('Убрать из избранного', `pu:${programId}`)
       : button.callback('☆ В избранное', `pf:${programId}`)]];
-    if (program.sourceUrl) rows.push([button.link('Источник', program.sourceUrl)]);
+    if (program.sourceUrl) {
+      const confirmed = programDataStatus(program, { today: todayMsk(clock) }).status === DATA_STATUS.CONFIRMED;
+      rows.push([button.link(confirmed ? 'Источник' : 'Приёмная комиссия и источник', program.sourceUrl)]);
+    }
     rows.push(reportButtonRow('p', programId));
     rows.push([button.callback('← Все программы', 'colleges:show')]);
-    return { text: programCard(program, isFavorite), keyboard: Keyboard.inlineKeyboard(rows) };
+    return { text: programCard(program, isFavorite, todayMsk(clock)), keyboard: Keyboard.inlineKeyboard(rows) };
   }
 
   const surveyView = () => ({ text: texts.needSurvey, keyboard: startKeyboard({ hasProfile: false }) });

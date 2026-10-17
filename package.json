@@ -19,6 +19,7 @@
     "start": "npm run start --workspace apps/server",
     "test": "npm test --workspace packages/core && npm test --workspace apps/server",
     "data:check": "npm run data:check --workspace apps/server",
+    "data:links": "node scripts/check-sources.mjs",
     "stats": "npm run stats --workspace apps/server",
     "api:check": "node scripts/check-data-api.mjs",
     "presentation:pdf": "node scripts/print-presentation.mjs"

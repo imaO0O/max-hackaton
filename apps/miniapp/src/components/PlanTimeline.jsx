@@ -3,7 +3,8 @@ import { Typography } from '@maxhub/max-ui';
 
 import { daysText, formatDateRange, monthKey, monthTitle } from '../lib/format.js';
 import { ReportButton } from './ReportButton.jsx';
-import { SourceNote, Tag } from './ui.jsx';
+import { KeyDateStatus } from './DataStatus.jsx';
+import { Tag } from './ui.jsx';
 
 const SCOPE_TAGS = {
   federal: { text: 'для всех регионов', tone: 'neutral' },
@@ -92,14 +93,8 @@ function PlanItem({
           <div className="plan-item__details">
             <Typography.Body variant="small" className="preline">{item.description}</Typography.Body>
             {steps.length > 0 && <ChecklistSteps item={item} onToggleStep={onToggleStep} pendingSteps={pendingSteps} />}
-            {item.scope !== 'recommendation' && (
-              <SourceNote
-                title={item.sourceTitle}
-                url={item.sourceUrl}
-                checkedAt={item.checkedAt}
-                isDemo={item.scope === 'regional' && regionIsDemo}
-              />
-            )}
+            {/* У советов сервиса уже есть метка «совет» — плашка статуса только у сроков и правил */}
+            {item.scope !== 'recommendation' && <KeyDateStatus item={item} regionIsDemo={regionIsDemo} />}
             {/* О неточности сообщают только про факты с источником: у советов сервиса и демо-дат источника нет */}
             {item.scope !== 'recommendation' && !(item.scope === 'regional' && regionIsDemo) && (
               <ReportButton targetType="item" targetId={item.id} />

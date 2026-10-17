@@ -1,4 +1,6 @@
-import { OTHER_REGION_ID, PATH_TITLES, planPeriodLabel } from '@posle9/core';
+import {
+  DATA_STATUS_ICONS, keyDateDataStatus, localDateString, OTHER_REGION_ID, PATH_TITLES, planPeriodLabel,
+} from '@posle9/core';
 
 const MONTHS = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -72,6 +74,7 @@ export const texts = {
   askGrade: `Шаг 3 из ${TOTAL_STEPS}. В каком классе сейчас подросток?`,
   askInterests: `Шаг 4 из ${TOTAL_STEPS}. Что интересно подростку? Можно выбрать несколько, затем нажмите «Готово».`,
   askPath: `Шаг 5 из ${TOTAL_STEPS}. К какому пути склоняется семья?`,
+  quizBeforeThanks: 'Спасибо! Ответы сравним, когда план будет готов.',
   surveyExpired: 'Этот вопрос устарел. Начнём заново?',
   surveyDone: 'Ответы уже сохранены, план готов. Поменять их можно кнопкой «Изменить ответы».',
   reminderExampleNote: 'Это пример. Настоящие напоминания приходят в 10:00 по времени региона перед важными датами плана.',
@@ -86,6 +89,7 @@ export const texts = {
     '/colleges — колледжи по интересам из ответов',
     '/paths — чем отличаются 10–11 класс и колледж',
     '/oge — сколько ОГЭ сдавать: 2 или 4',
+    '/quiz — проверить себя: 3 вопроса о правилах',
     '/reminders — включить или выключить напоминания',
     '/test_reminder — показать пример напоминания прямо сейчас',
     '/privacy — какие данные храним',
@@ -252,14 +256,13 @@ function itemStatusText(item) {
 }
 
 /** Карточка пункта плана: дата, статус, что сделать и откуда это известно. */
-export function planItemCard(item) {
+/** today — сегодняшняя дата для статуса «давно не проверялось» (по умолчанию — по Москве); regionIsDemo — даты демо-региона. */
+export function planItemCard(item, { today = localDateString(new Date(), 3), regionIsDemo = false } = {}) {
   const date = item.dateEnd ? `${formatDate(item.dateStart)} — ${formatDate(item.dateEnd)}` : formatDate(item.dateStart);
   const status = itemStatusText(item);
-  let source;
-  if (item.scope === 'recommendation') source = 'Совет сервиса.';
-  else if (item.sourceTitle || item.sourceUrl) {
-    source = `Источник: ${item.sourceTitle ?? 'по ссылке ниже'}${item.checkedAt ? `, проверено ${formatCheckedAt(item.checkedAt)}` : ', дата не проверена'}.`;
-  } else source = 'Источник не указан.';
+  // Статус даты — как у программ колледжей: заметная дата проверки и где уточнить
+  const dataStatus = keyDateDataStatus(item, { today, regionIsDemo });
+  const source = [`${DATA_STATUS_ICONS[dataStatus.status]} ${dataStatus.title}`, ...dataStatus.lines].join('\n');
   // Чек-лист: шаги с отметками, у пунктов из справочника без плана — просто список
   const steps = item.steps?.length
     ? ['', `Шаги (${item.steps.filter((step) => step.done).length} из ${item.steps.length}):`,

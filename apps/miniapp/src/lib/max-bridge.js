@@ -96,7 +96,8 @@ export async function downloadFile(url, fileName) {
 
 export function haptic(type = 'success') {
   try {
-    getWebApp()?.HapticFeedback?.notificationOccurred?.(type);
+    // Метод возвращает промис: на десктопе и в вебе он отклоняется — отказ гасим, чтобы не было ошибки в консоли
+    Promise.resolve(getWebApp()?.HapticFeedback?.notificationOccurred?.(type)).catch(() => {});
   } catch {
     // Тактильный отклик недоступен на десктопе и в вебе
   }
@@ -104,7 +105,7 @@ export function haptic(type = 'success') {
 
 export function hapticSelection() {
   try {
-    getWebApp()?.HapticFeedback?.selectionChanged?.();
+    Promise.resolve(getWebApp()?.HapticFeedback?.selectionChanged?.()).catch(() => {});
   } catch {
     // Тактильный отклик недоступен на десктопе и в вебе
   }

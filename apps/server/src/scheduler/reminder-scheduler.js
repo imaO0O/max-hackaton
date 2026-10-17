@@ -2,6 +2,9 @@ import { reminderKeyboard } from '../bot/keyboards.js';
 import { reminderText } from '../bot/texts.js';
 import { EVENTS } from '../services/analytics.js';
 
+/** Подсказка владельцу плана: отметка «Сделано» снимает напоминания по пункту и показывает, что шаг выполнен. */
+const DONE_HINT = 'Когда сделаете — нажмите «✅ Сделано»: шаг отметится в плане, и напоминаний по нему больше не будет.';
+
 /** Напоминание, которое опоздало больше чем на сутки (например, сервер был выключен), не отправляется. */
 const STALE_AFTER_MS = 24 * 3600 * 1000;
 
@@ -37,12 +40,11 @@ export function createReminderScheduler({
           continue;
         }
         try {
-          await sendMessage(reminder.recipientId, reminderText(reminder), {
-            // «Сделано» — только владельцу плана: подросток по чужому плану отмечать пункты не может
-            attachments: [reminderKeyboard(runtime.botUsername, {
-              keyDateId: reminder.keyDate.id,
-              canMarkDone: reminder.recipientId === reminder.ownerId,
-            })],
+          // «Сделано» — только владельцу плана: подросток по чужому плану отмечать пункты не может
+          const canMarkDone = reminder.recipientId === reminder.ownerId;
+          const text = canMarkDone ? `${reminderText(reminder)}\n\n${DONE_HINT}` : reminderText(reminder);
+          await sendMessage(reminder.recipientId, text, {
+            attachments: [reminderKeyboard(runtime.botUsername, { keyDateId: reminder.keyDate.id, canMarkDone })],
           });
           repos.reminders.markSent(reminder.id);
           analytics?.track(EVENTS.REMINDER_SENT, reminder.recipientId, { keyDateId: reminder.keyDate.id });

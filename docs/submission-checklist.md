@@ -6,7 +6,7 @@
 
 - [ ] Все PR слиты в `main`, в GitHub Actions последняя проверка `main` зелёная (тесты, Docker-сборка не дольше 5 минут, запуск контейнера).
 - [ ] Сервер обновлён до `main`: `./scripts/deploy.sh` (при сбое сам откатится), версия отмечена тегом по `docs/releases.md`.
-- [ ] `https://158-160-18-41.sslip.io/api/health` → `{"status":"ok","bot":"running",…}`, в `version` — тег сдаваемой версии.
+- [ ] `https://posle9.onrender.com/api/health` → `{"status":"ok","bot":"running",…}`, в `version` — тег сдаваемой версии.
 - [ ] `npm run api:check` — все проверки `DATA-API.yaml` проходят на боевом сервере.
 - [ ] Первый слайд презентации: значения переменных окружения, нужные для запуска и проверки (требование кейса, стр. 10) — как минимум `BOT_TOKEN` (выдан организаторами) и что остальное берётся из `.env.example`. Решение, указывать ли сам токен, — за командой; в репозиторий его не добавляем.
 - [ ] Основной сценарий пройден в мобильном и веб-MAX по `docs/max-check.md` на обновлённом сервере.
@@ -17,13 +17,13 @@
 
 | Требование | Где |
 |---|---|
-| Работающее решение в MAX | бот [t567_hakaton_max_bot](https://max.ru/t567_hakaton_max_bot), мини-приложение `https://158-160-18-41.sslip.io/` |
+| Работающее решение в MAX | бот [t567_hakaton_max_bot](https://max.ru/t567_hakaton_max_bot), мини-приложение `https://posle9.onrender.com/` |
 | Зафиксированная версия кода | commit hash `main` + архив с контрольной суммой (`scripts/make-submission.sh`) |
 | README: назначение, сценарий, архитектура, запуск одной командой, окружение, порты, зависимости, интеграции, данные, тестовые данные, сценарий проверки, ожидаемое поведение, ограничения, остановка и перезапуск | `README.md` |
 | Файл зависимостей | `package-lock.json` |
 | Docker: Dockerfile, compose, `.dockerignore`, `.env.example` без секретов, сборка ≤ 5 минут | корень репозитория; время сборки — в GitHub Actions |
 | Презентация PDF, первый слайд — техническая информация | `docs/presentation/presentation.pdf` |
-| Собственный API: HTTPS-адрес, OpenAPI, тестовые данные и доступы, `DATA-API.yaml` | `https://158-160-18-41.sslip.io/api`, `docs/openapi.yaml`, `data/`, `DATA-API.yaml` |
+| Собственный API: HTTPS-адрес, OpenAPI, тестовые данные и доступы, `DATA-API.yaml` | `https://posle9.onrender.com/api`, `docs/openapi.yaml`, `data/`, `DATA-API.yaml` |
 | Модельные интеграции и тестовые данные обозначены | README «Внешние сервисы и интеграции», «Тестовые данные»; слайд 8 |
 | Секретов в репозитории нет | `.env` в `.gitignore`; проверка: `git log -p \| grep -i -E "token\|secret"` |
 

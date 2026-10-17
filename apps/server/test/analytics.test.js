@@ -84,3 +84,32 @@ test('ошибка записи события не ломает сценари�
     assert.equal(warnings.length, 1);
   });
 });
+
+test('реально выполненный шаг: ключевой шаг до 1 марта, отметка после срока и снятая отметка не считаются', () => {
+  const app = createTestApp({ now: '2027-02-20T09:00:00Z' });
+  const { analytics, plan } = app.services;
+  const family = (id, grade = 9) => {
+    plan.saveProfile(id, { regionId: 'demo-standard', grade, path: 'college', interests: [] });
+    analytics.track(EVENTS.SURVEY_COMPLETED, id, { grade });
+  };
+  const KEY = '2627-fed-gia-application'; // заявление на ОГЭ, 1 марта — ключевой шаг
+  const mark = (id, itemId, from) => {
+    plan.setItemDone(id, itemId, true);
+    analytics.track(EVENTS.ITEM_DONE, id, { itemId, from });
+  };
+  family(501); family(502); family(503);
+  mark(501, KEY, 'reminder'); // до 1 марта — ключевой шаг выполнен
+  mark(503, KEY, 'chat');
+  plan.setItemDone(503, KEY, false); // отметку сняли — не считается
+  app.clock.now = new Date('2027-03-05T09:00:00Z');
+  mark(502, KEY, 'chat'); // после срока — не считается
+  analytics.track(EVENTS.ITEM_DONE, 504, { itemId: KEY }); // план не собирал — не в выборке
+  const { steps } = analytics.funnel(null);
+  assert.deepEqual(steps, {
+    families: 3, onTime: 1, fromReminder: 1, ninthGrade: 3, keyStep: 1,
+  });
+  const report = analytics.report();
+  assert.match(report, /Ключевой шаг — заявление на ОГЭ отмечено до 1 марта: 1 из 3 семей 9 класса \(33%\)/);
+  assert.match(report, /Любой шаг плана в срок: 1 из 3 собравших план/);
+  app.db.close();
+});

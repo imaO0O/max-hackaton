@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
 import { STUDY_FORMS } from '@posle9/core';
 
+import { DataStatus } from '../components/DataStatus.jsx';
 import { ProgramCompare } from '../components/ProgramCompare.jsx';
 import { ReportButton } from '../components/ReportButton.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
 import {
-  Card, Chip, DemoTag, ScreenHeader, SectionTitle, SourceNote, Tag, useToast,
+  Card, Chip, DemoTag, ScreenHeader, SectionTitle, Tag, useToast,
 } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import { formatScore, plural } from '../lib/format.js';
@@ -21,7 +22,7 @@ function minScore(programs) {
 }
 
 function ProgramCard({
-  program, isFavorite, onToggleFavorite, pending, myAverage, isDemo, experimentYear,
+  program, isFavorite, onToggleFavorite, pending, myAverage, isDemo, dataNote, experimentYear,
 }) {
   return (
     <Card className="program">
@@ -66,7 +67,7 @@ function ProgramCard({
         </Typography.Body>
       )}
 
-      <SourceNote title="Источник" url={program.sourceUrl} checkedAt={program.checkedAt} isDemo={isDemo} />
+      <DataStatus program={program} college={{ isDemo, dataNote }} />
       {!isDemo && <ReportButton targetType="program" targetId={program.id} />}
     </Card>
   );
@@ -104,6 +105,7 @@ function CollegeDetails({
                 key={program.id}
                 program={program}
                 isDemo={college.data.isDemo}
+                dataNote={college.data.dataNote}
                 experimentYear={experimentYear}
                 myAverage={myAverage}
                 isFavorite={favoriteIds.has(program.id)}

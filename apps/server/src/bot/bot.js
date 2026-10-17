@@ -10,6 +10,7 @@ import {
 import { registerCollegesChat } from './colleges-chat.js';
 import { registerExamsChat } from './exams-chat.js';
 import { registerPathsChat } from './paths-chat.js';
+import { registerQuizChat } from './quiz-chat.js';
 import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
@@ -27,7 +28,9 @@ const HEALTH_FAILURES_BEFORE_ALERT = 3;
  * Чат-бот: опрос семьи, кнопка открытия мини-приложения, управление напоминаниями.
  * Логика профиля и плана — в сервисах, бот отвечает только за диалог.
  */
-export function createBot({ config, repos, services, runtime, logger, clientOptions }) {
+export function createBot({
+  config, repos, services, runtime, logger, clientOptions, clock = () => new Date(),
+}) {
   // clientOptions.fetch подменяется в тестах, чтобы проверять диалог без обращений к MAX.
   // Поверх него — оформление сообщений (жирные заголовки), если BOT_RICH_TEXT не выключен
   const baseFetch = clientOptions?.fetch ?? globalThis.fetch;
@@ -53,10 +56,18 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     });
   }
 
-  const planChat = registerPlanChat({ bot, users, reference, services, runtime });
-  const collegesChat = registerCollegesChat({ bot, users, reference, services, runtime });
+  const planChat = registerPlanChat({
+    bot, users, reference, services, runtime, clock,
+  });
+  const collegesChat = registerCollegesChat({
+    bot, users, reference, services, runtime, clock,
+  });
   const pathsChat = registerPathsChat({ bot, users, services, runtime });
   registerReportsChat({ bot, reference, services, config });
+  // Вопросы «до» в начале опроса: после ответов сразу продолжаем опрос
+  const quizChat = registerQuizChat({
+    bot, services, onBeforeDone: (ctx) => startSurvey(ctx, texts.quizBeforeThanks),
+  });
   const examsChat = registerExamsChat({ bot, users, reference, services });
 
   async function showStep(ctx, step, { edit }) {
@@ -66,6 +77,15 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
     } else {
       await ctx.reply(step.text, { attachments: [step.keyboard] });
     }
+  }
+
+  /** Начать опрос с первого вопроса — региона. intro — строка перед вопросом, например после вопросов «до». */
+  async function startSurvey(ctx, intro = null) {
+    const userId = userIdOf(ctx);
+    users.setSurveyState(userId, { draft: {} });
+    services.analytics.track(EVENTS.SURVEY_STARTED, userId);
+    const step = regionStep(reference.listRegions());
+    return showStep(ctx, intro ? { ...step, text: `${intro}\n\n${step.text}` } : step, { edit: true });
   }
 
   async function sendStart(ctx, payload) {
@@ -175,6 +195,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
   bot.command('menu', planChat.sendMenu);
   bot.command('colleges', (ctx) => collegesChat.sendColleges(ctx));
   bot.command('paths', (ctx) => pathsChat.sendPaths(ctx));
+  bot.command('quiz', (ctx) => quizChat.sendQuiz(ctx));
   bot.command('reminders', toggleReminders);
   bot.command('test_reminder', planChat.sendReminderExample);
   bot.action('reminder:example', async (ctx) => {
@@ -204,10 +225,16 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
 
     switch (action) {
       case 'start': {
-        save({});
-        services.analytics.track(EVENTS.SURVEY_STARTED, userId);
-        return showStep(ctx, regionStep(reference.listRegions()), { edit: true });
+        // Новой семье — сначала три вопроса о правилах (можно пропустить), чтобы сравнить «до» и «после»
+        if (!isProfileComplete(user) && quizChat.shouldOfferBefore(userId)) {
+          return showStep(ctx, quizChat.offerView(), { edit: true });
+        }
+        return startSurvey(ctx);
       }
+      case 'begin':
+        // «Пропустить» под предложением вопросов «до»
+        if (!isProfileComplete(user) && quizChat.shouldOfferBefore(userId)) services.quiz.skip(userId, { from: 'bot' });
+        return startSurvey(ctx);
       case 'region': {
         const region = reference.getRegion(value);
         if (!region) return restart();
@@ -375,6 +402,7 @@ export function createBot({ config, repos, services, runtime, logger, clientOpti
         { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'paths', description: '10 класс или колледж: сравнить' },
         { name: 'oge', description: 'Сколько ОГЭ сдавать: 2 или 4' },
+        { name: 'quiz', description: 'Проверить себя: 3 вопроса о правилах' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },
         { name: 'privacy', description: 'Какие данные храним' },

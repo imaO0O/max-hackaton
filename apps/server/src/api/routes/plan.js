@@ -36,7 +36,14 @@ export function registerPlanRoutes(api, { plan, analytics }) {
         },
       },
     },
-  }, async (request) => ({ profile: plan.saveProfile(request.maxUser.id, request.body) }));
+  }, async (request) => {
+    const profile = plan.saveProfile(request.maxUser.id, request.body);
+    // План собран в мини-приложении — для воронки и метрик так же, как опрос в боте
+    analytics.track(EVENTS.SURVEY_COMPLETED, request.maxUser.id, {
+      regionId: profile.regionId, path: profile.path, grade: profile.grade, from: 'miniapp',
+    });
+    return { profile };
+  });
 
   /** Удаление всех данных пользователя: профиль, план, отметки, избранное, подписки, напоминания. */
   api.delete('/profile', { config: { auth: true } }, async (request) => {
