@@ -154,6 +154,34 @@ components:
         path: { type: string, enum: [school10, college, undecided] }
         interests: { type: array, maxItems: 20, items: { type: string } }
         remindersEnabled: { type: boolean }
+    WeekStepView:
+      type: object
+      required: [options, current]
+      properties:
+        options:
+          type: array
+          description: 2–3 шага, подходящих семье (по классу, пути и региону); без профиля — пусто
+          items:
+            type: object
+            required: [id, button, title]
+            properties:
+              id: { type: string, enum: [teacher_two_oge, teacher_oge, open_day, profile_class, interests] }
+              button: { type: string, examples: ['🏫 День открытых дверей'] }
+              title: { type: string, examples: [Записаться на день открытых дверей колледжа] }
+        current:
+          description: Последний выбранный шаг или null
+          oneOf:
+            - type: 'null'
+            - type: object
+              required: [id, stepId, title, hint, status, chosenAt, checkAt]
+              properties:
+                id: { type: integer }
+                stepId: { type: string }
+                title: { type: string }
+                hint: { type: string, description: Что именно сделать }
+                status: { type: string, enum: [chosen, done, not_yet] }
+                chosenAt: { type: string, format: date-time }
+                checkAt: { type: string, format: date-time, description: Когда бот спросит «Получилось?» — через 5 дней в 10:00 по времени региона }
     QuizScore:
       type: object
       required: [score, total]
@@ -762,6 +790,21 @@ paths:
                   followersRemoved: { type: integer }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
+  /api/plan/share/sent:
+    post:
+      operationId: markPlanShared
+      tags: [plan]
+      summary: Родитель нажал «Отправить план подростку»
+      description: Ссылку мини-приложение готовит заранее (POST /api/plan/share), поэтому саму отправку отмечает этот вызов — для метрики «подключился ли подросток» по семьям. В событии — внутренний номер плана, без ID в MAX.
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Отмечено
+          content:
+            application/json:
+              schema: { type: object, required: [ok], properties: { ok: { type: boolean, const: true } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
   /api/plan/calendar-link:
     post:
       operationId: createCalendarLink
@@ -821,6 +864,82 @@ paths:
           content:
             application/json:
               schema: { type: object, required: [created], properties: { created: { type: boolean, const: false } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /api/week-step:
+    get:
+      operationId: getWeekStep
+      tags: [plan]
+      summary: Шаг на эту неделю — варианты и выбранный шаг
+      description: Одно конкретное действие, пока ближайшие сроки плана далеко. Те же варианты и правила, что в чате (/step). Через 5 дней бот спрашивает «Получилось?».
+      security: [{ maxInitData: [] }]
+      responses:
+        '200':
+          description: Варианты и текущий шаг
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeekStepView' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      operationId: chooseWeekStep
+      tags: [plan]
+      summary: Выбрать шаг на эту неделю
+      description: Если шаг этой недели уже выбран и бот ещё не спрашивал «Получилось?», шаг заменяется; иначе начинается новый.
+      security: [{ maxInitData: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stepId]
+              additionalProperties: false
+              properties:
+                stepId: { type: string, examples: [open_day] }
+      responses:
+        '200':
+          description: Шаг выбран
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeekStepView' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Профиль не заполнен
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/week-step/{id}/answer:
+    post:
+      operationId: answerWeekStep
+      tags: [plan]
+      summary: «Сделано» или «Ещё нет» по шагу
+      description: После «Ещё нет» можно ответить «Сделано»; сделанный шаг не откатывается (changed — false).
+      security: [{ maxInitData: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [result]
+              additionalProperties: false
+              properties:
+                result: { type: string, enum: [done, not_yet] }
+      responses:
+        '200':
+          description: Ответ сохранён
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/WeekStepView' }
+                  - { type: object, required: [changed], properties: { changed: { type: boolean } } }
         '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
