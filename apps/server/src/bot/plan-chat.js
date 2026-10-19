@@ -112,6 +112,7 @@ export function registerPlanChat({
 
   function shareView(userId) {
     const share = services.plan.createShareLink(userId);
+    services.analytics.track(EVENTS.PLAN_SHARED, userId, { planId: services.plan.planIdFor({ userId }), from: 'chat' });
     const { followersCount } = services.plan.getPlan(userId);
     const followers = followersCount > 0
       ? `\n\nПо этой ссылке уже подписались: ${followersCount}. Если ссылка попала не туда — её можно отозвать.`
@@ -158,7 +159,9 @@ export function registerPlanChat({
     if (!TOKEN_RE.test(token)) return ctx.reply(texts.sharedInvalid);
     try {
       const view = sharedPlanView(services.plan.getSharedPlan(userId, token), token);
-      if (!view.shared.isOwner) services.analytics.track(EVENTS.SHARED_PLAN_OPENED, userId, { from: 'chat' });
+      if (!view.shared.isOwner) {
+        services.analytics.track(EVENTS.SHARED_PLAN_OPENED, userId, { planId: services.plan.planIdFor({ token }), from: 'chat' });
+      }
       return show(ctx, view, { edit: false });
     } catch (error) {
       if (isNotFound(error)) return ctx.reply(texts.sharedInvalid);
@@ -325,7 +328,7 @@ export function registerPlanChat({
       }
       throw error;
     }
-    if (follow) services.analytics.track(EVENTS.FOLLOW_STARTED, userId, { from: 'chat' });
+    if (follow) services.analytics.track(EVENTS.FOLLOW_STARTED, userId, { planId: services.plan.planIdFor({ token }), from: 'chat' });
     const view = sharedPlanView(services.plan.getSharedPlan(userId, token), token);
     return show(ctx, { text: `${follow ? texts.followOn : texts.followOff}\n\n${view.text}`, keyboard: view.keyboard }, { edit: true });
   });

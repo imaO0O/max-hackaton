@@ -7,12 +7,14 @@ import { createReferenceRepository } from './repositories/reference.js';
 import { createReminderRepository } from './repositories/reminders.js';
 import { createReportRepository } from './repositories/reports.js';
 import { createUserRepository } from './repositories/users.js';
+import { createWeekStepRepository } from './repositories/week-steps.js';
 import { createAnalytics } from './services/analytics.js';
 import { calendarSecret, createCalendarLinks, createCalendarService } from './services/calendar.js';
 import { createCatalogService } from './services/catalog-service.js';
 import { createPlanService } from './services/plan-service.js';
 import { createQuizService } from './services/quiz-service.js';
 import { createReportService } from './services/reports-service.js';
+import { createWeekStepService } from './services/week-step-service.js';
 
 /**
  * Собирает зависимости приложения: база, справочники, репозитории и сервисы.
@@ -36,6 +38,7 @@ export function createContainer(config, { clock } = {}) {
     reminders: createReminderRepository(db),
     events: createEventRepository(db),
     reports: createReportRepository(db),
+    weekSteps: createWeekStepRepository(db),
   };
 
   const plan = createPlanService({ db, repos, config, runtime, clock });
@@ -50,6 +53,7 @@ export function createContainer(config, { clock } = {}) {
     reports: createReportService({ repos, clock }),
   };
   services.quiz = createQuizService({ repos, plan, analytics: services.analytics });
+  services.weekStep = createWeekStepService({ repos, analytics: services.analytics, clock });
 
   return { db, repos, services, runtime };
 }

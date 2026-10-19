@@ -70,9 +70,10 @@ function allButtons(message) {
   return (message.attachments ?? []).flatMap((attachment) => attachment.payload?.buttons ?? []).flat();
 }
 
-/** Последний ответ бота: текст и payload всех кнопок. */
-function lastAnswer() {
-  const request = [...requests].reverse().find((item) => item.path === '/messages' || item.path === '/answers');
+/** Последний ответ бота: текст и payload всех кнопок. onlyPath — только новые сообщения (/messages) или только правки (/answers). */
+function lastAnswer(onlyPath = null) {
+  const request = [...requests].reverse()
+    .find((item) => (onlyPath ? item.path === onlyPath : item.path === '/messages' || item.path === '/answers'));
   const message = request.path === '/answers' ? request.body.message : request.body;
   const buttons = (message.attachments ?? [])
     .flatMap((attachment) => attachment.payload?.buttons ?? [])
@@ -150,7 +151,7 @@ describe('опрос в боте', () => {
     assert.match(lastAnswer().text, /Шаг 5 из 5/);
 
     await bot.handleUpdate(press('survey:path:college'));
-    const summary = lastAnswer();
+    const summary = lastAnswer('/answers');
     assert.match(summary.text, /Готово! План собран/);
     assert.match(summary.text, /Город: Демоград/);
     assert.match(summary.text, /Ближайшие даты:/);
@@ -160,6 +161,12 @@ describe('опрос в боте', () => {
     for (const payload of ['plan:all', 'colleges:show', 'share:show', 'reminder:example', 'menu:show']) {
       assert.ok(summary.buttons.includes(payload), payload);
     }
+
+    // Отдельным сообщением — одно конкретное действие на эту неделю
+    const question = lastAnswer();
+    assert.equal(question.path, '/messages');
+    assert.match(question.text, /^Какой шаг сделаете на этой неделе\?/);
+    assert.deepEqual(question.buttons, ['wk:teacher_oge', 'wk:open_day', 'wk:interests', 'wk:later']);
 
     const profile = ctx.services.plan.getProfile(555);
     assert.deepEqual(
@@ -210,8 +217,8 @@ describe('опрос: регионы', () => {
     await bot.handleUpdate(press('survey:grade:9', other));
     await bot.handleUpdate(press('survey:interests-done', other));
     await bot.handleUpdate(press('survey:path:college', other));
-    assert.match(lastAnswer().text, /Регион: Другой регион/);
-    assert.match(lastAnswer().text, /федеральные сроки/);
+    assert.match(lastAnswer('/answers').text, /Регион: Другой регион/);
+    assert.match(lastAnswer('/answers').text, /федеральные сроки/);
 
     const plan = ctx.services.plan.getPlan(560);
     assert.ok(plan.items.some((item) => item.scope === 'federal'));
@@ -853,8 +860,9 @@ describe('регионы эксперимента без колледжей', ()
     await bot.handleUpdate(press('survey:grade:9', family));
     await bot.handleUpdate(press('survey:interests-done', family));
     await bot.handleUpdate(press('survey:path:college', family));
-    assert.match(lastAnswer().text, /Регион: Москва/);
-    assert.ok(lastAnswer().buttons.includes('oge:start'), 'в регионе эксперимента — подсказка под итогом опроса');
+    assert.match(lastAnswer('/answers').text, /Регион: Москва/);
+    assert.ok(lastAnswer('/answers').buttons.includes('oge:start'), 'в регионе эксперимента — подсказка под итогом опроса');
+    assert.ok(lastAnswer().buttons.includes('wk:teacher_two_oge'), 'шаг недели — вопрос про 2 или 4 ОГЭ');
 
     const plan = ctx.services.plan.getPlan(610);
     assert.ok(plan.items.some((item) => item.id === '2627-fed-gia-application-two-oge'), 'заявление на ОГЭ с выбором 2 или 4');
@@ -865,6 +873,58 @@ describe('регионы эксперимента без колледжей', ()
     assert.ok(!lastAnswer().buttons.includes('oge:list'));
   });
 });
+
+describe('шаг на эту неделю', () => {
+    const FAMILY = { ...USER, user_id: 630 };
+
+    test('выбор после плана, замена до вопроса, «Ещё нет», новый шаг и «Сделано»', async () => {
+      for (const payload of ['survey:begin', 'survey:region:demo-standard', 'survey:city:0', 'survey:grade:9', 'survey:interests-done', 'survey:path:school10']) {
+        await bot.handleUpdate(press(payload, FAMILY));
+      }
+      assert.deepEqual(lastAnswer().buttons, ['wk:teacher_oge', 'wk:profile_class', 'wk:interests', 'wk:later'], 'путь в 10 класс — профили, а не колледж');
+
+      await bot.handleUpdate(press('wk:profile_class', FAMILY));
+      assert.match(lastAnswer().text, /^Записали: «Узнать в школе, какие профили 10 класса будут»/);
+      assert.match(lastAnswer().text, /Через 5 дней спрошу, получилось ли/);
+
+      // /step до вопроса: шаг, дата вопроса, «Сделано» и замена
+      await bot.handleUpdate(command('/step', FAMILY));
+      const first = ctx.services.weekStep.view(630).current;
+      assert.match(lastAnswer().text, /Ваш шаг на эту неделю: «Узнать в школе/);
+      assert.match(lastAnswer().text, /Спрошу, получилось ли, 21\.09/);
+      assert.deepEqual(lastAnswer().buttons, [`wkd:${first.id}:done`, 'wk:change', 'menu:show']);
+      await bot.handleUpdate(press('wk:change', FAMILY));
+      await bot.handleUpdate(press('wk:interests', FAMILY));
+      assert.match(lastAnswer().text, /^Записали: «Обсудить с подростком 2–3 интересные сферы»/);
+      assert.equal(ctx.services.weekStep.view(630).current.id, first.id, 'до вопроса шаг заменяется, а не добавляется');
+
+      await bot.handleUpdate(press(`wkd:${first.id}:no`, FAMILY));
+      assert.match(lastAnswer().text, /^Ничего страшного/);
+      assert.ok(lastAnswer().buttons.includes('wk:interests'));
+      await bot.handleUpdate(press('wk:open_day', FAMILY));
+      assert.match(lastAnswer().text, /^Какой шаг сделаете на этой неделе\?/, 'шага нет среди вариантов семьи — показываем её варианты');
+      await bot.handleUpdate(press('wk:interests', FAMILY));
+      const second = ctx.services.weekStep.view(630).current;
+      assert.notEqual(second.id, first.id, 'после ответа — новый шаг');
+
+      await bot.handleUpdate(press(`wkd:${second.id}:done`, FAMILY));
+      assert.match(lastAnswer().text, /^Отлично, записали! 🎉/);
+      assert.match(lastAnswer().text, /Выберете шаг на следующую неделю\?/);
+      await bot.handleUpdate(press(`wkd:${second.id}:done`, FAMILY));
+      assert.match(lastAnswer().text, /уже отмечен/);
+      await bot.handleUpdate(press(`wkd:${first.id}:done`, TEEN));
+      assert.match(lastAnswer().text, /больше не найден/, 'чужой шаг не отмечается');
+
+      await bot.handleUpdate(command('/stats'));
+      assert.match(lastAnswer().text, /Шаг на эту неделю, семьи: предложили — \d+, выбрали — \d+/);
+      assert.match(lastAnswer().text, /выполнили за неделю: \d+ из \d+/);
+    });
+
+    test('без плана /step предлагает ответить на вопросы', async () => {
+      await bot.handleUpdate(command('/step', { ...USER, user_id: 631 }));
+      assert.match(lastAnswer().text, /Сначала ответьте на 5 вопросов/);
+    });
+  });
 
 describe('какие данные храним', () => {
   test('/privacy, кнопка на старте и вопрос текстом: что храним, чего нет, как удалить', async () => {

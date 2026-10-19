@@ -90,6 +90,7 @@ export const api = {
     { done },
   ),
   sharePlan: () => request('POST', '/plan/share'),
+  markPlanShared: () => request('POST', '/plan/share/sent'),
   revokeShare: () => request('DELETE', '/plan/share'),
   calendarLink: () => request('POST', '/plan/calendar-link'),
   deleteMyData: () => request('DELETE', '/profile'),
@@ -97,6 +98,9 @@ export const api = {
   quizStatus: () => request('GET', '/quiz'),
   submitQuiz: (answers) => request('POST', '/quiz', { answers }),
   skipQuiz: () => request('POST', '/quiz/skip'),
+  weekStep: () => request('GET', '/week-step'),
+  chooseWeekStep: (stepId) => request('POST', '/week-step', { stepId }),
+  answerWeekStep: (id, result) => request('POST', `/week-step/${id}/answer`, { result }),
   sharedPlan: (token) => request('GET', `/shared-plans/${encodeURIComponent(token)}`),
   followSharedPlan: (token, follow) => request('PUT', `/shared-plans/${encodeURIComponent(token)}/follow`, { follow }),
 };

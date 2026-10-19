@@ -44,6 +44,7 @@ async function main() {
       intervalMs: config.reminderIntervalMs,
       resyncAll: () => services.plan.syncAllReminders(),
       analytics: services.analytics,
+      weekSteps: services.weekStep,
     });
     scheduler.start();
     bot.startHealthMonitor();

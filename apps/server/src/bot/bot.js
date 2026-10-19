@@ -15,6 +15,7 @@ import { detectTopic } from './free-text.js';
 import { richTextFetch } from './rich-text.js';
 import { registerPlanChat } from './plan-chat.js';
 import { registerReportsChat } from './reports-chat.js';
+import { registerWeekStepChat } from './week-step-chat.js';
 import {
   ANY_CITY, cityStep, gradeStep, interestsStep, parseSurveyPayload, pathStep, regionStep,
 } from './survey.js';
@@ -69,6 +70,7 @@ export function createBot({
     bot, services, onBeforeDone: (ctx) => startSurvey(ctx, texts.quizBeforeThanks),
   });
   const examsChat = registerExamsChat({ bot, users, reference, services });
+  const weekStepChat = registerWeekStepChat({ bot, services });
 
   async function showStep(ctx, step, { edit }) {
     const body = { text: step.text, attachments: [step.keyboard] };
@@ -289,7 +291,9 @@ export function createBot({
         const preview = planText(services.plan.getPlan(userId), { limit: 3 });
         const text = `${summaryText({ ...profile, region, interests: interestTitles })}\n\n${preview}`;
         const keyboard = summaryKeyboard(runtime.botUsername, { withExamAdvice: planChat.hasExamChoice(profile.regionId) });
-        return showStep(ctx, { text, keyboard }, { edit: true });
+        await showStep(ctx, { text, keyboard }, { edit: true });
+        // Ближайшие сроки плана далеко — сразу предлагаем одно конкретное действие на эту неделю
+        return weekStepChat.offerAfterSurvey(ctx);
       }
       case 'back': {
         // Возврат на шаг назад с сохранением уже выбранных ответов
@@ -402,6 +406,7 @@ export function createBot({
         { name: 'colleges', description: 'Колледжи по интересам' },
         { name: 'paths', description: '10 класс или колледж: сравнить' },
         { name: 'oge', description: 'Сколько ОГЭ сдавать: 2 или 4' },
+        { name: 'step', description: 'Шаг на эту неделю' },
         { name: 'quiz', description: 'Проверить себя: 3 вопроса о правилах' },
         { name: 'reminders', description: 'Напоминания вкл/выкл' },
         { name: 'test_reminder', description: 'Пример напоминания' },

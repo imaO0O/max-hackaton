@@ -4,6 +4,7 @@ import { PATH_TITLES, STUDY_FORMS, planPeriodLabel } from '@posle9/core';
 
 import { PlanTimeline } from '../components/PlanTimeline.jsx';
 import { QuizCard } from '../components/QuizCard.jsx';
+import { WeekStepCard } from '../components/WeekStepCard.jsx';
 import { ErrorState, LoadingState } from '../components/states.jsx';
 import {
   Card, DemoTag, ScreenHeader, SectionTitle, Tag, useToast,
@@ -114,6 +115,8 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
     try {
       const share = preparedShare.data ?? await api.sharePlan();
       const result = await shareToMax({ text: share.text, link: share.link });
+      // Для метрики «подключился ли подросток»: отправку считаем по нажатию, не по заранее готовой ссылке
+      if (result !== 'failed') api.markPlanShared().catch(() => {});
       if (result === 'copied') showToast('Ссылка скопирована — отправьте её подростку в MAX');
       if (result === 'failed') showToast(`Не удалось открыть отправку. Ссылка: ${share.link}`, 'error');
     } catch (error) {
@@ -235,6 +238,8 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
           </Typography.Body>
         </Card>
       )}
+
+      <WeekStepCard />
 
       <div className="actions">
         <Button size="large" stretched loading={sharing} onClick={sharePlan}>

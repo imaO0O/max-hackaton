@@ -89,6 +89,34 @@ describe('API мини-приложения', () => {
     assert.match(ctx.services.analytics.report(), /пропустили вопросы «до»: 1 чел\./);
   });
 
+  test('шаг на эту неделю в мини-приложении: варианты по профилю, выбор, ответ; чужой шаг не отметить', async () => {
+    const user = 6106;
+    assert.equal((await call('GET', '/api/week-step')).statusCode, 401);
+    assert.deepEqual((await call('GET', '/api/week-step', { user })).json(), { options: [], current: null }, 'без профиля вариантов нет');
+
+    await call('PUT', '/api/profile', { user, body: { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: [] } });
+    const view = (await call('GET', '/api/week-step', { user })).json();
+    assert.deepEqual(view.options.map((option) => option.id), ['teacher_two_oge', 'open_day', 'interests'], 'Татарстан — регион эксперимента');
+    assert.equal(view.current, null);
+
+    assert.equal((await call('POST', '/api/week-step', { user, body: { stepId: 'profile_class' } })).statusCode, 400, 'не из вариантов семьи');
+    const chosen = (await call('POST', '/api/week-step', { user, body: { stepId: 'open_day' } })).json();
+    assert.equal(chosen.current.stepId, 'open_day');
+    assert.equal(chosen.current.status, 'chosen');
+    assert.equal(chosen.current.checkAt, '2026-09-21T07:00:00.000Z', 'через 5 дней в 10:00 по Москве');
+
+    const url = `/api/week-step/${chosen.current.id}/answer`;
+    assert.equal((await call('POST', url, { user: 6107, body: { result: 'done' } })).statusCode, 404);
+    assert.equal((await call('POST', url, { user, body: { result: 'maybe' } })).statusCode, 400);
+    const done = (await call('POST', url, { user, body: { result: 'done' } })).json();
+    assert.equal(done.current.status, 'done');
+    assert.equal(done.changed, true);
+    assert.equal((await call('POST', url, { user, body: { result: 'not_yet' } })).json().changed, false, 'сделанный шаг не откатывается');
+
+    const offered = ctx.repos.events.list('week_step_offered', '1970-01-01T00:00:00.000Z').filter((event) => event.userId === user);
+    assert.equal(offered.length, 1, 'предложение считается один раз');
+  });
+
   test('план, собранный в мини-приложении, учитывается в метриках как пройденный опрос', async () => {
     const user = 7007;
     await call('PUT', '/api/profile', { user, body: { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: [] } });

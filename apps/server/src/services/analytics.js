@@ -1,5 +1,5 @@
 import {
-  EXAM_ADVICE, localDateString, PATH_TITLES, QUIZ_PHASES, QUIZ_QUESTIONS, summarizeQuiz,
+  EXAM_ADVICE, localDateString, PATH_TITLES, QUIZ_PHASES, QUIZ_QUESTIONS, summarizeQuiz, summarizeWeekSteps,
 } from '@posle9/core';
 
 /**
@@ -28,6 +28,10 @@ export const EVENTS = Object.freeze({
   EXAM_ADVICE: 'exam_advice',
   QUIZ_COMPLETED: 'quiz_completed',
   QUIZ_SKIPPED: 'quiz_skipped',
+  PLAN_SHARED: 'plan_shared',
+  WEEK_STEP_OFFERED: 'week_step_offered',
+  WEEK_STEP_CHOSEN: 'week_step_chosen',
+  WEEK_STEP_ANSWERED: 'week_step_answered',
 });
 
 /**
@@ -111,6 +115,14 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       completedByRegion: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'regionId', since),
       completedByPath: events.countUsersByProp(EVENTS.SURVEY_COMPLETED, 'path', since),
       steps: stepsOnTime(since),
+      family: familyConnection(since),
+      weekStep: summarizeWeekSteps({
+        offered: events.list(EVENTS.WEEK_STEP_OFFERED, since).filter((event) => event.userId !== null).map((event) => event.userId),
+        chosen: events.list(EVENTS.WEEK_STEP_CHOSEN, since).filter((event) => event.userId !== null)
+          .map((event) => ({ userId: event.userId, weekStepId: event.props.weekStepId, createdAt: event.createdAt })),
+        answered: events.list(EVENTS.WEEK_STEP_ANSWERED, since)
+          .map((event) => ({ weekStepId: event.props.weekStepId, result: event.props.result, createdAt: event.createdAt })),
+      }),
       quizSkipped: users(EVENTS.QUIZ_SKIPPED),
       quiz: summarizeQuiz(events.list(EVENTS.QUIZ_COMPLETED, since)
         .filter((event) => event.userId !== null)
@@ -157,7 +169,29 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
     };
   }
 
+  /**
+   * Подключение подростка — по семьям, а не по людям: план, ссылку на который взяли, чтобы отправить,
+   * и сколько из этих планов открыли по ссылке и на сколько подписался подросток или второй родитель.
+   * В событиях — внутренний номер плана, а не ID владельца в MAX.
+   */
+  function familyConnection(since) {
+    const planIds = (name) => new Set(events.list(name, since).map((event) => event.props.planId).filter(Boolean));
+    const shared = planIds(EVENTS.PLAN_SHARED);
+    const opened = [...planIds(EVENTS.SHARED_PLAN_OPENED)].filter((id) => shared.has(id));
+    const connected = [...planIds(EVENTS.FOLLOW_STARTED)].filter((id) => shared.has(id));
+    return { shared: shared.size, opened: opened.length, connected: connected.length };
+  }
+
   const percent = (part, whole) => (whole ? ` (${Math.round((part / whole) * 100)}%)` : '');
+
+  /** Шаг на эту неделю: выбрали ли и сделали ли за неделю — по первому выбранному шагу семьи. */
+  function weekStepLines(weekStep) {
+    if (!weekStep.offered) return ['Шаг на эту неделю: пока никому не предлагали'];
+    return [
+      `Шаг на эту неделю, семьи: предложили — ${weekStep.offered}, выбрали — ${weekStep.chosen}${percent(weekStep.chosen, weekStep.offered)}`,
+      `  выполнили за неделю: ${weekStep.doneInWeek} из ${weekStep.chosen}${percent(weekStep.doneInWeek, weekStep.chosen)}; позже — ${weekStep.doneLater}; «ещё нет» — ${weekStep.notYet}; ждём ответа — ${weekStep.waiting}; всего выполнено шагов: ${weekStep.totalDone}`,
+    ];
+  }
 
   /** Проверка понимания правил: доля верных до и после, сдвиг у ответивших оба раза, по вопросам. */
   function quizLines(quiz) {
@@ -194,11 +228,13 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Открыли мини-приложение: ${data.miniappOpened}`,
       `Открыли чужой план по ссылке: ${data.sharedPlanOpened}`,
       `Подписались на напоминания по чужому плану: ${data.followStarted}`,
+      `Семьи: взяли ссылку, чтобы отправить план подростку, — ${data.family.shared}; открыли план по ссылке — ${data.family.opened}; подключился подросток или второй родитель — ${data.family.connected} из ${data.family.shared}${percent(data.family.connected, data.family.shared)}`,
       `Отправлено напоминаний: ${data.remindersSent}`,
       `Вернулись из напоминания в мини-приложение: ${data.openedFromReminder}`,
       `Отмечено пунктов плана: ${data.itemsDone}`,
       `Ключевой шаг — заявление на ОГЭ отмечено до 1 марта: ${data.steps.keyStep} из ${data.steps.ninthGrade} семей 9 класса${percent(data.steps.keyStep, data.steps.ninthGrade)}`,
       `Любой шаг плана в срок: ${data.steps.onTime} из ${data.steps.families} собравших план${percent(data.steps.onTime, data.steps.families)}; из них по кнопке «Сделано» в напоминании: ${data.steps.fromReminder}`,
+      ...weekStepLines(data.weekStep),
       `Отмечено шагов чек-листа поступления: ${data.stepsDone}`,
       `Добавлено в избранное: ${data.favoritesAdded}`,
       `Сообщили о неточностях в данных: ${data.dataReported} (подробно — /reports)`,
