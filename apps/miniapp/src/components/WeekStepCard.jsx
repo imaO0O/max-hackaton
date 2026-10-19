@@ -78,6 +78,8 @@ export function WeekStepCard() {
             size="medium"
             variant="secondary"
             stretched
+            className="button--wrap"
+            innerClassNames={{ content: 'button--wrap__content' }}
             disabled={saving}
             onClick={() => run(() => api.chooseWeekStep(option.id), null)}
           >
