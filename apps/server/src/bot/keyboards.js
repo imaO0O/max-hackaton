@@ -10,6 +10,7 @@ import { Keyboard } from '@maxhub/max-bot-api';
  * Шаг чек-листа в карточке пункта: st:<id пункта>:<id шага> — переключает отметку.
  * Какие данные храним: privacy:show.
  * Неточность в данных: rp:<p|i>:<id> — выбор причины, rr:<p|i>:<причина>:<id> — сохранить (reports-chat.js).
+ * Шаг на эту неделю: wk:<шаг>, wk:change, wk:later, wkd:<номер>:<done|no> (week-step-chat.js).
  */
 
 const button = Keyboard.button;

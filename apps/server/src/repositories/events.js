@@ -44,6 +44,11 @@ export function createEventRepository(db) {
       return row ? JSON.parse(row.props) : null;
     },
 
+    /** Было ли у пользователя такое событие. */
+    hasUser(name, userId) {
+      return Boolean(db.prepare('SELECT 1 FROM events WHERE name = ? AND user_id = ? LIMIT 1').get(name, userId));
+    },
+
     /** Распределение пользователей по значению свойства события, например по источнику открытия. */
     countUsersByProp(name, prop, since) {
       return db.prepare(`SELECT json_extract(props, ?) AS value, COUNT(DISTINCT user_id) AS users

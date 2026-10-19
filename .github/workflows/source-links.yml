@@ -1,0 +1,26 @@
+name: Ссылки на источники
+
+# Раз в неделю проверяет, открываются ли ссылки на первоисточники из data/*.json (npm run data:links).
+# Отдельно от проверок PR: сайты колледжей бывают недоступны по причинам, не связанным с кодом.
+# Падает, только если ссылка точно сломана (страницы нет, домен не найден): тогда запись сверяют за 3 рабочих дня.
+# Таймауты и защита от ботов попадают в сводку «Открыть в браузере» и запуск не роняют.
+
+on:
+  schedule:
+    - cron: '0 5 * * 1' # понедельник, 08:00 по Москве
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    name: Открываются ли ссылки на источники
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm run data:links

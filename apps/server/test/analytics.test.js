@@ -52,6 +52,8 @@ test('воронка пилота считается по событиям ос�
   await call('PUT', '/api/plan/items/2627-rec-talk-interests', PARENT, { body: { done: false } });
 
   const { token } = (await call('POST', '/api/plan/share', PARENT)).json();
+  assert.equal(analytics.funnel().family.shared, 0, 'ссылка, подготовленная заранее, — ещё не отправка');
+  await call('POST', '/api/plan/share/sent', PARENT);
   await call('GET', `/api/shared-plans/${token}`, PARENT);
   await call('GET', '/api/session', TEEN, { startParam: `plan_${token}` });
   await call('GET', `/api/shared-plans/${token}`, TEEN);
@@ -67,12 +69,44 @@ test('воронка пилота считается по событиям ос�
   assert.equal(funnel.itemsDone, 1, 'снятие отметки не считается');
   assert.equal(funnel.favoritesAdded, 1);
   assert.deepEqual(funnel.completedByPath, [{ value: 'college', users: 1 }]);
+  assert.deepEqual(funnel.family, { shared: 1, opened: 1, connected: 1 }, 'по семьям: владелец, открывший свою ссылку, не считается');
 
   const report = analytics.report();
   assert.match(report, /Прошли опрос: 1 \(50%\)/);
   assert.match(report, /Регионы: Демо-регион А: 1/);
   assert.match(report, /кнопка в напоминании: 1/);
   assert.match(report, /За 7 дней/);
+  assert.match(report, /подключился подросток или второй родитель — 1 из 1 \(100%\)/);
+  const props = ctx.repos.events.list(EVENTS.FOLLOW_STARTED, '1970-01-01T00:00:00.000Z')[0].props;
+  assert.equal(typeof props.planId, 'number');
+  assert.ok(!JSON.stringify(props).includes(String(PARENT)), 'в событии нет ID владельца в MAX');
+});
+
+test('шаг на эту неделю: за неделю, позже, «ещё нет» и без ответа — по первому шагу семьи', () => {
+  const app = createTestApp({ now: '2026-10-19T09:00:00Z' });
+  const { weekStep, plan } = app.services;
+  for (const id of [701, 702, 703, 704]) {
+    plan.saveProfile(id, { regionId: 'demo-standard', grade: 9, path: 'college', interests: [] });
+    weekStep.offer(id, { from: 'bot' });
+  }
+  weekStep.offer(705, { from: 'bot' }); // предложили, но не выбрали
+  const step = (id) => weekStep.choose(id, 'interests', { from: 'bot' }).current.id;
+  const first = { 701: step(701), 702: step(702), 703: step(703), 704: step(704) };
+  app.clock.now = new Date('2026-10-24T09:00:00Z');
+  weekStep.answer(701, first[701], 'done'); // через 5 дней
+  weekStep.answer(702, first[702], 'not_yet');
+  weekStep.answer(704, first[704], 'not_yet');
+  app.clock.now = new Date('2026-10-30T09:00:00Z');
+  weekStep.answer(704, first[704], 'done'); // через 11 дней — позже недели
+  const next = weekStep.choose(701, 'open_day').current.id; // второй шаг — только в «всего выполнено»
+  weekStep.answer(701, next, 'done');
+
+  assert.deepEqual(app.services.analytics.funnel(null).weekStep, {
+    offered: 5, chosen: 4, doneInWeek: 1, doneLater: 1, notYet: 1, waiting: 1, totalDone: 3,
+  });
+  assert.match(app.services.analytics.report(), /Шаг на эту неделю, семьи: предложили — 5, выбрали — 4 \(80%\)/);
+  assert.match(app.services.analytics.report(), /выполнили за неделю: 1 из 4 \(25%\); позже — 1; «ещё нет» — 1; ждём ответа — 1; всего выполнено шагов: 3/);
+  app.db.close();
 });
 
 test('ошибка записи события не ломает сценарий', () => {

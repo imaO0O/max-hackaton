@@ -1,5 +1,6 @@
 import { reminderKeyboard } from '../bot/keyboards.js';
 import { reminderText } from '../bot/texts.js';
+import { weekStepCheckMessage } from '../bot/week-step-chat.js';
 import { EVENTS } from '../services/analytics.js';
 
 /** Подсказка владельцу плана: отметка «Сделано» снимает напоминания по пункту и показывает, что шаг выполнен. */
@@ -19,7 +20,7 @@ function isPermanentError(error) {
  * Работает в одном процессе с ботом; при нескольких экземплярах нужна блокировка задач.
  */
 export function createReminderScheduler({
-  repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date(), analytics = null,
+  repos, sendMessage, runtime, logger, intervalMs, clock = () => new Date(), analytics = null, weekSteps = null,
   resyncAll = null, resyncIntervalMs = 24 * 3600 * 1000,
 }) {
   let timer = null;
@@ -53,6 +54,24 @@ export function createReminderScheduler({
           failed += 1;
           repos.reminders.markFailed(reminder.id, error?.message ?? error, { permanent: isPermanentError(error) });
           logger.warn({ err: error, reminderId: reminder.id }, 'reminder send failed');
+        }
+      }
+      // «Получилось?» по шагу на эту неделю
+      for (const check of weekSteps?.dueChecks(now) ?? []) {
+        // Шага больше нет в списке или вопрос опоздал больше чем на сутки — не спрашиваем
+        if (!check.step || now.getTime() - Date.parse(check.checkAt) > STALE_AFTER_MS) {
+          weekSteps.markCheckSent(check.id);
+          continue;
+        }
+        try {
+          const message = weekStepCheckMessage(check);
+          await sendMessage(check.userId, message.text, { attachments: [message.keyboard] });
+          weekSteps.markCheckSent(check.id);
+          sent += 1;
+        } catch (error) {
+          failed += 1;
+          if (isPermanentError(error)) weekSteps.markCheckSent(check.id);
+          logger.warn({ err: error, weekStepId: check.id }, 'week step check send failed');
         }
       }
     } finally {

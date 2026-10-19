@@ -12,6 +12,7 @@ import { registerCalendarRoutes } from './routes/calendar.js';
 import { registerPlanRoutes } from './routes/plan.js';
 import { registerQuizRoutes } from './routes/quiz.js';
 import { registerReportRoutes } from './routes/reports.js';
+import { registerWeekStepRoutes } from './routes/week-step.js';
 
 /**
  * HTTP-сервер: REST API мини-приложения под /api и статика собранного мини-приложения.
@@ -107,6 +108,7 @@ export function buildApp({ config, services, runtime, logger = true }) {
     registerCalendarRoutes(api, services);
     registerReportRoutes(api, services);
     registerQuizRoutes(api, services);
+    registerWeekStepRoutes(api, services);
   }, { prefix: '/api' });
 
   const indexHtml = path.join(config.miniappDistDir, 'index.html');

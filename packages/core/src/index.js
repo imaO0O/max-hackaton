@@ -5,3 +5,4 @@ export * from './grades.js';
 export * from './plan.js';
 export * from './quiz.js';
 export * from './reports.js';
+export * from './week-step.js';

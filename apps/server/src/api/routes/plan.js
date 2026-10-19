@@ -112,7 +112,15 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     return result;
   });
 
+  // Ссылку мини-приложение готовит заранее, при открытии плана, — поэтому отправку отмечает отдельный вызов ниже
   api.post('/plan/share', { config: { auth: true } }, async (request) => plan.createShareLink(request.maxUser.id));
+
+  /** Родитель нажал «Отправить план подростку» — для метрики подключения подростка по семьям. */
+  api.post('/plan/share/sent', { config: { auth: true } }, async (request) => {
+    const planId = plan.planIdFor({ userId: request.maxUser.id });
+    if (planId) analytics.track(EVENTS.PLAN_SHARED, request.maxUser.id, { planId, from: 'miniapp' });
+    return { ok: true };
+  });
 
   api.delete('/plan/share', { config: { auth: true } }, async (request) => plan.revokeShareLink(request.maxUser.id));
 
@@ -121,7 +129,9 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     schema: { params: { type: 'object', required: ['token'], properties: { token: tokenParam } } },
   }, async (request) => {
     const shared = plan.getSharedPlan(request.maxUser.id, request.params.token);
-    if (!shared.isOwner) analytics.track(EVENTS.SHARED_PLAN_OPENED, request.maxUser.id);
+    if (!shared.isOwner) {
+      analytics.track(EVENTS.SHARED_PLAN_OPENED, request.maxUser.id, { planId: plan.planIdFor({ token: request.params.token }) });
+    }
     return shared;
   });
 
@@ -138,7 +148,9 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     },
   }, async (request) => {
     const result = plan.setFollowing(request.maxUser.id, request.params.token, request.body.follow);
-    if (result.isFollowing) analytics.track(EVENTS.FOLLOW_STARTED, request.maxUser.id);
+    if (result.isFollowing) {
+      analytics.track(EVENTS.FOLLOW_STARTED, request.maxUser.id, { planId: plan.planIdFor({ token: request.params.token }) });
+    }
     return result;
   });
 }

@@ -214,6 +214,12 @@ export function createPlanService({ db, repos, config, runtime, clock = () => ne
     },
 
     /** Создаёт (или возвращает существующую) ссылку на план для подростка или второго родителя. */
+    /** Внутренний номер плана — по владельцу или по токену ссылки; null, если плана нет. */
+    planIdFor({ userId, token }) {
+      const plan = token ? plans.getByShareToken(token) : plans.getByUser(userId);
+      return plan?.id ?? null;
+    },
+
     createShareLink(userId) {
       const user = users.ensure(userId);
       if (!isProfileComplete(user)) {

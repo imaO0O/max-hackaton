@@ -17,6 +17,7 @@ function setup(now) {
     logger: silentLogger,
     intervalMs: 60_000,
     clock: () => ctx.clock.now,
+    weekSteps: ctx.services.weekStep,
     sendMessage: async (userId, text, extra) => {
       if (failWith) throw failWith;
       sent.push({ userId, text, extra });
@@ -109,5 +110,42 @@ test('подписчику по чужому плану напоминание �
   assert.ok(!payloads(teen).some((payload) => payload.startsWith('rdone:')));
   assert.match(parent.text, /Когда сделаете — нажмите «✅ Сделано»/, 'владельцу — подсказка отметить шаг');
   assert.doesNotMatch(teen.text, /Сделано/, 'подписчику подсказки нет: отмечает только родитель');
+  ctx.db.close();
+});
+
+test('шаг на неделю: «Получилось?» через 5 дней в 10:00 по времени региона, один раз', async () => {
+  const { ctx, sent, scheduler } = setup('2026-10-19T09:00:00Z');
+  ctx.services.plan.saveProfile(30, { regionId: 'demo-standard', grade: 9, path: 'college', interests: [] });
+  const { current } = ctx.services.weekStep.choose(30, 'open_day', { from: 'bot' });
+  const checks = () => sent.filter((message) => /Получилось\?/.test(message.text));
+
+  ctx.clock.now = new Date('2026-10-24T06:59:00Z');
+  await scheduler.tick();
+  assert.equal(checks().length, 0, 'ещё рано');
+
+  ctx.clock.now = new Date('2026-10-24T07:00:30Z');
+  await scheduler.tick();
+  assert.equal(checks().length, 1);
+  assert.equal(checks()[0].userId, 30);
+  assert.match(checks()[0].text, /5 дней назад вы выбрали шаг: «Записаться на день открытых дверей колледжа»\. Получилось\?/);
+  assert.deepEqual(
+    checks()[0].extra.attachments[0].payload.buttons.flat().map((button) => button.payload),
+    [`wkd:${current.id}:done`, `wkd:${current.id}:no`],
+  );
+  await scheduler.tick();
+  assert.equal(checks().length, 1, 'второй раз не спрашиваем');
+  ctx.db.close();
+});
+
+test('шаг на неделю: не спрашиваем, если уже ответили или напоминания выключены', async () => {
+  const { ctx, sent, scheduler } = setup('2026-10-19T09:00:00Z');
+  for (const id of [31, 32]) ctx.services.plan.saveProfile(id, { regionId: 'demo-standard', grade: 9, path: 'college', interests: [] });
+  const answered = ctx.services.weekStep.choose(31, 'interests').current.id;
+  ctx.services.weekStep.answer(31, answered, 'done');
+  ctx.services.weekStep.choose(32, 'interests');
+  ctx.services.plan.setRemindersEnabled(32, false);
+  ctx.clock.now = new Date('2026-10-24T07:00:30Z');
+  await scheduler.tick();
+  assert.equal(sent.filter((message) => /Получилось\?/.test(message.text)).length, 0);
   ctx.db.close();
 });
