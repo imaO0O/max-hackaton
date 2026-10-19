@@ -299,6 +299,21 @@ button {
   gap: 8px;
 }
 
+/* Кнопка с длинной подписью: текст переносится на вторую строку, а не обрезается многоточием на узком экране */
+.button--wrap.button--wrap {
+  height: auto;
+  min-height: 52px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.button--wrap__content.button--wrap__content {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.25;
+}
+
 .quiz__options {
   display: flex;
   flex-direction: column;

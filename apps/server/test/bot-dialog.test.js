@@ -808,7 +808,7 @@ describe('неточность в данных', () => {
     assert.match(lastAnswer().text, /Уточните в приёмной комиссии колледжа\./);
 
     await bot.handleUpdate(press('item:2627-fed-oge-main-period', PARENT));
-    assert.match(lastAnswer().text, /🕓 Дата ориентировочная\n/);
+    assert.match(lastAnswer().text, /🕓 Дата ориентировочная · проверено 19\.10\.2026\n/);
     assert.match(lastAnswer().text, /Уточните в школе\./);
 
     await bot.handleUpdate(press('item:2627-chk-summer-checklist', PARENT));
