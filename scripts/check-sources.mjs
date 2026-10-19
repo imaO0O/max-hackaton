@@ -6,11 +6,14 @@
  *
  *   npm run data:links
  *
- * Не входит в CI: сайты колледжей и ведомств бывают недоступны по причинам, не связанным с кодом.
+ * Раз в неделю запускается в GitHub Actions (.github/workflows/source-links.yml), отдельно от проверок PR:
+ * сайты колледжей и ведомств бывают недоступны по причинам, не связанным с кодом.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { trustRussianRootCa } from '../apps/server/src/tls-ca.js';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dataDir = path.join(repoRoot, 'data');
@@ -61,6 +64,9 @@ async function check(url) {
   }
 }
 
+// Сайты ведомств часто используют сертификат НУЦ Минцифры — доверяем ему так же, как сервер
+trustRussianRootCa();
+
 const links = new Map();
 fs.readdirSync(dataDir).filter((file) => file.endsWith('.json')).sort().forEach((file) => collectLinks(file, links));
 
@@ -89,4 +95,19 @@ const print = (title, list) => {
 console.log(`Ссылок на источники: ${urls.length}. Открываются: ${groups.ok.length}.`);
 print('Не работают — сверьте записи и замените ссылку', groups.broken);
 print('Откройте в браузере — автоматическая проверка не прошла', groups.manual);
+// В GitHub Actions — сводка на странице запуска
+if (process.env.GITHUB_STEP_SUMMARY) {
+  const table = (title, list) => (list.length
+    ? [`\n### ${title}: ${list.length}\n`, '| Ссылка | Результат | Где |', '|---|---|---|',
+      ...list.map((url) => `| ${url} | ${results.get(url).detail} | ${links.get(url).join('; ')} |`)].join('\n')
+    : '');
+  fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, [
+    '## Ссылки на источники',
+    '',
+    `Всего: ${urls.length}, открываются: ${groups.ok.length}.`,
+    table('Не работают — сверить записи за 3 рабочих дня', groups.broken),
+    table('Открыть в браузере', groups.manual),
+    '',
+  ].join('\n'));
+}
 if (groups.broken.length) process.exitCode = 1;
