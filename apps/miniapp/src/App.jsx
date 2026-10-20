@@ -34,6 +34,8 @@ export function App() {
   const quizStatus = useAsync(() => api.quizStatus().catch(() => null), []);
   const [quizGateDone, setQuizGateDone] = useState(false);
   const [quizNotice, setQuizNotice] = useState(null);
+  // «План собран» или «План обновлён» — над ближайшим шагом, пока не перешли на другую вкладку
+  const [planNotice, setPlanNotice] = useState(null);
 
   useEffect(() => {
     if (!session.data) return;
@@ -49,6 +51,7 @@ export function App() {
 
   const changeTab = (next, { compare = false, experimentOnly = false } = {}) => {
     saveLocal('visited', true);
+    setPlanNotice(null);
     setCompareOnOpen(compare);
     setExperimentOnlyOnOpen(experimentOnly);
     setTab(next);
@@ -90,7 +93,8 @@ export function App() {
           setProfile(saved);
           setEditingProfile(false);
           setDataDeleted(false);
-          changeTab(firstTime ? 'paths' : 'plan');
+          changeTab('plan');
+          setPlanNotice(firstTime ? 'built' : 'updated');
         }}
       />
     );
@@ -114,6 +118,7 @@ export function App() {
         )}
         {tab === 'plan' && (
           <PlanScreen
+            notice={planNotice}
             onEditProfile={() => setEditingProfile(true)}
             onProfileChange={setProfile}
             onOpenTab={changeTab}

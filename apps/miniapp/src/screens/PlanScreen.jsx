@@ -11,13 +11,16 @@ import {
 } from '../components/ui.jsx';
 import { api } from '../lib/api.js';
 import {
-  daysText, formatDateRange, formatScore, reminderTimeText,
+  daysText, formatDateRange, formatScore, plural, reminderTimeText,
 } from '../lib/format.js';
 import { downloadFile, haptic, shareToMax } from '../lib/max-bridge.js';
 import { clearLocal } from '../lib/storage.js';
 import { useAsync } from '../lib/use-async.js';
 
-export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDeleted }) {
+/** notice: built — план только что собран, updated — пересобран после «Изменить». */
+export function PlanScreen({
+  notice = null, onEditProfile, onProfileChange, onOpenTab, onDataDeleted,
+}) {
   const plan = useAsync(() => api.plan(), []);
   const favorites = useAsync(() => api.favorites(), []);
   // Ссылка на план постоянная, поэтому готовим её заранее: MAX Bridge открывает экран шеринга
@@ -193,6 +196,32 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
     }
   };
 
+  // Даты года — сразу после отправки плана подростку; календарь, напоминания и вопросы — ниже
+  const timeline = items.length > 0 && (
+    <>
+      <SectionTitle
+        after={pastCount > 0 ? (
+          <button type="button" className="link-button" onClick={() => setShowPast(!showPast)}>
+            {showPast ? 'Скрыть прошедшие' : `Показать прошедшие (${pastCount})`}
+          </button>
+        ) : <Tag>{`выполнено ${doneCount} из ${items.length}`}</Tag>}
+      >
+        Даты года
+      </SectionTitle>
+
+      <PlanTimeline
+        items={items}
+        nextItemId={plan.data.nextItemId}
+        onToggleDone={toggleDone}
+        pendingIds={pendingIds}
+        onToggleStep={toggleStep}
+        pendingSteps={pendingSteps}
+        regionIsDemo={region.isDemo}
+        hidePast={!showPast}
+      />
+    </>
+  );
+
   return (
     <div className="page">
       <ScreenHeader
@@ -227,6 +256,12 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
         </Card>
       )}
 
+      {notice && (
+        <Typography.Body variant="medium-strong" className="plan-notice">
+          {`✅ ${notice === 'built' ? 'План собран' : 'План обновлён по новым ответам'}: ${items.length} ${plural(items.length, ['дата', 'даты', 'дат'])}${upcomingCount < items.length ? `, впереди — ${upcomingCount}` : ''}`}
+        </Typography.Body>
+      )}
+
       {nextItem && (
         <Card highlighted className="next-step">
           <Typography.Label variant="medium" className="muted">Ближайший шаг</Typography.Label>
@@ -245,11 +280,6 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
         <Button size="large" stretched loading={sharing} onClick={sharePlan}>
           Отправить план подростку
         </Button>
-        {upcomingCount > 0 && (
-          <Button size="large" variant="secondary" stretched loading={downloading} onClick={addToCalendar}>
-            Добавить даты в календарь
-          </Button>
-        )}
       </div>
       {plan.data.followersCount > 0 && (
         <Typography.Body variant="small" className="muted hint">
@@ -257,7 +287,15 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
         </Typography.Body>
       )}
 
-      <QuizCard />
+      {timeline}
+
+      {upcomingCount > 0 && (
+        <div className="actions">
+          <Button size="large" variant="secondary" stretched loading={downloading} onClick={addToCalendar}>
+            Добавить даты в календарь
+          </Button>
+        </div>
+      )}
 
       <Card>
         <label className="switch-row">
@@ -274,30 +312,7 @@ export function PlanScreen({ onEditProfile, onProfileChange, onOpenTab, onDataDe
         </label>
       </Card>
 
-      {items.length > 0 && (
-        <>
-          <SectionTitle
-            after={pastCount > 0 ? (
-              <button type="button" className="link-button" onClick={() => setShowPast(!showPast)}>
-                {showPast ? 'Скрыть прошедшие' : `Показать прошедшие (${pastCount})`}
-              </button>
-            ) : <Tag>{`выполнено ${doneCount} из ${items.length}`}</Tag>}
-          >
-            Даты года
-          </SectionTitle>
-
-          <PlanTimeline
-            items={items}
-            nextItemId={plan.data.nextItemId}
-            onToggleDone={toggleDone}
-            pendingIds={pendingIds}
-            onToggleStep={toggleStep}
-            pendingSteps={pendingSteps}
-            regionIsDemo={region.isDemo}
-            hidePast={!showPast}
-          />
-        </>
-      )}
+      <QuizCard />
 
       <SectionTitle
         after={favorites.data?.length >= 2
