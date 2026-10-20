@@ -57,8 +57,10 @@ export function registerPlanChat({
     const user = users.ensure(userId);
     const familyToken = services.plan.getFollowedShareToken(userId);
     if (isProfileComplete(user)) {
+      const weekStep = services.weekStep.view(userId).current;
+      const weekStepLine = weekStep?.status === 'chosen' ? `\n\nВаш шаг на эту неделю: «${weekStep.title}». Отметить — /step` : '';
       return {
-        text: greeting ? texts.welcomeBack : texts.menu,
+        text: `${greeting ? texts.welcomeBack : texts.menu}${weekStepLine}`,
         keyboard: menuKeyboard({
           botUsername: runtime.botUsername,
           remindersEnabled: user.remindersEnabled,
@@ -110,6 +112,19 @@ export function registerPlanChat({
     return { text: card, keyboard: planItemKeyboard({ item: keyDate, canMarkDone: false, back: 'menu:show' }) };
   }
 
+  /**
+   * Ответ на частый вопрос текстом («когда подавать заявление на ОГЭ?»): карточка пункта из плана —
+   * с датой, правилом, источником и отметкой. Пункт ищется по id без учебного года, чтобы ответ не устарел.
+   * Без плана — как раньше: ближайшие даты или предложение ответить на вопросы.
+   */
+  async function sendItemAnswer(ctx, idPattern) {
+    const userId = userIdOf(ctx);
+    const item = currentPlan(userId)?.plan.items.find((row) => idPattern.test(row.id));
+    const view = item && itemView(userId, item.id);
+    if (!view) return sendPlanPreview(ctx);
+    return ctx.reply(view.text, { attachments: [view.keyboard] });
+  }
+
   function shareView(userId) {
     const share = services.plan.createShareLink(userId);
     services.analytics.track(EVENTS.PLAN_SHARED, userId, { planId: services.plan.planIdFor({ userId }), from: 'chat' });
@@ -121,7 +136,9 @@ export function registerPlanChat({
   }
 
   function sharedPlanView(shared, token, { intro } = {}) {
-    const header = intro ?? (shared.isOwner ? texts.sharedOwn : texts.sharedIntro);
+    let header = intro ?? texts.sharedIntro;
+    if (!intro && shared.isOwner) header = texts.sharedOwn;
+    else if (!intro && shared.isFollowing) header = texts.familyPlanIntro;
     return {
       shared,
       text: `${header}\n\n${planText(shared, { limit: PLAN_PREVIEW_ITEMS })}`,
@@ -334,6 +351,6 @@ export function registerPlanChat({
   });
 
   return {
-    menuView, sendPlanPreview, sendMenu, sendShare, openSharedPlan, sendReminderExample, hasExamChoice,
+    menuView, sendPlanPreview, sendMenu, sendShare, openSharedPlan, sendReminderExample, hasExamChoice, sendItemAnswer,
   };
 }

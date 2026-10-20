@@ -578,7 +578,11 @@ describe('команды', () => {
       await bot.handleUpdate(command(text));
       return lastAnswer();
     };
-    assert.match((await answerTo('Когда подавать заявление на ОГЭ?')).text, /^План на 2026\/2027/);
+    const application = await answerTo('Когда подавать заявление на ОГЭ?');
+    assert.match(application.text, /^📌 Заявление на ОГЭ/, 'частый вопрос — сразу карточка пункта');
+    assert.match(application.text, /1 марта/);
+    assert.ok(application.buttons.some((payload) => payload.startsWith('item-done:')), 'с отметкой «выполнено»');
+    assert.match((await answerTo('Когда дни открытых дверей?')).text, /^План на 2026\/2027/);
     assert.match((await answerTo('какие колледжи есть?')).text, /^Колледжи: Демо-регион А/);
     assert.match((await answerTo('Что лучше: 10 класс или колледж?')).text, /^10–11 класс или колледж/);
     const grades = await answerTo('как посчитать средний балл аттестата');
