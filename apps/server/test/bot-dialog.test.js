@@ -191,7 +191,7 @@ describe('опрос в боте', () => {
 });
 
 describe('опрос: регионы', () => {
-  test('пилотный регион первым, затем 11 регионов эксперимента по два в строке, «Другой регион», демо — в конце', async () => {
+  test('пилотный регион первым, затем 11 регионов эксперимента, «Другой регион», демо — в конце, по одному в строке', async () => {
     await bot.handleUpdate(press('survey:begin', { ...USER, user_id: 560 }));
     const regions = lastAnswer().buttons.filter((payload) => payload.startsWith('survey:region:'));
     assert.equal(regions[0], 'survey:region:tatarstan');
@@ -200,9 +200,7 @@ describe('опрос: регионы', () => {
     assert.ok(regions.indexOf('survey:region:demo-standard') > regions.indexOf('survey:region:other'));
 
     const rows = requests.at(-1).body.message.attachments[0].payload.buttons;
-    assert.equal(rows[0].length, 1, 'пилотный регион — отдельной строкой');
-    assert.equal(rows[1].length, 2, 'регионы эксперимента — по два');
-    assert.ok(rows.length <= 10, 'список регионов не растягивается на 15 строк');
+    assert.ok(rows.every((row) => row.length === 1), 'по одному в строке: длинные названия в ряд по два не помещаются');
   });
 
 
@@ -959,6 +957,6 @@ describe('меню помещается на экран', () => {
     const rows = requests.at(-1).body.attachments[0].payload.buttons;
     assert.ok(rows.length <= 5, `строк: ${rows.length}`);
     const labels = rows.flat().map((button) => button.text);
-    assert.ok(labels.includes('🏫 Колледжи') && labels.includes('📨 Отправить подростку'));
+    assert.ok(labels.includes('🏫 Колледжи') && labels.includes('📨 Подростку'));
   });
 });

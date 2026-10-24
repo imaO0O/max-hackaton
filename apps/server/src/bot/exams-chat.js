@@ -6,7 +6,7 @@ import {
 
 import { isProfileComplete } from '../repositories/users.js';
 import { EVENTS } from '../services/analytics.js';
-import { pickPrograms } from './colleges-chat.js';
+import { pickPrograms, programButtonLabel } from './colleges-chat.js';
 import { startKeyboard } from './keyboards.js';
 import { texts } from './texts.js';
 
@@ -123,7 +123,7 @@ export function registerExamsChat({ bot, users, reference, services }) {
       `Колледж и профессия были в перечне ${list.year} года — перед подачей документов уточните в приёмной комиссии.`,
       'Нажмите на номер программы, чтобы открыть подробности.',
     );
-    const rows = shown.map((program, index) => [button.callback(`${index + 1}. ${shorten(program.specialtyTitle, 34)}`, `p:${program.id}`)]);
+    const rows = shown.map((program, index) => [button.callback(programButtonLabel(program, index + 1), `p:${program.id}`)]);
     rows.push([button.callback('← К подсказке', 'oge:start')], BACK_TO_MENU);
     return { text: lines.filter((line) => line !== null).join('\n'), keyboard: Keyboard.inlineKeyboard(rows) };
   }

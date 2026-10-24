@@ -26,6 +26,16 @@ function shorten(text, maxLength) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
+/**
+ * Подпись кнопки программы: номер, короткое имя колледжа и начало названия программы —
+ * одинаковые программы разных колледжей различимы. Без короткого имени (демо) — номер и программа.
+ */
+export function programButtonLabel(program, number, { favorite = false } = {}) {
+  const college = program.college?.shortName;
+  const title = college ? `${college} · ${program.specialtyTitle}` : program.specialtyTitle;
+  return `${favorite ? '★ ' : ''}${number}. ${shorten(title, 34)}`;
+}
+
 /** Номер программы в списке — он же на кнопке, чтобы подпись кнопки была короткой и не обрезалась на телефоне. */
 function programLine(program, number, info) {
   const score = program.passingScore === null ? 'балл: нет данных' : `балл ${program.scoreYear ?? ''}: ${formatScore(program.passingScore)}`;
@@ -144,7 +154,7 @@ export function registerCollegesChat({
       'Нажмите на номер программы, чтобы открыть подробности и добавить в избранное.',
     ].filter((line) => line !== null).join('\n');
     const rows = shown.map((program, index) => [button.callback(
-      `${favorites.has(program.id) ? '★ ' : ''}${index + 1}. ${shorten(program.specialtyTitle, 34)}`,
+      programButtonLabel(program, index + 1, { favorite: favorites.has(program.id) }),
       `p:${program.id}`,
     )]);
     rows.push([button.callback('← Меню', 'menu:show')]);

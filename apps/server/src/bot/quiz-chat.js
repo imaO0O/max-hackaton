@@ -60,7 +60,7 @@ export function registerQuizChat({ bot, services, onBeforeDone }) {
     if (phase === QUIZ_PHASES.BEFORE) {
       if (roleCode === 'p') return onBeforeDone(ctx);
       return show(ctx, {
-        text: 'Спасибо! Посмотрите план семьи и ответьте ещё раз — кнопка «🧠 Проверить себя» в меню. Тогда сравним.',
+        text: 'Спасибо! Посмотрите план семьи и ответьте ещё раз — кнопка «🧠 Самопроверка» в меню. Тогда сравним.',
         keyboard: Keyboard.inlineKeyboard([[button.callback('☰ Меню', 'menu:show')]]),
       });
     }

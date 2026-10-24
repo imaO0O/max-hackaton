@@ -18,36 +18,12 @@ export { openAppKeyboard, startKeyboard } from './keyboards.js';
 /** Кнопка «Назад» возвращает к предыдущему шагу, не сбрасывая ответы. */
 const backRow = (step) => [button.callback('← Назад', `survey:back:${step}`)];
 
-function chunk(items, size) {
-  const rows = [];
-  for (let index = 0; index < items.length; index += size) {
-    rows.push(items.slice(index, index + size));
-  }
-  return rows;
-}
-
 /**
- * Регионы по порядку справочника. Пилотный регион с колледжами, «Другой регион» и демо — по одному в строке,
- * регионы эксперимента без колледжей в справочнике — по два, чтобы список не растягивался на весь экран.
+ * Регионы по порядку справочника, по одному в строке: «Московская область» и «Санкт-Петербург»
+ * в ряд по два на телефоне не помещаются — MAX обрезает подпись.
  */
 export function regionStep(regions) {
-  const rows = [];
-  let pair = [];
-  for (const region of regions) {
-    const regionButton = button.callback(region.name, `survey:region:${region.id}`);
-    if (region.hasColleges || region.isDemo || !region.twoOgeExperiment) {
-      if (pair.length) rows.push(pair);
-      pair = [];
-      rows.push([regionButton]);
-    } else {
-      pair.push(regionButton);
-      if (pair.length === 2) {
-        rows.push(pair);
-        pair = [];
-      }
-    }
-  }
-  if (pair.length) rows.push(pair);
+  const rows = regions.map((region) => [button.callback(region.name, `survey:region:${region.id}`)]);
   return { text: texts.askRegion, keyboard: Keyboard.inlineKeyboard(rows) };
 }
 
@@ -74,6 +50,7 @@ export function gradeStep(backTo = 'city') {
   };
 }
 
+/** Интересы — по одному в строке: «IT и программирование» в ряд по два не помещается. */
 export function interestsStep(interests, selected) {
   const chosen = new Set(selected);
   const buttons = interests.map((interest) => button.callback(
@@ -83,7 +60,7 @@ export function interestsStep(interests, selected) {
   return {
     text: texts.askInterests,
     keyboard: Keyboard.inlineKeyboard([
-      ...chunk(buttons, 2),
+      ...buttons.map((interestButton) => [interestButton]),
       [button.callback(chosen.size ? `Готово (${chosen.size})` : 'Пока не знаем', 'survey:interests-done')],
       backRow('grade'),
     ]),
