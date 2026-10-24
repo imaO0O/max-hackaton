@@ -67,7 +67,9 @@ export function SharedPlanScreen({ token, onOpenOwnPlan }) {
       ) : (
         <Card highlighted>
           <Typography.Body variant="small">
-            С вами поделились планом выбора пути после 9 класса. Включите напоминания — бот напишет перед важными датами.
+            {data.isFollowing
+              ? '✅ Напоминания включены: бот напишет в чат перед важными датами этого плана.'
+              : 'С вами поделились планом выбора пути после 9 класса. Включите напоминания — бот напишет перед важными датами.'}
           </Typography.Body>
           <Button
             size="large"
