@@ -1,10 +1,17 @@
 #!/bin/sh
 # Подготовка к сдаче: проверки, архив исходников зафиксированного коммита и контрольная сумма.
-# Запускать из main после последнего слияния: ./scripts/make-submission.sh
+# Запускать из main после последнего слияния: ./scripts/make-submission.sh [путь к PDF презентации]
+# PDF кладётся в корень архива рядом с кодом — организаторы финала просят код и презентацию одним архивом.
 # Архив и файл с суммой появятся в папке submission/ (в git не попадает).
 
 set -eu
 cd "$(dirname "$0")/.."
+
+presentation="${1:-}"
+if [ -n "$presentation" ] && [ ! -f "$presentation" ]; then
+  echo "Нет файла презентации: $presentation" >&2
+  exit 1
+fi
 
 if [ -n "$(git status --porcelain)" ]; then
   echo "Есть незакоммиченные изменения — сначала закоммитьте или уберите их." >&2
@@ -25,7 +32,15 @@ commit=$(git rev-parse HEAD)
 short=$(git rev-parse --short HEAD)
 mkdir -p submission
 archive="submission/posle9-$short.zip"
-git archive --format=zip --prefix=posle9/ -o "$archive" HEAD
+if [ -n "$presentation" ]; then
+  # --add-file: файл вне git попадает в корень posle9/. Имя — латиницей: кириллица в zip искажается
+  tmpdir=$(mktemp -d)
+  trap 'rm -rf "$tmpdir"' EXIT
+  cp "$presentation" "$tmpdir/presentation-final.pdf"
+  git archive --format=zip --prefix=posle9/ --add-file="$tmpdir/presentation-final.pdf" -o "$archive" HEAD
+else
+  git archive --format=zip --prefix=posle9/ -o "$archive" HEAD
+fi
 
 if command -v sha256sum > /dev/null 2>&1; then
   sum=$(sha256sum "$archive" | cut -d' ' -f1)
@@ -40,6 +55,7 @@ echo "== Для первого слайда и формы сдачи"
 echo "Репозиторий:  $remote"
 echo "Коммит:       $commit"
 echo "Архив:        $archive"
+if [ -n "$presentation" ]; then echo "Презентация:  posle9/presentation-final.pdf"; fi
 echo "SHA-256:      $sum"
 echo
 echo "Проверить архив на другой машине: sha256sum -c $(basename "$archive").sha256"
