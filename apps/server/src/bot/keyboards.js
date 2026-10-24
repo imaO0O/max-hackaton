@@ -19,7 +19,8 @@ const REMINDER_EXAMPLE = [button.callback('⏰ Пример напоминани
 // Подсказка «2 или 4 ОГЭ?» — в регионах эксперимента и для «Другого региона» (payload oge:…)
 const EXAM_ADVICE = [button.callback('🧮 Сколько ОГЭ сдавать: 2 или 4', 'oge:start')];
 // Проверка понимания правил «после»; в меню — рядом с подсказкой «2 или 4 ОГЭ?», чтобы меню не стало длиннее
-const QUIZ_BUTTON = button.callback('🧠 Проверить себя', 'qz:go:p');
+const QUIZ_BUTTON = button.callback('🧠 Самопроверка', 'qz:go:p');
+// В ряду из двух кнопок на телефоне помещается около 14 символов подписи — длиннее MAX обрезает «…»
 
 /**
  * Клавиатура с кнопкой «Открыть план». Payload попадает в start_param мини-приложения
@@ -48,11 +49,11 @@ export function menuKeyboard({
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Даты плана', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
     withExamAdvice ? [button.callback('🧮 2 или 4 ОГЭ?', 'oge:start'), QUIZ_BUTTON] : [QUIZ_BUTTON],
-    [button.callback('🏫 Колледжи', 'colleges:show'), button.callback('📨 Отправить подростку', 'share:show')],
+    [button.callback('🏫 Колледжи', 'colleges:show'), button.callback('📨 Подростку', 'share:show')],
     ...(withFamilyPlan ? [[button.callback('👪 План, которым поделились со мной', 'family:show')]] : []),
     [
-      button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle'),
-      button.callback('✏️ Изменить ответы', 'survey:start'),
+      button.callback(remindersEnabled ? '🔕 Не напоминать' : '🔔 Напоминать', 'reminders:toggle'),
+      button.callback('✏️ Мои ответы', 'survey:start'),
     ],
     ...(withReminderExample ? [REMINDER_EXAMPLE] : []),
   ]);
@@ -66,7 +67,7 @@ export function followerMenuKeyboard({
     [button.callback('📅 План семьи', 'plan:show'), button.callback('⚖️ Сравнить пути', 'paths:show')],
     [button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle')],
     ...(withReminderExample ? [REMINDER_EXAMPLE] : []),
-    [button.callback('🧠 Проверить себя', 'qz:go:t'), button.callback('Собрать свой план', 'survey:start')],
+    [button.callback('🧠 Самопроверка', 'qz:go:t'), button.callback('📝 Свой план', 'survey:start')],
   ], `plan_${token}`, 'Открыть план семьи');
 }
 
@@ -75,7 +76,7 @@ export function summaryKeyboard(botUsername, { withExamAdvice = false } = {}) {
   return openAppKeyboard(botUsername, [
     [button.callback('📅 Все даты', 'plan:all'), button.callback('🏫 Колледжи', 'colleges:show')],
     ...(withExamAdvice ? [EXAM_ADVICE] : []),
-    [button.callback('📨 Отправить подростку', 'share:show'), button.callback('☰ Меню', 'menu:show')],
+    [button.callback('📨 Подростку', 'share:show'), button.callback('☰ Меню', 'menu:show')],
     REMINDER_EXAMPLE,
   ]);
 }
@@ -183,7 +184,7 @@ export function sharedPlanKeyboard({ botUsername, token, isFollowing }) {
     [isFollowing
       ? button.callback('Не получать напоминания', `unfollow:${token}`)
       : button.callback('🔔 Получать напоминания', `follow:${token}`)],
-    [button.callback('📅 Все даты', `shared-all:${token}`), button.callback('🧠 3 вопроса о правилах', 'qz:go:t')],
+    [button.callback('📅 Все даты', `shared-all:${token}`), button.callback('🧠 Самопроверка', 'qz:go:t')],
     BACK_TO_MENU,
   ], `plan_${token}`, 'Открыть в мини-приложении');
 }
