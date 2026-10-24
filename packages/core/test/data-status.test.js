@@ -28,10 +28,13 @@ test('неполные данные: что не опубликовано, по�
   assert.deepEqual(info.missing, ['прошлогодний проходной балл', 'число бюджетных мест']);
   const text = dataStatusExplanation(info);
   assert.equal(text.title, 'Неполные данные · проверено 16.09.2026');
-  assert.match(text.lines.join('\n'), /Колледж не опубликовал: прошлогодний проходной балл, число бюджетных мест\./);
+  assert.match(text.lines.join('\n'), /Нет данных: прошлогодний проходной балл, число бюджетных мест\./);
   assert.match(text.lines.join('\n'), /План приёма опубликован сканом\./);
   assert.match(text.lines.at(-1), /Уточните в приёмной комиссии/);
   assert.equal(text.askAdmission, true);
+
+  const withoutNote = dataStatusExplanation(programDataStatus({ ...full, passingScore: null, college }, { today }));
+  assert.match(withoutNote.lines.join('\n'), /Колледж не опубликовал: прошлогодний проходной балл\./, 'без пояснения — кто не опубликовал');
 });
 
 test('давно не проверялось, не проверено и демо', () => {
