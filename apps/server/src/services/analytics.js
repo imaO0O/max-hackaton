@@ -182,6 +182,9 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
     return { shared: shared.size, opened: opened.length, connected: connected.length };
   }
 
+  /** «из 1 семьи», «из 3 семей» */
+  const familiesOf = (count) => `${count} ${count % 10 === 1 && count % 100 !== 11 ? 'семьи' : 'семей'}`;
+
   const percent = (part, whole) => (whole ? ` (${Math.round((part / whole) * 100)}%)` : '');
 
   /** Шаг на эту неделю: выбрали ли и сделали ли за неделю — по первому выбранному шагу семьи. */
@@ -232,7 +235,7 @@ export function createAnalytics({ repos, logger, clock = () => new Date() }) {
       `Отправлено напоминаний: ${data.remindersSent}`,
       `Вернулись из напоминания в мини-приложение: ${data.openedFromReminder}`,
       `Отмечено пунктов плана: ${data.itemsDone}`,
-      `Ключевой шаг — заявление на ОГЭ отмечено до 1 марта: ${data.steps.keyStep} из ${data.steps.ninthGrade} семей 9 класса${percent(data.steps.keyStep, data.steps.ninthGrade)}`,
+      `Ключевой шаг — заявление на ОГЭ отмечено до 1 марта: ${data.steps.keyStep} из ${familiesOf(data.steps.ninthGrade)} 9 класса${percent(data.steps.keyStep, data.steps.ninthGrade)}`,
       `Любой шаг плана в срок: ${data.steps.onTime} из ${data.steps.families} собравших план${percent(data.steps.onTime, data.steps.families)}; из них по кнопке «Сделано» в напоминании: ${data.steps.fromReminder}`,
       ...weekStepLines(data.weekStep),
       `Отмечено шагов чек-листа поступления: ${data.stepsDone}`,

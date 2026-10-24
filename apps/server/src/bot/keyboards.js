@@ -51,7 +51,7 @@ export function menuKeyboard({
     [button.callback('🏫 Колледжи', 'colleges:show'), button.callback('📨 Отправить подростку', 'share:show')],
     ...(withFamilyPlan ? [[button.callback('👪 План, которым поделились со мной', 'family:show')]] : []),
     [
-      button.callback(remindersEnabled ? '🔕 Напоминания: выкл' : '🔔 Напоминания: вкл', 'reminders:toggle'),
+      button.callback(remindersEnabled ? '🔕 Выключить напоминания' : '🔔 Включить напоминания', 'reminders:toggle'),
       button.callback('✏️ Изменить ответы', 'survey:start'),
     ],
     ...(withReminderExample ? [REMINDER_EXAMPLE] : []),

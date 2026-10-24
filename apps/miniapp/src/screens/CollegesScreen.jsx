@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button, CellList, CellSimple, Switch, Typography } from '@maxhub/max-ui';
 import { STUDY_FORMS } from '@posle9/core';
 
-import { DataStatus } from '../components/DataStatus.jsx';
+import { CollegeDataStatus, DataStatus, sharedCollegeStatus } from '../components/DataStatus.jsx';
 import { ProgramCompare } from '../components/ProgramCompare.jsx';
 import { ReportButton } from '../components/ReportButton.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/states.jsx';
@@ -22,7 +22,7 @@ function minScore(programs) {
 }
 
 function ProgramCard({
-  program, isFavorite, onToggleFavorite, pending, myAverage, isDemo, dataNote, experimentYear,
+  program, isFavorite, onToggleFavorite, pending, myAverage, isDemo, dataNote, experimentYear, compactStatus = false,
 }) {
   return (
     <Card className="program">
@@ -67,7 +67,7 @@ function ProgramCard({
         </Typography.Body>
       )}
 
-      <DataStatus program={program} college={{ isDemo, dataNote }} />
+      <DataStatus program={program} college={{ isDemo, dataNote }} compact={compactStatus} />
       {!isDemo && <ReportButton targetType="program" targetId={program.id} />}
     </Card>
   );
@@ -80,6 +80,11 @@ function CollegeDetails({
   const myAverage = loadLocal(AVERAGE_STORAGE_KEY, null);
 
   useEffect(() => showBackButton(onBack), [onBack]);
+
+  // Одинаковое пояснение у всех программ (например, «колледж не публикует баллы») — один раз над списком
+  const sharedStatus = college.data
+    ? sharedCollegeStatus(college.data.programs, { isDemo: college.data.isDemo, dataNote: college.data.dataNote })
+    : null;
 
   return (
     <div className="page">
@@ -99,6 +104,7 @@ function CollegeDetails({
             </Typography.Body>
           )}
           <SectionTitle>{`Программы (${college.data.programs.length})`}</SectionTitle>
+          {sharedStatus && <CollegeDataStatus status={sharedStatus} />}
           <div className="stack">
             {college.data.programs.map((program) => (
               <ProgramCard
@@ -111,6 +117,7 @@ function CollegeDetails({
                 isFavorite={favoriteIds.has(program.id)}
                 pending={pendingIds.has(program.id)}
                 onToggleFavorite={() => onToggleFavorite(program.id)}
+                compactStatus={Boolean(sharedStatus)}
               />
             ))}
           </div>

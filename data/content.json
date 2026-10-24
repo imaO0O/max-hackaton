@@ -61,9 +61,9 @@
           "checkedAt": "2026-09-16"
         },
         {
-          "title": "Рособрнадзор: ГИА-11 и ЕГЭ",
-          "url": "https://obrnadzor.gov.ru/gia/gia-11/",
-          "checkedAt": null
+          "title": "Рособрнадзор: как участвовать в ГИА-11 и ЕГЭ (в том числе студентам колледжей)",
+          "url": "https://obrnadzor.gov.ru/gia/gia-11/kak-uchastvovat-v-gia-11/",
+          "checkedAt": "2026-10-20"
         }
       ]
     },
@@ -78,9 +78,14 @@
       ],
       "sources": [
         {
-          "title": "ФИПИ: ЕГЭ",
-          "url": "https://fipi.ru/ege",
-          "checkedAt": null
+          "title": "Рособрнадзор: результаты ЕГЭ — вступительные испытания в вуз",
+          "url": "https://obrnadzor.gov.ru/gia/gia-11/kak-uchastvovat-v-gia-11/",
+          "checkedAt": "2026-10-20"
+        },
+        {
+          "title": "Порядок приёма в СПО (приказ № 457): конкурс по среднему баллу аттестата",
+          "url": "https://www.consultant.ru/document/cons_doc_LAW_366971/",
+          "checkedAt": "2026-09-16"
         }
       ]
     }

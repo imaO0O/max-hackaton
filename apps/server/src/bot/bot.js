@@ -181,6 +181,12 @@ export function createBot({
     reminders: sendRemindersStatus,
     share: (ctx) => planChat.sendShare(ctx),
     plan: planChat.sendPlanPreview,
+    // Частые вопросы о сроках — карточка пункта плана (id без учебного года)
+    q_application: (ctx) => planChat.sendItemAnswer(ctx, /^\d{4}-fed-gia-application/),
+    q_interview: (ctx) => planChat.sendItemAnswer(ctx, /^\d{4}-fed-final-interview$/),
+    q_oge_dates: (ctx) => planChat.sendItemAnswer(ctx, /^\d{4}-fed-oge-main-period$/),
+    q_admission: (ctx) => planChat.sendItemAnswer(ctx, /^\d{4}-fed-college-admission$/),
+    q_original: (ctx) => planChat.sendItemAnswer(ctx, /^\d{4}-fed-original-document$/),
     paths: (ctx) => pathsChat.sendPaths(ctx),
     colleges: (ctx) => collegesChat.sendColleges(ctx),
     grades: sendGradesHint,
