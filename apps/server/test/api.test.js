@@ -363,6 +363,23 @@ describe('API мини-приложения', () => {
     ctx.db.prepare("UPDATE key_dates SET date_end = '2027-08-15' WHERE id = '2627-fed-college-admission'").run();
   });
 
+  test('сессия: подросток, подписанный на план семьи, получает его токен; со своим планом — нет', async () => {
+    const parent = 6101;
+    const teen = 6102;
+    ctx.services.plan.saveProfile(parent, { regionId: 'tatarstan', city: 'Казань', grade: 9, path: 'college', interests: ['it'] });
+    const { token } = ctx.services.plan.createShareLink(parent);
+
+    const before = (await call('GET', '/api/session', { headers: authHeaders(teen) })).json();
+    assert.equal(before.familyPlanToken, null, 'до подписки плана семьи нет');
+
+    ctx.services.plan.setFollowing(teen, token, true);
+    const after = (await call('GET', '/api/session', { headers: authHeaders(teen, { startParam: 'from_bot' }) })).json();
+    assert.equal(after.familyPlanToken, token);
+
+    const own = (await call('GET', '/api/session', { headers: authHeaders(parent) })).json();
+    assert.equal(own.familyPlanToken, null, 'у кого свой план — открывается свой');
+  });
+
   test('мини-приложение по ссылке для школы: открытие засчитывается коду школы', async () => {
     const user = 6006;
     const response = await call('GET', '/api/session', { headers: authHeaders(user, { startParam: 'src_kazan_school7' }) });

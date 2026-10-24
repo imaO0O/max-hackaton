@@ -640,7 +640,8 @@ button {
 
 .add-subject {
   display: grid;
-  grid-template-columns: 1fr auto;
+  /* minmax(0, …): поле ввода сжимается, а кнопка «Добавить» получает ширину по тексту и не обрезается на 360 px */
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
 }

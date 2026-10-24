@@ -133,8 +133,12 @@ export function dataStatusExplanation(info) {
       lines.push('Сведения сверены с сайтом колледжа (ссылка на источник ниже).');
       break;
     case DATA_STATUS.INCOMPLETE:
-      lines.push(`Колледж не опубликовал: ${info.missing.join(', ')}.`);
-      if (info.note) lines.push(info.note);
+      // С пояснением колледжа первая строка говорит только, чего нет, а пояснение — почему: без повтора одного и того же
+      if (info.note) {
+        lines.push(`Нет данных: ${info.missing.join(', ')}.`, info.note);
+      } else {
+        lines.push(`Колледж не опубликовал: ${info.missing.join(', ')}.`);
+      }
       break;
     case DATA_STATUS.STALE:
       lines.push('С даты проверки прошло больше полугода — правила и цифры могли измениться.');

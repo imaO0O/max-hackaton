@@ -40,7 +40,8 @@ export function App() {
   useEffect(() => {
     if (!session.data) return;
     setProfile(session.data.profile);
-    setSharedToken(shareTokenFrom(session.data.startParam));
+    // Ссылка на план — по ней; без ссылки подросток, подписанный на план семьи, видит этот план, а не опрос
+    setSharedToken(shareTokenFrom(session.data.startParam) ?? session.data.familyPlanToken ?? null);
   }, [session.data]);
 
   useEffect(() => {

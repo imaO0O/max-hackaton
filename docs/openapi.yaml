@@ -579,6 +579,9 @@ paths:
                   userId: { type: integer }
                   startParam: { type: [string, 'null'], examples: [plan_Ej-h4c_6uvdC9Spst6DkIw] }
                   profile: { $ref: '#/components/schemas/Profile' }
+                  familyPlanToken:
+                    type: [string, 'null']
+                    description: Токен плана семьи, на который подписан пользователь без своего плана (подросток). Мини-приложение открывает этот план, если запущено без ссылки на план
         '401': { $ref: '#/components/responses/Unauthorized' }
 
   /api/profile:

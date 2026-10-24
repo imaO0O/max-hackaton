@@ -12,7 +12,12 @@ export function registerPlanRoutes(api, { plan, analytics }) {
     analytics.track(EVENTS.MINIAPP_OPENED, request.maxUser.id, {
       source: launchSource(request.startParam), ...(campaign ? { campaign } : {}),
     });
-    return { userId: request.maxUser.id, startParam: request.startParam, profile };
+    // План семьи, на который подписан пользователь: подросток без своего плана, открыв мини-приложение
+    // кнопкой из чата или напоминания (без ссылки), видит план семьи, а не опрос
+    const familyPlanToken = profile.isComplete ? null : plan.getFollowedShareToken(request.maxUser.id);
+    return {
+      userId: request.maxUser.id, startParam: request.startParam, profile, familyPlanToken,
+    };
   });
 
   api.get('/profile', { config: { auth: true } }, async (request) => ({

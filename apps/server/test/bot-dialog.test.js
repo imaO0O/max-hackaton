@@ -418,7 +418,7 @@ describe('меню, план в чате и отправка подростку'
     await bot.handleUpdate(press('p:tat-kazan-radiomechanical-college--090201--full_time'));
     const incomplete = lastAnswer();
     assert.match(incomplete.text, /⚠️ Неполные данные · проверено 16.09.2026/);
-    assert.match(incomplete.text, /Колледж не опубликовал: прошлогодний проходной балл, число бюджетных мест./);
+    assert.match(incomplete.text, /Нет данных: прошлогодний проходной балл, число бюджетных мест./);
     assert.match(incomplete.text, /Прошлогодний проходной балл колледж не публикует/);
     assert.match(incomplete.text, /Уточните в приёмной комиссии колледжа./);
     assert.ok(allButtons(requests.at(-1).body.message).some((button) => button.type === 'link' && button.text === 'Приёмная комиссия и источник'));
